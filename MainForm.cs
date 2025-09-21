@@ -1658,12 +1658,12 @@ namespace HesapTakip
 
         public static async Task CheckForUpdate()
         {
-            string repoOwner = "vincentv54"; // GitHub kullanıcı adı
-            string repoName = "HesapTakipApp"; // Repo adı
+            string repoOwner = "yusatopaloglu-s"; // GitHub kullanıcı adı
+            string repoName = "HesapTakip"; // Repo adı
 
             using (var client = new HttpClient())
             {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakipApp");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
                 var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
                 dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
                 string latestVersion = release.tag_name;
@@ -1695,6 +1695,10 @@ namespace HesapTakip
     }
 
 }
+
+
+
+
 
 
 

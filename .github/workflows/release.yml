@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'   # Sadece v1.0.0 gibi tag'lerde çalýþýr
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Kodu çek
+      uses: actions/checkout@v4
+
+    - name: .NET'i kur
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Projeyi derle
+      run: dotnet publish -c Release -r win-x64 --self-contained true -o publish
+
+    - name: Yayýn dosyasýný arþivle
+      run: Compress-Archive -Path publish\* -DestinationPath HesapTakip.zip
+
+    - name: GitHub Release oluþtur
+      uses: softprops/action-gh-release@v2
+      with:
+        files: HesapTakip.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
