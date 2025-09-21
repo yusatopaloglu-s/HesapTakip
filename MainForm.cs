@@ -3,7 +3,6 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
-using System.Data.SQLite;
 using System.Globalization;
 using System.IO;
 
@@ -37,81 +36,11 @@ namespace HesapTakip
             }
 
         }
-
-
-
-        //private string connectionString = $"Data Source={Properties.Settings.Default.DatabasePath};Version=3;";
-        //public string connectionString = "Server=192.168.1.2;Database=HesapTakipDB;User=yusa;Password=1991;port=3306;Charset=utf8mb4;";
-        private MySqlConnection connection;
-        //private readonly SQLiteDataAdapter customersAdapter;
+                       
+        private MySqlConnection connection;       
         private DataSet dataSet = new DataSet();
         private List<string> _suggestions = new List<string>();
-
-
-        /* private void InitializeDatabase()
-         {
-             connection = new SQLiteConnection(connectionString);
-
-             if (!System.IO.File.Exists(Properties.Settings.Default.DatabasePath))
-             {
-                 SQLiteConnection.CreateFile(Properties.Settings.Default.DatabasePath);
-
-                  using (var cmd = new SQLiteCommand(connection))
-                      {
-                         connection.Open();
-                         cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Customers (
-                                    CustomerID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                      Name TEXT NOT NULL,
-                                        EDefter INTEGER DEFAULT 0
-                                                                             )";
-                         cmd.ExecuteNonQuery();
-
-                         cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Transactions (
-                                             TransactionID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                             CustomerID INTEGER,
-                                             Date DATETIME,
-                                             Description TEXT,
-                                             Amount DECIMAL,
-                                             Type TEXT)";
-                         cmd.ExecuteNonQuery();
-
-                         cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Suggestions (
-                                             SuggestionID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                             Description TEXT NOT NULL UNIQUE,
-                                             CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP);";
-                         cmd.ExecuteNonQuery();
-
-                         cmd.CommandText = @"CREATE TABLE IF NOT EXISTS EDefterTakip (
-                                                     TransactionID INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                     CustomerID INTEGER,
-                                                     Date DATETIME,
-                                                     Kontor DECIMAL  
-                                                     Type TEXT,                                         
-
-
-     )";
-                         cmd.ExecuteNonQuery(); 
-
-                     cmd.CommandText = @"CREATE INDEX IDX_Transactions_CustomerID ON Transactions(CustomerID);";
-                     cmd.ExecuteNonQuery();
-
-
-                     cmd.CommandText = @"ALTER TABLE Transactions ADD CHECK (Type IN ('Gelir','Gider'));";
-                     cmd.ExecuteNonQuery();
-
-                     connection.Close();
-                 }
-
-
-
-             }
-         } */
-
-
-
-
-
-        //public string connectionString = "Server=192.168.1.2;Database=HesapTakipDB;User=yusa;Password=1991;port=3306;Charset=utf8mb4;";
+                              
         private void InitializeDatabase()
         {
             connection = new MySqlConnection(connectionString);
@@ -171,7 +100,7 @@ namespace HesapTakip
                 dgvCustomers.Columns.Clear();
 
                 // Müşteri listesini yükle
-                //  using (var adapter = new SQLiteDataAdapter("SELECT CustomerID, Name, EDefter FROM Customers", connection))
+                
                 using (var adapter = new MySqlDataAdapter("SELECT * FROM Customers", connection))
                 {
                     DataTable dt = new DataTable();
@@ -281,22 +210,9 @@ namespace HesapTakip
 
                 if (inputForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.InputText))
                 {
-                    //using (var connection = new SQLiteConnection(connectionString))
-                    // using (var cmd = new MySqlCommand())
+
                     {
-                        // Eski kod (SQLite ile)
-                        // connection.Open();
-                        // using (var cmd = new SQLiteCommand(
-                        //     "INSERT INTO Customers (Name, EDefter) VALUES (@name, @edefter)",
-                        //     connection))
-                        // {
-                        //     cmd.Parameters.AddWithValue("@name", inputForm.InputText.Trim());
-                        //     cmd.Parameters.AddWithValue("@edefter", chkEDefter.Checked ? 1 : 0);
-                        //     cmd.ExecuteNonQuery();
-                        // }
-                        // connection.Close();
-                        // Düzenlenmiş kod (MySQL ile)
-                        //cmd.Connection = connection;
+
                         {
                             connection.Open();
                             using (var cmd = new MySqlCommand(
@@ -330,29 +246,7 @@ namespace HesapTakip
 
             try
             {
-                // using (var cmd = new SQLiteCommand(connection))
-                // {
-                //     connection.Open();
-                //     using (var transaction = connection.BeginTransaction())
-                //     {
-                //         try
-                //         {
-                //             cmd.Transaction = transaction;
-                //             cmd.CommandText = "DELETE FROM Transactions WHERE CustomerID = @id";
-                //             cmd.Parameters.AddWithValue("@id", customerID);
-                //             cmd.ExecuteNonQuery();
-                //             cmd.CommandText = "DELETE FROM Customers WHERE CustomerID = @id";
-                //             cmd.ExecuteNonQuery();
-                //             transaction.Commit();
-                //         }
-                //         catch
-                //         {
-                //             transaction.Rollback();
-                //             throw;
-                //         }
-                //     }
-                //     connection.Close();
-                // }
+               
                 using (var cmd = new MySqlCommand())
                 {
                     cmd.Connection = connection;
@@ -394,39 +288,7 @@ namespace HesapTakip
 
         }
 
-        // ESKİ KOD (SQLite ile)
-        //private void CalculateAndDisplayTotal(int customerID)
-        //{
-        //    try
-        //    {
-        //        connection.Open();
-        //        using (var cmd = new SQLiteCommand(
-        //            @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
-        //            FROM Transactions 
-        //            WHERE CustomerID = @customerID", connection))
-        //        {
-        //            cmd.Parameters.AddWithValue("@customerID", customerID);
-        //            var result = cmd.ExecuteScalar();
-        //
-        //            decimal total = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
-        //            lblTotal.Text = $"Toplam Bakiye: {total.ToString("N2")} ₺";
-        //
-        //            // Negatif bakiyeler için renk değişimi
-        //            lblTotal.ForeColor = total >= 0 ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkRed;
-        //
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show("Hesaplama hatası: " + ex.Message);
-        //    }
-        //    finally
-        //    {
-        //        connection.Close();
-        //    }
-        //}
-
-        // YENİ KOD (MySQL ile)
+        
         private void CalculateAndDisplayTotal(int customerID)
         {
             try
@@ -435,7 +297,7 @@ namespace HesapTakip
                 using (var cmd = new MySql.Data.MySqlClient.MySqlCommand(
                     @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
                       FROM Transactions 
-                      WHERE CustomerID = @customerID AND IsDeleted = 0", connection)) // <-- DÜZELTİLDİ
+                      WHERE CustomerID = @customerID AND IsDeleted = 0", connection)) 
                 {
                     cmd.Parameters.AddWithValue("@customerID", customerID);
                     var result = cmd.ExecuteScalar();
@@ -470,23 +332,7 @@ namespace HesapTakip
                 var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
                 if (!ValidateTransactionType()) return;
-
-                // using (var cmd = new SQLiteCommand(connection))
-                // {
-                //     connection.Open();
-                //     cmd.CommandText = @"INSERT INTO Transactions 
-                //                       (CustomerID, Date, Description, Amount, Type) 
-                //                       VALUES 
-                //                       (@cid, @date, @desc, @amount, @type)";
-                //     cmd.Parameters.AddWithValue("@cid", customerID);
-                //     cmd.Parameters.AddWithValue("@date", dtpDate.Value);
-                //     cmd.Parameters.AddWithValue("@desc", txtDescription.Text);
-                //     cmd.Parameters.AddWithValue("@amount", txtAmount.Text);
-                //     cmd.Parameters.AddWithValue("@amount", amount);
-                //     cmd.Parameters.AddWithValue("@type", GetSelectedTransactionType());
-                //     cmd.ExecuteNonQuery();
-                //     connection.Close();
-                // }
+                                
                 using (var cmd = new MySqlCommand(
                     @"INSERT INTO Transactions 
               (CustomerID, Date, Description, Amount, Type) 
@@ -586,7 +432,7 @@ namespace HesapTakip
         // RadioButton'ların arkaplan rengini değiştir
         private void UpdateTypeValidationUI()
         {
-            QuestPDF.Infrastructure.Color errorColor = QuestPDF.Infrastructure.Color.FromRGB(255, 182, 193); // LightPink equivalent
+            QuestPDF.Infrastructure.Color errorColor = QuestPDF.Infrastructure.Color.FromRGB(255, 182, 193); 
 
             rbIncome.BackColor = GetSelectedTransactionType() != null
                 ? SystemColors.Window
@@ -599,7 +445,7 @@ namespace HesapTakip
         // Her değişiklikte tetikle
         private void rbIncome_CheckedChanged(object sender, EventArgs e) => UpdateTypeValidationUI();
         private void rbExpense_CheckedChanged(object sender, EventArgs e) => UpdateTypeValidationUI();
-        // Label'a geçiş efekti (optional)
+        // Label'a geçiş efekti 
         private void UpdateTotalWithAnimation(decimal newTotal)
         {
             Color targetColor = newTotal >= 0 ? Color.FromRGB(255, 182, 193) : Color.FromRGB(255, 182, 193);
@@ -710,23 +556,7 @@ namespace HesapTakip
         }
 
 
-        // Müşteri DataTable'ı oluştur (ESKİ KOD - SQLite ile)
-        //private DataTable GetCustomersDataTable()
-        //{
-        //    DataTable dt = new DataTable();
-        //    dt.TableName = "Customers";
-        //
-        //    using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM Customers", connection))
-        //    {
-        //        connection.Open();
-        //        SQLiteDataReader reader = cmd.ExecuteReader();
-        //        dt.Load(reader);
-        //        connection.Close();
-        //    }
-        //    return dt;
-        //}
-
-        // YENİ KOD - MySQL ile uyumlu
+        
         private DataTable GetCustomersDataTable()
         {
             DataTable dt = new DataTable();
@@ -744,25 +574,7 @@ namespace HesapTakip
             return dt;
         }
 
-        // Hareket DataTable'ı oluştur
-        // ESKİ KOD (SQLite ile)
-        //private DataTable GetTransactionsDataTable(int customerID)
-        //{
-        //    DataTable dt = new DataTable();
-        //    using (SQLiteCommand cmd = new SQLiteCommand(
-        //        "SELECT Date, Description, Amount, Type FROM Transactions WHERE CustomerID = @customerID ORDER BY Date ASC",
-        //        connection))
-        //    {
-        //        cmd.Parameters.AddWithValue("@customerID", customerID);
-        //        connection.Open();
-        //        SQLiteDataReader reader = cmd.ExecuteReader();
-        //        dt.Load(reader);
-        //        connection.Close();
-        //    }
-        //    return dt;
-        //}
-
-        // YENİ KOD (MySQL ile)
+       
         private DataTable GetTransactionsDataTable(int customerID)
         {
             DataTable dt = new DataTable();
@@ -969,102 +781,7 @@ namespace HesapTakip
                 }
             }
         }
-
-
-        /* public class PDFGenerator
-        {
-            public static void GeneratePdf(DataTable transactions, string customerName, string savePath)
-            {
-
-                Document.Create(document =>
-            {
-                document.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, QuestPDF.Infrastructure.Unit.Centimetre);
-
-                    page.Header()
-                        .Text($"{customerName} Hesap Hareketleri")
-                        .Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
-
-                    page.Content()
-                        .PaddingVertical(1, QuestPDF.Infrastructure.Unit.Centimetre)
-                        .Table(
-                        );
-                    //(
-                    //    table =>
-                    //    {
-                    //        table.ColumnsDefinition(columns =>
-                    //        {
-                    //            columns.RelativeColumn(); // Tarih
-                    //            columns.RelativeColumn(2); // Açıklama
-                    //            columns.RelativeColumn(); // Tutar
-                    //            columns.RelativeColumn(); // Tür
-                    //        });
-                    //
-                    //        // Başlık Satırı
-                    //        table.Header(header =>
-                    //        {
-                    //            header.Cell().Text("Tarih").Bold();
-                    //            header.Cell().Text("Açıklama").Bold();
-                    //            header.Cell().Text("Tutar").Bold();
-                    //            header.Cell().Text("Tür").Bold();
-                    //        });
-                    //
-                    //        // Veri Satırları
-                    //        foreach (DataRow row in transactions.Rows)
-                    //        {
-                    //            table.Cell().Text(row["Date"].ToString().Substring(0, 10));
-                    //            table.Cell().Text(row["Description"].ToString());
-                    //            table.Cell().Text($"{row["Amount"]} ₺");
-                    //            table.Cell().Text(row["Type"].ToString());
-                    //        }
-                    //    });
-                    //
-                    //    page.Footer()
-                    //        .AlignCenter()
-                    //        .Text(x => x.CurrentPageNumber());
-                    //});
-            }
-
-        }
-        private void btnExportPdf_Click(object sender, EventArgs e)
-        {
-            if (dgvCustomers.CurrentRow == null)
-            {
-                MessageBox.Show("Lütfen bir müşteri seçin!");
-                return;
-            }
-
-            using (SaveFileDialog sfd = new SaveFileDialog())
-            {
-                sfd.Filter = "PDF Dosyaları|*.pdf";
-                sfd.FileName = $"{dgvCustomers.CurrentRow.Cells["Name"].Value}_Hareketler.pdf";
-
-                if (sfd.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        // Müşteri bilgilerini ve hareketleri al
-                        string customerName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
-                        int customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
-                        DataTable transactions = GetTransactionsDataTable(customerID); // Mevcut metodunuzu kullanın
-
-                        // PDF oluştur
-                        PDFGenerator.GeneratePdf(transactions, customerName, sfd.FileName);
-
-                        MessageBox.Show("PDF başarıyla oluşturuldu!");
-                        //Process.Start(sfd.FileName); // PDF'i aç
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Hata: " + ex.Message);
-                    }
-                }
-            }
-
-        }*/
-
+                        
         public static class DatabaseHelper
         {
             public static List<string> GetSuggestions(MySqlConnection conn)
@@ -1463,26 +1180,7 @@ namespace HesapTakip
                     decimal tutar = worksheet.Cells[row, 3].GetValue<decimal>();
                     //decimal alacak = worksheet.Cells[row, 3].GetValue<decimal>();
                     string tur = worksheet.Cells[row, 4].Text;
-
-                    /*  // Tür belirleme
-                      string tur;
-                      decimal tutar;
-
-                      if (borc > 0)
-                      {
-                          tur = "Gelir";
-                          tutar = borc;
-                      }
-                      else if (alacak > 0)
-                      {
-                          tur = "Gider";
-                          tutar = alacak;
-                      }
-                      else
-                      {
-                          continue; // Geçersiz satır
-                      }
-                    */
+                                       
                     // DataTable'a ekle
                     dt.Rows.Add(tarih, aciklama, tutar, tur);
                 }
@@ -1658,9 +1356,8 @@ namespace HesapTakip
 
         public static async Task CheckForUpdate()
         {
-            string repoOwner = "yusatopaloglu-s"; // GitHub kullanıcı adı
-            string repoName = "HesapTakip"; // Repo adı
-
+            string repoOwner = "yusatopaloglu-s"; 
+            string repoName = "HesapTakip";
             using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");

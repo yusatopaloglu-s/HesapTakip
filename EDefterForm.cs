@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
-using System.Data.SQLite;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
@@ -23,8 +22,6 @@ namespace HesapTakip
         public EDefterForm()
         {
             InitializeComponent();
-            //connectionString = $"Data Source={Properties.Settings.Default.DatabasePath};Version=3;";
-            //connectionString = "Server=192.168.1.2;Database=HesapTakipDB;User=yusa;Password=1991;port=3306;Charset=utf8mb4;";
             connectionString = Properties.Settings.Default.DatabasePath;
             InitializeDatabase();
             connection = new MySqlConnection(connectionString);
@@ -34,14 +31,11 @@ namespace HesapTakip
 
 
         }
-
-        //private readonly SQLiteDataAdapter customersAdapter;
-        //public string connectionString = "Server=192.168.1.2;Database=HesapTakipDB;User=yusa;Password=1991;port=3306;Charset=utf8mb4;";
         private MySqlConnection connection;
 
         private void InitializeDatabase()
         {
-            // Gerekirse burada veritabanı bağlantı kontrolü veya ilk ayarları yapabilirsiniz.
+
         }
 
         public void LoadCustomers()
@@ -54,7 +48,7 @@ namespace HesapTakip
                 using (var adapter = new MySqlDataAdapter("SELECT CustomerID, Name FROM Customers WHERE EDefter = 1", connection))
                 {
                     DataTable dt = new DataTable();
-                    adapter.Fill(dt); // connection burada otomatik açılır ve kapanır
+                    adapter.Fill(dt); 
                     dgvFirmaList.DataSource = dt;
                 }
             }
@@ -172,7 +166,7 @@ namespace HesapTakip
 
         }
 
-        private string selectedTransactionType; // Sınıf seviyesinde tanımlayın
+        private string selectedTransactionType; 
 
         private void btnekle_Click(object sender, EventArgs e)
         {
@@ -194,7 +188,7 @@ namespace HesapTakip
                         connection.Open();
                     using (var cmd = new MySqlCommand())
                     {
-                        cmd.Connection = connection; // Bağlantıyı belirtmek önemli!
+                        cmd.Connection = connection; 
                         cmd.CommandText = @"INSERT INTO EDefterTakip 
                                             (CustomerID, Date, Kontor, Type) 
                                             VALUES 

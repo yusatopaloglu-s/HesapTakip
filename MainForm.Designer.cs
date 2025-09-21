@@ -41,7 +41,6 @@
             btnImportExcel = new Button();
             btnResetSettings = new Button();
             btnEditTransaction = new Button();
-            lstSuggestions = new ListBox();
             btnRemoveDescipt = new Button();
             btnAddDescipt = new Button();
             btnExportPdf = new Button();
@@ -63,6 +62,7 @@
             txtAmount = new TextBox();
             label1 = new Label();
             dgvTransactions = new DataGridView();
+            lstSuggestions = new ListBox();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
@@ -178,7 +178,6 @@
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
             gbTransactions.Controls.Add(btnEditTransaction);
-            gbTransactions.Controls.Add(lstSuggestions);
             gbTransactions.Controls.Add(btnRemoveDescipt);
             gbTransactions.Controls.Add(btnAddDescipt);
             gbTransactions.Controls.Add(btnExportPdf);
@@ -190,6 +189,7 @@
             gbTransactions.Controls.Add(btnAddTransaction);
             gbTransactions.Controls.Add(tableLayoutPanel1);
             gbTransactions.Controls.Add(dgvTransactions);
+            gbTransactions.Controls.Add(lstSuggestions);
             gbTransactions.Dock = DockStyle.Fill;
             gbTransactions.Location = new Point(0, 0);
             gbTransactions.Name = "gbTransactions";
@@ -200,9 +200,9 @@
             // 
             // btnSaveToDb
             // 
-            btnSaveToDb.Location = new Point(485, 231);
+            btnSaveToDb.Location = new Point(466, 308);
             btnSaveToDb.Name = "btnSaveToDb";
-            btnSaveToDb.Size = new Size(113, 23);
+            btnSaveToDb.Size = new Size(120, 23);
             btnSaveToDb.TabIndex = 16;
             btnSaveToDb.Text = "Excel'den Kaydet";
             btnSaveToDb.UseVisualStyleBackColor = true;
@@ -210,9 +210,9 @@
             // 
             // btnImportExcel
             // 
-            btnImportExcel.Location = new Point(485, 202);
+            btnImportExcel.Location = new Point(466, 279);
             btnImportExcel.Name = "btnImportExcel";
-            btnImportExcel.Size = new Size(113, 23);
+            btnImportExcel.Size = new Size(120, 23);
             btnImportExcel.TabIndex = 14;
             btnImportExcel.Text = "Excel'den Yükle";
             btnImportExcel.UseVisualStyleBackColor = true;
@@ -231,22 +231,13 @@
             // 
             // btnEditTransaction
             // 
-            btnEditTransaction.Location = new Point(488, 159);
+            btnEditTransaction.Location = new Point(466, 189);
             btnEditTransaction.Name = "btnEditTransaction";
-            btnEditTransaction.Size = new Size(110, 23);
+            btnEditTransaction.Size = new Size(117, 23);
             btnEditTransaction.TabIndex = 12;
             btnEditTransaction.Text = "Hareket Düzenle";
             btnEditTransaction.UseVisualStyleBackColor = true;
             btnEditTransaction.Click += btnEditTransaction_Click;
-            // 
-            // lstSuggestions
-            // 
-            lstSuggestions.FormattingEnabled = true;
-            lstSuggestions.Location = new Point(466, 397);
-            lstSuggestions.Name = "lstSuggestions";
-            lstSuggestions.Size = new Size(120, 94);
-            lstSuggestions.TabIndex = 11;
-            lstSuggestions.Visible = false;
             // 
             // btnRemoveDescipt
             // 
@@ -270,9 +261,9 @@
             // 
             // btnExportPdf
             // 
-            btnExportPdf.Location = new Point(488, 292);
+            btnExportPdf.Location = new Point(466, 337);
             btnExportPdf.Name = "btnExportPdf";
-            btnExportPdf.Size = new Size(110, 23);
+            btnExportPdf.Size = new Size(120, 23);
             btnExportPdf.TabIndex = 8;
             btnExportPdf.Text = "PDF Aktar";
             btnExportPdf.UseVisualStyleBackColor = true;
@@ -292,9 +283,9 @@
             // 
             // btnDeleteTransaction
             // 
-            btnDeleteTransaction.Location = new Point(488, 130);
+            btnDeleteTransaction.Location = new Point(466, 160);
             btnDeleteTransaction.Name = "btnDeleteTransaction";
-            btnDeleteTransaction.Size = new Size(110, 23);
+            btnDeleteTransaction.Size = new Size(117, 23);
             btnDeleteTransaction.TabIndex = 6;
             btnDeleteTransaction.Text = "Hareket Sil";
             btnDeleteTransaction.UseVisualStyleBackColor = true;
@@ -302,9 +293,9 @@
             // 
             // btnExportExcel
             // 
-            btnExportExcel.Location = new Point(488, 321);
+            btnExportExcel.Location = new Point(466, 366);
             btnExportExcel.Name = "btnExportExcel";
-            btnExportExcel.Size = new Size(110, 25);
+            btnExportExcel.Size = new Size(120, 25);
             btnExportExcel.TabIndex = 5;
             btnExportExcel.Text = "Excel'e Aktar";
             btnExportExcel.UseVisualStyleBackColor = true;
@@ -354,7 +345,7 @@
             rbIncome.Size = new Size(107, 23);
             rbIncome.TabIndex = 6;
             rbIncome.TabStop = true;
-            rbIncome.Text = "Tahsilat";
+            rbIncome.Text = "Tahsilat / Gelir";
             rbIncome.TextAlign = ContentAlignment.MiddleCenter;
             rbIncome.UseVisualStyleBackColor = false;
             rbIncome.CheckedChanged += rbIncome_CheckedChanged;
@@ -393,9 +384,9 @@
             // 
             // btnAddTransaction
             // 
-            btnAddTransaction.Location = new Point(488, 101);
+            btnAddTransaction.Location = new Point(466, 131);
             btnAddTransaction.Name = "btnAddTransaction";
-            btnAddTransaction.Size = new Size(110, 23);
+            btnAddTransaction.Size = new Size(117, 23);
             btnAddTransaction.TabIndex = 2;
             btnAddTransaction.Text = "Hareket Ekle";
             btnAddTransaction.UseVisualStyleBackColor = true;
@@ -501,6 +492,15 @@
             dgvTransactions.Name = "dgvTransactions";
             dgvTransactions.Size = new Size(460, 360);
             dgvTransactions.TabIndex = 0;
+            // 
+            // lstSuggestions
+            // 
+            lstSuggestions.FormattingEnabled = true;
+            lstSuggestions.Location = new Point(466, 397);
+            lstSuggestions.Name = "lstSuggestions";
+            lstSuggestions.Size = new Size(120, 94);
+            lstSuggestions.TabIndex = 11;
+            lstSuggestions.Visible = false;
             // 
             // menuStrip1
             // 

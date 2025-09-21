@@ -35,7 +35,7 @@
             label1 = new Label();
             label2 = new Label();
             label3 = new Label();
-
+            btnGenerateKey = new Button();
             SuspendLayout();
             // 
             // txtLicenseKey
@@ -57,9 +57,9 @@
             // btnActivate
             // 
             btnActivate.AccessibleName = "";
-            btnActivate.Location = new Point(123, 101);
+            btnActivate.Location = new Point(203, 101);
             btnActivate.Name = "btnActivate";
-            btnActivate.Size = new Size(168, 23);
+            btnActivate.Size = new Size(88, 23);
             btnActivate.TabIndex = 3;
             btnActivate.Text = "Aktive Et";
             btnActivate.UseVisualStyleBackColor = true;
@@ -92,11 +92,22 @@
             label3.TabIndex = 6;
             label3.Text = "AKTİVASYON FORMU";
             // 
+            // btnGenerateKey
+            // 
+            btnGenerateKey.Location = new Point(122, 101);
+            btnGenerateKey.Name = "btnGenerateKey";
+            btnGenerateKey.Size = new Size(75, 23);
+            btnGenerateKey.TabIndex = 7;
+            btnGenerateKey.Text = "Üret";
+            btnGenerateKey.UseVisualStyleBackColor = true;
+            btnGenerateKey.Click += btnGenerateSecureKey_Click;
+            // 
             // ActivationForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(362, 167);
+            ClientSize = new Size(306, 144);
+            Controls.Add(btnGenerateKey);
             Controls.Add(label3);
             Controls.Add(label2);
             Controls.Add(label1);
@@ -117,5 +128,6 @@
         private Label label1;
         private Label label2;
         private Label label3;
+        private Button btnGenerateKey;
     }
 }

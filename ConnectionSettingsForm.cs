@@ -1,8 +1,3 @@
-using System;
-using System.Windows.Forms;
-using System.ComponentModel;
-using System.Data;
-
 namespace HesapTakip
 {
     public partial class ConnectionSettingsForm : Form
