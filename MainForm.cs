@@ -3,10 +3,10 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -18,6 +18,7 @@ namespace HesapTakip
     using OfficeOpenXml.Style;
     using QuestPDF.Infrastructure;
     using System.Diagnostics;
+    using System.Windows.Forms;
 
     public partial class MainForm : Form
     {
@@ -47,6 +48,7 @@ namespace HesapTakip
             LoadSuggestions();
             dtpDate.Value = DateTime.Today;
             dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
+            toolStripStatusLabelVersion.Text = $"v{GetCurrentVersion()}";
             /*   if (!_versionChecked)
                {
                    _versionChecked = true;
@@ -1693,37 +1695,23 @@ exit
                 // Temizlik hatasını görmezden gel
             }
         }
-
         private async void CheckUpdateButton_Click(object sender, EventArgs e)
         {
             // Progress bar'ı sıfırla ve göster
-            progressBar1.Value = 0;
             progressBar1.Visible = true;
+            progressBar1.Value = 0;
             statusLabel.Text = "Güncelleme kontrol ediliyor...";
             statusLabel.Visible = true;
 
             var progress = new Progress<int>(percent =>
             {
-                if (progressBar1.InvokeRequired)
-                {
-                    progressBar1.Invoke(new Action<int>(p => progressBar1.Value = p), percent);
-                }
-                else
-                {
-                    progressBar1.Value = percent;
-                }
+                // Doğrudan güncelle - ToolStripProgressBar thread-safe
+                progressBar1.Value = percent;
             });
 
             var statusProgress = new Progress<string>(status =>
             {
-                if (statusLabel.InvokeRequired)
-                {
-                    statusLabel.Invoke(new Action<string>(s => statusLabel.Text = s), status);
-                }
-                else
-                {
-                    statusLabel.Text = status;
-                }
+                statusLabel.Text = status;
                 statusLabel.Visible = !string.IsNullOrEmpty(status);
             });
 
@@ -1734,25 +1722,15 @@ exit
             catch (Exception ex)
             {
                 MessageBox.Show($"Hata: {ex.Message}");
-
-                // Hata durumunda progress bar'ı temizle
-                progressBar1.Value = 0;
                 progressBar1.Visible = false;
-                statusLabel.Text = "";
                 statusLabel.Visible = false;
             }
             finally
             {
-                // İşlem tamamlandığında progress bar'ı gizle
-                if (progressBar1.Value == 100 || progressBar1.Value == 0)
-                {
-                    await Task.Delay(2000);
-                    progressBar1.Visible = false;
-                    statusLabel.Visible = false;
-                }
+                await Task.Delay(2000);
+                progressBar1.Visible = false;
+                statusLabel.Visible = false;
             }
         }
-    }
-
-
+        }
 }

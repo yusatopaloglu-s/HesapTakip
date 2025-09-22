@@ -37,8 +37,7 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
-            statusLabel = new Label();
-            progressBar1 = new ProgressBar();
+            linkLabel1 = new LinkLabel();
             btnSaveToDb = new Button();
             btnImportExcel = new Button();
             btnResetSettings = new Button();
@@ -46,7 +45,6 @@
             btnRemoveDescipt = new Button();
             btnAddDescipt = new Button();
             btnExportPdf = new Button();
-            linkLabel1 = new LinkLabel();
             btnDeleteTransaction = new Button();
             btnExportExcel = new Button();
             tableLayoutPanel2 = new TableLayoutPanel();
@@ -65,6 +63,10 @@
             label1 = new Label();
             dgvTransactions = new DataGridView();
             lstSuggestions = new ListBox();
+            statusStrip1 = new StatusStrip();
+            progressBar1 = new ToolStripProgressBar();
+            statusLabel = new ToolStripStatusLabel();
+            toolStripStatusLabelVersion = new ToolStripStatusLabel();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
@@ -82,6 +84,7 @@
             totalPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
+            statusStrip1.SuspendLayout();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -177,8 +180,7 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            gbTransactions.Controls.Add(statusLabel);
-            gbTransactions.Controls.Add(progressBar1);
+            gbTransactions.Controls.Add(linkLabel1);
             gbTransactions.Controls.Add(btnSaveToDb);
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
@@ -186,7 +188,6 @@
             gbTransactions.Controls.Add(btnRemoveDescipt);
             gbTransactions.Controls.Add(btnAddDescipt);
             gbTransactions.Controls.Add(btnExportPdf);
-            gbTransactions.Controls.Add(linkLabel1);
             gbTransactions.Controls.Add(btnDeleteTransaction);
             gbTransactions.Controls.Add(btnExportExcel);
             gbTransactions.Controls.Add(tableLayoutPanel2);
@@ -195,6 +196,7 @@
             gbTransactions.Controls.Add(tableLayoutPanel1);
             gbTransactions.Controls.Add(dgvTransactions);
             gbTransactions.Controls.Add(lstSuggestions);
+            gbTransactions.Controls.Add(statusStrip1);
             gbTransactions.Dock = DockStyle.Fill;
             gbTransactions.Location = new Point(0, 0);
             gbTransactions.Name = "gbTransactions";
@@ -203,21 +205,17 @@
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
             // 
-            // statusLabel
+            // linkLabel1
             // 
-            statusLabel.AutoSize = true;
-            statusLabel.Location = new Point(105, 545);
-            statusLabel.Name = "statusLabel";
-            statusLabel.Size = new Size(44, 15);
-            statusLabel.TabIndex = 18;
-            statusLabel.Text = "Durum";
-            // 
-            // progressBar1
-            // 
-            progressBar1.Location = new Point(6, 545);
-            progressBar1.Name = "progressBar1";
-            progressBar1.Size = new Size(93, 15);
-            progressBar1.TabIndex = 17;
+            linkLabel1.AutoSize = true;
+            linkLabel1.Enabled = false;
+            linkLabel1.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            linkLabel1.Location = new Point(438, 530);
+            linkLabel1.Name = "linkLabel1";
+            linkLabel1.Size = new Size(145, 15);
+            linkLabel1.TabIndex = 7;
+            linkLabel1.TabStop = true;
+            linkLabel1.Text = "SMMM YUŞA TOPALOĞLU";
             // 
             // btnSaveToDb
             // 
@@ -289,18 +287,6 @@
             btnExportPdf.Text = "PDF Aktar";
             btnExportPdf.UseVisualStyleBackColor = true;
             btnExportPdf.Click += btnExportPdf_Click;
-            // 
-            // linkLabel1
-            // 
-            linkLabel1.AutoSize = true;
-            linkLabel1.Enabled = false;
-            linkLabel1.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            linkLabel1.Location = new Point(455, 539);
-            linkLabel1.Name = "linkLabel1";
-            linkLabel1.Size = new Size(145, 15);
-            linkLabel1.TabIndex = 7;
-            linkLabel1.TabStop = true;
-            linkLabel1.Text = "SMMM YUŞA TOPALOĞLU";
             // 
             // btnDeleteTransaction
             // 
@@ -523,6 +509,31 @@
             lstSuggestions.TabIndex = 11;
             lstSuggestions.Visible = false;
             // 
+            // statusStrip1
+            // 
+            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion });
+            statusStrip1.Location = new Point(3, 538);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(606, 22);
+            statusStrip1.TabIndex = 19;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // progressBar1
+            // 
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(100, 16);
+            // 
+            // statusLabel
+            // 
+            statusLabel.Name = "statusLabel";
+            statusLabel.Size = new Size(44, 17);
+            statusLabel.Text = "Durum";
+            // 
+            // toolStripStatusLabelVersion
+            // 
+            toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
+            toolStripStatusLabelVersion.Size = new Size(0, 17);
+            // 
             // menuStrip1
             // 
             menuStrip1.Font = new Font("Segoe UI", 9F, FontStyle.Underline);
@@ -598,6 +609,8 @@
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).EndInit();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             ResumeLayout(false);
@@ -646,7 +659,9 @@
         private ToolStripMenuItem modülToolStripMenuItem;
         private ToolStripMenuItem eDefterKontorTakipToolStripMenuItem;
         private ToolStripMenuItem güncellemeKontrolEtToolStripMenuItem;
-        private ProgressBar progressBar1;
-        private Label statusLabel;
+        private StatusStrip statusStrip1;
+        private ToolStripProgressBar progressBar1;
+        private ToolStripStatusLabel statusLabel;
+        private ToolStripStatusLabel toolStripStatusLabelVersion;
     }
 }
