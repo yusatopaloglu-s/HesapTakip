@@ -14,8 +14,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.3.2</Version>
-    <PackageVersion>1.0.0</PackageVersion>	  	    
+    <Version>1.0.3.3</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <NeutralLanguage>tr</NeutralLanguage>	  	    
     </PropertyGroup>
 
   <ItemGroup>
@@ -71,7 +72,7 @@
 
   <ItemGroup>
     <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
+      <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Update="spellbook.jpg">

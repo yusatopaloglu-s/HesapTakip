@@ -21,8 +21,11 @@ namespace HesapTakip
                 MessageBox.Show("Tüm alanlarý doldurun!");
                 return;
             }
+
+            // SABÝT CONFIG'E KAYDET
+            AppConfigHelper.SaveConnectionString(Server, Database, User, Password, Port);
+
             this.DialogResult = DialogResult.OK;
-            //this.Close();
         }
 
         private TextBox txtServer;
@@ -35,6 +38,7 @@ namespace HesapTakip
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ConnectionSettingsForm));
             txtServer = new TextBox();
             txtDatabase = new TextBox();
             txtUser = new TextBox();
@@ -104,6 +108,7 @@ namespace HesapTakip
             Controls.Add(txtUser);
             Controls.Add(txtDatabase);
             Controls.Add(txtServer);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "ConnectionSettingsForm";
             ResumeLayout(false);
             PerformLayout();

@@ -27,19 +27,32 @@ namespace HesapTakip
         public MainForm()
         {
             InitializeComponent();
-            connectionString = Properties.Settings.Default.DatabasePath;
+
+            // SABİT CONFIG'TEN OKU
+            connectionString = AppConfigHelper.DatabasePath;
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                // Eski settings'ten oku ve yeni config'e taşı
+                connectionString = Properties.Settings.Default.DatabasePath;
+                if (!string.IsNullOrEmpty(connectionString))
+                {
+                    AppConfigHelper.DatabasePath = connectionString;
+                }
+            }
+
             InitializeDatabase();
             LoadCustomers();
             InitializeAutoComplete();
             LoadSuggestions();
             dtpDate.Value = DateTime.Today;
             dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
-         /*   if (!_versionChecked)
-            {
-                _versionChecked = true;
-                _ = CheckForUpdate();
-            }
-         */
+            /*   if (!_versionChecked)
+               {
+                   _versionChecked = true;
+                   _ = CheckForUpdate();
+               }
+            */
         }
                        
         private MySqlConnection connection;       
@@ -89,13 +102,38 @@ namespace HesapTakip
             });
         }
 
-
-
+        
         private void btnResetSettings_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.Reset();
-            MessageBox.Show("Ayarlar sıfırlandı. Uygulama kapatılıyor...");
-            Application.Exit();
+
+            var result = MessageBox.Show(
+                "Tüm ayarlar sıfırlanacak ve bağlantı bilgileri silinecek. Emin misiniz?",
+                "Ayarları Sıfırla",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    // Özel config dosyasını sil
+                    if (File.Exists(AppConfigHelper.ConfigFilePath))
+                    {
+                        File.Delete(AppConfigHelper.ConfigFilePath);
+                    }
+
+                    // Eski settings'i sıfırla
+                    Properties.Settings.Default.Reset();
+                    Properties.Settings.Default.Save();
+
+                    MessageBox.Show("Ayarlar sıfırlandı. Uygulama kapatılıyor...");
+                    Application.Exit();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ayarlar sıfırlanırken hata oluştu: {ex.Message}");
+                }
+            }
         }
 
         public void LoadCustomers()
@@ -1588,22 +1626,42 @@ timeout /t 2 /nobreak >nul
 taskkill /f /im ""HesapTakip.exe"" >nul 2>&1
 taskkill /f /im ""HesapTakip"" >nul 2>&1
 
-echo Dosyalar kopyalanıyor...
+echo Ayarlar korunuyor...
+
+:: Özel config dosyasını yedekle
+if exist ""{appPath}\HesapTakip.config"" (
+    copy ""{appPath}\HesapTakip.config"" ""{appPath}\HesapTakip.config.backup"" >nul
+    echo Config yedeklendi
+)
+
+:: Yeni dosyaları kopyala
+echo Güncelleme dosyaları kopyalanıyor...
 xcopy ""{updateFilesPath}\*"" ""{appPath}"" /Y /E /I /Q
 
+:: Config dosyasını geri yükle
+if exist ""{appPath}\HesapTakip.config.backup"" (
+    copy ""{appPath}\HesapTakip.config.backup"" ""{appPath}\HesapTakip.config"" >nul
+    del ""{appPath}\HesapTakip.config.backup"" >nul
+    echo Config geri yüklendi
+)
+
 if %errorlevel% equ 0 (
-    echo Güncelleme başarıyla tamamlandı!
-    echo Uygulama yeniden başlatılıyor...
+    echo.
+    echo ✓ Güncelleme başarıyla tamamlandı!
+    echo ✓ Uygulama yeniden başlatılıyor...
+    echo.
     
+    timeout /t 2 /nobreak >nul
     cd /d ""{appPath}""
     start """" ""HesapTakip.exe""
 ) else (
-    echo Hata: Dosyalar kopyalanamadı!
+    echo.
+    echo ✗ Hata: Güncelleme sırasında problem oluştu!
     pause
 )
 
 echo Temizlik yapılıyor...
-rmdir /s /q ""{updateFilesPath}""
+if exist ""{updateFilesPath}"" rmdir /s /q ""{updateFilesPath}""
 
 exit
 ";
@@ -1611,17 +1669,15 @@ exit
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
             File.WriteAllText(batchFile, batchContent, System.Text.Encoding.UTF8);
 
-            // Son durum güncellemesi
-            statusProgress?.Report("Güncelleme işlemi tamamlanıyor...");
+            statusProgress?.Report("Güncelleme işlemi başlatılıyor...");
 
-            // Batch dosyasını çalıştır
             Process.Start(new ProcessStartInfo
             {
                 FileName = "cmd.exe",
                 Arguments = $"/c \"{batchFile}\"",
                 WorkingDirectory = appPath,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = false
             });
         }
 

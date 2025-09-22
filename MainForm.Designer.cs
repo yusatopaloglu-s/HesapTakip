@@ -262,7 +262,7 @@
             // 
             // btnRemoveDescipt
             // 
-            btnRemoveDescipt.Location = new Point(545, 48);
+            btnRemoveDescipt.Location = new Point(530, 48);
             btnRemoveDescipt.Name = "btnRemoveDescipt";
             btnRemoveDescipt.Size = new Size(53, 23);
             btnRemoveDescipt.TabIndex = 10;
@@ -272,7 +272,7 @@
             // 
             // btnAddDescipt
             // 
-            btnAddDescipt.Location = new Point(488, 48);
+            btnAddDescipt.Location = new Point(473, 48);
             btnAddDescipt.Name = "btnAddDescipt";
             btnAddDescipt.Size = new Size(53, 23);
             btnAddDescipt.TabIndex = 9;
@@ -295,7 +295,7 @@
             linkLabel1.AutoSize = true;
             linkLabel1.Enabled = false;
             linkLabel1.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            linkLabel1.Location = new Point(443, 535);
+            linkLabel1.Location = new Point(455, 539);
             linkLabel1.Name = "linkLabel1";
             linkLabel1.Size = new Size(145, 15);
             linkLabel1.TabIndex = 7;
