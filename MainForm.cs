@@ -1418,7 +1418,6 @@ namespace HesapTakip
         private static async Task DownloadAndInstallUpdate(string downloadUrl, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string tempZipFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(downloadUrl));
-            string extractPath = Path.GetTempPath(); // Geçici çıkartma yolu
 
             try
             {
@@ -1460,11 +1459,11 @@ namespace HesapTakip
                         }
                     }
 
-                    statusProgress?.Report("Dosyalar çıkartılıyor...");
+                    statusProgress?.Report("Dosyalar hazırlanıyor...");
                     progress?.Report(90);
 
-                    // ZIP dosyasını çıkart
-                    string tempExtractPath = Path.Combine(extractPath, "HesapTakip_Update");
+                    // ZIP'i çıkart
+                    string tempExtractPath = Path.Combine(Path.GetTempPath(), "HesapTakip_Update");
                     if (Directory.Exists(tempExtractPath))
                     {
                         Directory.Delete(tempExtractPath, true);
@@ -1472,178 +1471,72 @@ namespace HesapTakip
 
                     System.IO.Compression.ZipFile.ExtractToDirectory(tempZipFile, tempExtractPath);
 
-                    statusProgress?.Report("Dosyalar güncelleniyor...");
-                    progress?.Report(95);
+                    // Güncelleme batch dosyasını oluştur ve çalıştır
+                    CreateAndRunUpdateBatch(tempExtractPath);
 
-                    // Çıkartılan dosyaları uygulama klasörüne kopyala
-                    await CopyUpdateFiles(tempExtractPath, progress, statusProgress);
-
-                    statusProgress?.Report("Güncelleme tamamlandı");
+                    statusProgress?.Report("Güncelleme başlatılıyor...");
                     progress?.Report(100);
 
-                    // Uygulamayı yeniden başlat
-                    RestartApplication();
+                    // Uygulamayı kapat (batch dosyası gerisini halleder)
+                    Application.Exit();
                 }
             }
             catch (Exception ex)
             {
                 statusProgress?.Report("Hata oluştu");
                 MessageBox.Show($"Güncelleme sırasında hata oluştu: {ex.Message}");
-
-                // Temizlik
                 CleanupTempFiles(tempZipFile);
             }
         }
-        private static async Task CopyUpdateFiles(string sourcePath, IProgress<int> progress, IProgress<string> statusProgress)
+
+        private static void CreateAndRunUpdateBatch(string updateFilesPath)
         {
-            string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string backupDirectory = Path.Combine(Path.GetTempPath(), "HesapTakip_Backup");
+            string appPath = AppDomain.CurrentDomain.BaseDirectory;
+            string batchContent = $@"
+@echo off
+chcp 65001 >nul
+echo HesapTakip Güncelleme Aracı
+echo ===========================
+echo.
 
-            try
+echo Uygulama kapatılıyor...
+timeout /t 2 /nobreak >nul
+
+taskkill /f /im ""HesapTakip.exe"" >nul 2>&1
+taskkill /f /im ""HesapTakip"" >nul 2>&1
+
+echo Dosyalar kopyalanıyor...
+xcopy ""{updateFilesPath}\*"" ""{appPath}"" /Y /E /I /Q
+
+if %errorlevel% equ 0 (
+    echo Güncelleme başarıyla tamamlandı!
+    echo Uygulama yeniden başlatılıyor...
+    
+    cd /d ""{appPath}""
+    start """" ""HesapTakip.exe""
+) else (
+    echo Hata: Dosyalar kopyalanamadı!
+    pause
+)
+
+echo Temizlik yapılıyor...
+rmdir /s /q ""{updateFilesPath}""
+
+exit
+";
+
+            string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
+            File.WriteAllText(batchFile, batchContent, System.Text.Encoding.UTF8);
+
+            // Batch dosyasını çalıştır
+            Process.Start(new ProcessStartInfo
             {
-                // Önce yedek al
-                statusProgress?.Report("Yedek alınıyor...");
-                if (Directory.Exists(backupDirectory))
-                {
-                    Directory.Delete(backupDirectory, true);
-                }
-                Directory.CreateDirectory(backupDirectory);
-
-                // Mevcut dosyaları yedekle (exe ve dll'ler)
-                var filesToBackup = Directory.GetFiles(appDirectory, "*.*", SearchOption.TopDirectoryOnly)
-                    .Where(f => f.EndsWith(".exe") || f.EndsWith(".dll") || f.EndsWith(".config"))
-                    .ToArray();
-
-                for (int i = 0; i < filesToBackup.Length; i++)
-                {
-                    string file = filesToBackup[i];
-                    string destFile = Path.Combine(backupDirectory, Path.GetFileName(file));
-                    File.Copy(file, destFile, true);
-                }
-
-                statusProgress?.Report("Yeni dosyalar kopyalanıyor...");
-
-                // Çıkartılan dosyaları bul (publish klasörü veya doğrudan)
-                string actualUpdatePath = FindActualUpdatePath(sourcePath);
-
-                if (string.IsNullOrEmpty(actualUpdatePath))
-                {
-                    throw new DirectoryNotFoundException("Güncelleme dosyaları bulunamadı");
-                }
-
-                // Yeni dosyaları kopyala
-                var updateFiles = Directory.GetFiles(actualUpdatePath, "*.*", SearchOption.TopDirectoryOnly);
-
-                for (int i = 0; i < updateFiles.Length; i++)
-                {
-                    string sourceFile = updateFiles[i];
-                    string fileName = Path.GetFileName(sourceFile);
-                    string destFile = Path.Combine(appDirectory, fileName);
-
-                    // Eğer dosya kullanımda ise, geçici isimle kopyala
-                    if (File.Exists(destFile))
-                    {
-                        string tempDestFile = destFile + ".new";
-                        File.Copy(sourceFile, tempDestFile, true);
-
-                        // Orijinal dosyayı sil ve yeniden adlandır
-                        await WaitForFileRelease(destFile);
-                        File.Delete(destFile);
-                        File.Move(tempDestFile, destFile);
-                    }
-                    else
-                    {
-                        File.Copy(sourceFile, destFile, true);
-                    }
-
-                    // Progress güncelle
-                    int copyProgress = 95 + (int)((double)i / updateFiles.Length * 5);
-                    progress?.Report(copyProgress);
-                }
-
-                // Yedekleri temizle (başarılı olursa)
-                Directory.Delete(backupDirectory, true);
-            }
-            catch (Exception ex)
-            {
-                // Hata durumunda yedekten geri yükle
-                await RestoreFromBackup(backupDirectory, appDirectory);
-                throw;
-            }
-        }
-        private static string FindActualUpdatePath(string basePath)
-        {
-            // Önce publish klasörünü ara
-            string publishPath = Path.Combine(basePath, "publish");
-            if (Directory.Exists(publishPath))
-            {
-                return publishPath;
-            }
-
-            // Win-x64 veya benzeri runtime klasörlerini ara
-            var runtimeDirs = Directory.GetDirectories(basePath, "win-*", SearchOption.TopDirectoryOnly);
-            if (runtimeDirs.Length > 0)
-            {
-                return runtimeDirs[0];
-            }
-
-            // Doğrudan kök dizindeki exe dosyalarını kontrol et
-            var exeFiles = Directory.GetFiles(basePath, "*.exe", SearchOption.TopDirectoryOnly);
-            if (exeFiles.Length > 0)
-            {
-                return basePath;
-            }
-
-            // Tüm alt dizinlerde exe ara
-            var allExeFiles = Directory.GetFiles(basePath, "*.exe", SearchOption.AllDirectories);
-            if (allExeFiles.Length > 0)
-            {
-                return Path.GetDirectoryName(allExeFiles[0]);
-            }
-
-            return null;
-        }
-
-        private static async Task WaitForFileRelease(string filePath)
-        {
-            int attempts = 0;
-            while (attempts < 10)
-            {
-                try
-                {
-                    using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-                    {
-                        break; // Dosya serbest
-                    }
-                }
-                catch
-                {
-                    attempts++;
-                    await Task.Delay(500);
-                }
-            }
-        }
-
-        private static async Task RestoreFromBackup(string backupPath, string appDirectory)
-        {
-            if (!Directory.Exists(backupPath)) return;
-
-            var backupFiles = Directory.GetFiles(backupPath);
-            foreach (string backupFile in backupFiles)
-            {
-                string fileName = Path.GetFileName(backupFile);
-                string destFile = Path.Combine(appDirectory, fileName);
-
-                try
-                {
-                    await WaitForFileRelease(destFile);
-                    File.Copy(backupFile, destFile, true);
-                }
-                catch
-                {
-                    // Geri yükleme hatasını görmezden gel
-                }
-            }
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{batchFile}\"",
+                WorkingDirectory = appPath,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
         }
 
         private static void CleanupTempFiles(string tempZipFile)
@@ -1652,34 +1545,11 @@ namespace HesapTakip
             {
                 if (File.Exists(tempZipFile))
                     File.Delete(tempZipFile);
-
-                string tempExtractPath = Path.Combine(Path.GetTempPath(), "HesapTakip_Update");
-                if (Directory.Exists(tempExtractPath))
-                    Directory.Delete(tempExtractPath, true);
-
-                string backupPath = Path.Combine(Path.GetTempPath(), "HesapTakip_Backup");
-                if (Directory.Exists(backupPath))
-                    Directory.Delete(backupPath, true);
             }
             catch
             {
                 // Temizlik hatasını görmezden gel
             }
-        }
-        private static void RestartApplication()
-        {
-            string currentExe = Process.GetCurrentProcess().MainModule.FileName;
-            string arguments = string.Join(" ", Environment.GetCommandLineArgs().Skip(1));
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = currentExe,
-                Arguments = arguments,
-                UseShellExecute = true,
-                WorkingDirectory = Environment.CurrentDirectory
-            });
-
-            Application.Exit();
         }
         private async void CheckUpdateButton_Click(object sender, EventArgs e)
         {
