@@ -14,12 +14,13 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.0.3.0</Version>
     <PackageVersion>1.0.0</PackageVersion>	  	    
     </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="ActivationForm_old.cs" />
+    <Compile Remove="AssemblyInfo.cs" />
     <Compile Remove="Form1.cs" />
     <Compile Remove="Form1.Designer.cs" />
     <Compile Remove="KontorForm.cs" />

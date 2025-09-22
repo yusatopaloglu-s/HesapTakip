@@ -34,12 +34,12 @@ namespace HesapTakip
             LoadSuggestions();
             dtpDate.Value = DateTime.Today;
             dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
-            if (!_versionChecked)
+         /*   if (!_versionChecked)
             {
                 _versionChecked = true;
                 _ = CheckForUpdate();
             }
-
+         */
         }
                        
         private MySqlConnection connection;       
@@ -1361,7 +1361,115 @@ namespace HesapTakip
             }
         }
 
-        public static async Task CheckForUpdate(IProgress<int> progress = null, IProgress<string> statusProgress = null)
+        /*    public static async Task CheckForUpdate(IProgress<int> progress = null, IProgress<string> statusProgress = null)
+            {
+                string repoOwner = "yusatopaloglu-s";
+                string repoName = "HesapTakip";
+
+                try
+                {
+                    using (var client = new HttpClient())
+                    {
+                        client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
+                        client.Timeout = TimeSpan.FromSeconds(30);
+
+                        // Versiyon kontrolü
+                        statusProgress?.Report("Versiyon kontrol ediliyor...");
+                        progress?.Report(10);
+
+                        var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
+                        dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                        string latestVersion = release.tag_name;
+                        string downloadUrl = release.assets[0].browser_download_url;
+
+                        // Versiyon karşılaştırması
+                        if (latestVersion != Application.ProductVersion)
+                        {
+                            statusProgress?.Report("Yeni sürüm bulundu...");
+                            progress?.Report(30);
+
+                            var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
+
+                            if (result == DialogResult.Yes)
+                            {
+                                await DownloadAndInstallUpdate(downloadUrl, progress, statusProgress);
+                            }
+                            else
+                            {
+                                progress?.Report(100);
+                                statusProgress?.Report("Güncelleme iptal edildi");
+                            }
+                        }
+                        else
+                        {
+                            progress?.Report(100);
+                            statusProgress?.Report("Uygulamanız güncel");
+                            MessageBox.Show("Uygulamanız güncel.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    statusProgress?.Report("Hata oluştu");
+                    MessageBox.Show($"Güncelleme kontrolü sırasında hata: {ex.Message}");
+                }
+            }
+        */
+
+        /* public static async Task CheckForUpdate(IProgress<int> progress = null, IProgress<string> statusProgress = null)
+       {
+           string repoOwner = "yusatopaloglu-s";
+           string repoName = "HesapTakip";
+
+           try
+           {
+               using (var client = new HttpClient())
+               {
+                   client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
+                   client.Timeout = TimeSpan.FromSeconds(30);
+
+                   statusProgress?.Report("Versiyon kontrol ediliyor...");
+                   progress?.Report(10);
+
+                   var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
+                   dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                   string latestVersion = release.tag_name;
+
+                   // Doğru versiyon bilgisini al
+                   Version currentVersion = GetCurrentVersion();
+                   Version gitVersion = ParseVersion(latestVersion);
+
+                   // Versiyon karşılaştırması
+                   if (gitVersion > currentVersion)
+                   {
+                       string downloadUrl = release.assets[0].browser_download_url;
+                       statusProgress?.Report("Yeni sürüm bulundu...");
+                       progress?.Report(30);
+
+                       var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nMevcut sürüm: {currentVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
+
+                       if (result == DialogResult.Yes)
+                       {
+                           await DownloadAndInstallUpdate(downloadUrl, progress, statusProgress);
+                       }
+                   }
+                   else
+                   {
+                       progress?.Report(100);
+                       statusProgress?.Report("Uygulamanız güncel");
+                       // MessageBox.Show("Uygulamanız güncel."); // Her açılışta göstermeyelim
+                   }
+               }
+           }
+           catch (Exception ex)
+           {
+               statusProgress?.Report("Hata oluştu");
+               MessageBox.Show($"Güncelleme kontrolü sırasında hata: {ex.Message}");
+           }
+       }
+       */
+
+        public static async Task CheckForUpdate(IProgress<int> progress, IProgress<string> statusProgress)
         {
             string repoOwner = "yusatopaloglu-s";
             string repoName = "HesapTakip";
@@ -1373,7 +1481,6 @@ namespace HesapTakip
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
                     client.Timeout = TimeSpan.FromSeconds(30);
 
-                    // Versiyon kontrolü
                     statusProgress?.Report("Versiyon kontrol ediliyor...");
                     progress?.Report(10);
 
@@ -1383,12 +1490,15 @@ namespace HesapTakip
                     string downloadUrl = release.assets[0].browser_download_url;
 
                     // Versiyon karşılaştırması
-                    if (latestVersion != Application.ProductVersion)
+                    Version currentVersion = GetCurrentVersion();
+                    Version gitVersion = ParseVersion(latestVersion);
+
+                    if (gitVersion > currentVersion)
                     {
                         statusProgress?.Report("Yeni sürüm bulundu...");
                         progress?.Report(30);
 
-                        var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
+                        var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nMevcut sürüm: {currentVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
 
                         if (result == DialogResult.Yes)
                         {
@@ -1398,23 +1508,94 @@ namespace HesapTakip
                         {
                             progress?.Report(100);
                             statusProgress?.Report("Güncelleme iptal edildi");
+
+                            await Task.Delay(2000);
+                            progress?.Report(0);
+                            statusProgress?.Report("");
                         }
                     }
                     else
                     {
                         progress?.Report(100);
                         statusProgress?.Report("Uygulamanız güncel");
+
+                        await Task.Delay(1000);
                         MessageBox.Show("Uygulamanız güncel.");
+
+                        await Task.Delay(1000);
+                        progress?.Report(0);
+                        statusProgress?.Report("");
                     }
                 }
             }
             catch (Exception ex)
             {
                 statusProgress?.Report("Hata oluştu");
+                progress?.Report(0);
                 MessageBox.Show($"Güncelleme kontrolü sırasında hata: {ex.Message}");
+
+                await Task.Delay(1000);
+                progress?.Report(0);
+                statusProgress?.Report("");
             }
         }
 
+        // Versiyon metodlarını da ekleyelim
+        private static Version GetCurrentVersion()
+        {
+            Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
+            if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
+                {
+                    return fileVersion;
+                }
+            }
+
+            return assemblyVersion ?? new Version(1, 0, 0);
+        }
+                
+        /*
+        // Mevcut versiyonu Assembly'den al
+        private static Version GetCurrentVersion()
+        {
+            // 1. Önce AssemblyVersion'ı dene
+            Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
+            // 2. Eğer AssemblyVersion boşsa, FileVersion'ı kullan
+            if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
+                {
+                    return fileVersion;
+                }
+            }
+
+            return assemblyVersion ?? new Version(1, 0, 0);
+        }
+        */
+        // Git tag'ını Version formatına parse et
+        private static Version ParseVersion(string versionString)
+        {
+            try
+            {
+                // "v1.2.3" formatını "1.2.3" yap
+                string cleanVersion = versionString.Trim().TrimStart('v', 'V');
+
+                // Sadece versiyon numarasını al (eğer başka karakterler varsa)
+                string versionOnly = System.Text.RegularExpressions.Regex.Match(cleanVersion, @"[\d\.]+").Value;
+
+                return Version.Parse(versionOnly);
+            }
+            catch
+            {
+                // Parse edilemezse varsayılan versiyon dön
+                return new Version(0, 0, 0);
+            }
+        }
         private static async Task DownloadAndInstallUpdate(string downloadUrl, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string tempZipFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(downloadUrl));
@@ -1472,10 +1653,13 @@ namespace HesapTakip
                     System.IO.Compression.ZipFile.ExtractToDirectory(tempZipFile, tempExtractPath);
 
                     // Güncelleme batch dosyasını oluştur ve çalıştır
-                    CreateAndRunUpdateBatch(tempExtractPath);
+                    CreateAndRunUpdateBatch(tempExtractPath, progress, statusProgress);
 
                     statusProgress?.Report("Güncelleme başlatılıyor...");
                     progress?.Report(100);
+
+                    // Progress bar'ı kapatmak için biraz bekle
+                    await Task.Delay(1000);
 
                     // Uygulamayı kapat (batch dosyası gerisini halleder)
                     Application.Exit();
@@ -1484,12 +1668,20 @@ namespace HesapTakip
             catch (Exception ex)
             {
                 statusProgress?.Report("Hata oluştu");
+                progress?.Report(0); // Hata durumunda progress'i sıfırla
+
+                // Hata mesajını göster ama progress bilgisini sıfırla
                 MessageBox.Show($"Güncelleme sırasında hata oluştu: {ex.Message}");
+
+                // Progress bar'ı temizle
+                statusProgress?.Report("");
+                progress?.Report(0);
+
                 CleanupTempFiles(tempZipFile);
             }
         }
 
-        private static void CreateAndRunUpdateBatch(string updateFilesPath)
+        private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
             string batchContent = $@"
@@ -1528,6 +1720,9 @@ exit
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
             File.WriteAllText(batchFile, batchContent, System.Text.Encoding.UTF8);
 
+            // Son durum güncellemesi
+            statusProgress?.Report("Güncelleme işlemi tamamlanıyor...");
+
             // Batch dosyasını çalıştır
             Process.Start(new ProcessStartInfo
             {
@@ -1551,21 +1746,38 @@ exit
                 // Temizlik hatasını görmezden gel
             }
         }
+
         private async void CheckUpdateButton_Click(object sender, EventArgs e)
         {
             // Progress bar'ı sıfırla ve göster
             progressBar1.Value = 0;
             progressBar1.Visible = true;
             statusLabel.Text = "Güncelleme kontrol ediliyor...";
+            statusLabel.Visible = true;
 
             var progress = new Progress<int>(percent =>
             {
-                progressBar1.Value = percent;
+                if (progressBar1.InvokeRequired)
+                {
+                    progressBar1.Invoke(new Action<int>(p => progressBar1.Value = p), percent);
+                }
+                else
+                {
+                    progressBar1.Value = percent;
+                }
             });
 
             var statusProgress = new Progress<string>(status =>
             {
-                statusLabel.Text = status;
+                if (statusLabel.InvokeRequired)
+                {
+                    statusLabel.Invoke(new Action<string>(s => statusLabel.Text = s), status);
+                }
+                else
+                {
+                    statusLabel.Text = status;
+                }
+                statusLabel.Visible = !string.IsNullOrEmpty(status);
             });
 
             try
@@ -1575,28 +1787,25 @@ exit
             catch (Exception ex)
             {
                 MessageBox.Show($"Hata: {ex.Message}");
+
+                // Hata durumunda progress bar'ı temizle
+                progressBar1.Value = 0;
+                progressBar1.Visible = false;
+                statusLabel.Text = "";
+                statusLabel.Visible = false;
             }
             finally
             {
                 // İşlem tamamlandığında progress bar'ı gizle
-                if (progressBar1.Value == 100)
+                if (progressBar1.Value == 100 || progressBar1.Value == 0)
                 {
-                    await Task.Delay(2000); // Tamamlandı mesajını göstermek için bekle
+                    await Task.Delay(2000);
                     progressBar1.Visible = false;
+                    statusLabel.Visible = false;
                 }
             }
         }
-
-
     }
 
+
 }
-
-
-
-
-
-
-
-
-
