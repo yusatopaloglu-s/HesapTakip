@@ -37,6 +37,8 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
+            statusLabel = new Label();
+            progressBar1 = new ProgressBar();
             btnSaveToDb = new Button();
             btnImportExcel = new Button();
             btnResetSettings = new Button();
@@ -66,6 +68,7 @@
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
+            güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
             modülToolStripMenuItem = new ToolStripMenuItem();
             eDefterKontorTakipToolStripMenuItem = new ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -174,6 +177,8 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(statusLabel);
+            gbTransactions.Controls.Add(progressBar1);
             gbTransactions.Controls.Add(btnSaveToDb);
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
@@ -197,6 +202,22 @@
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
+            // 
+            // statusLabel
+            // 
+            statusLabel.AutoSize = true;
+            statusLabel.Location = new Point(105, 545);
+            statusLabel.Name = "statusLabel";
+            statusLabel.Size = new Size(44, 15);
+            statusLabel.TabIndex = 18;
+            statusLabel.Text = "Durum";
+            // 
+            // progressBar1
+            // 
+            progressBar1.Location = new Point(6, 545);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(93, 15);
+            progressBar1.TabIndex = 17;
             // 
             // btnSaveToDb
             // 
@@ -514,7 +535,7 @@
             // 
             // veriTabanıYeriniSıfırlaToolStripMenuItem
             // 
-            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { veriTabanıYeriSıfırlaToolStripMenuItem });
+            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { veriTabanıYeriSıfırlaToolStripMenuItem, güncellemeKontrolEtToolStripMenuItem });
             veriTabanıYeriniSıfırlaToolStripMenuItem.Name = "veriTabanıYeriniSıfırlaToolStripMenuItem";
             veriTabanıYeriniSıfırlaToolStripMenuItem.Size = new Size(50, 20);
             veriTabanıYeriniSıfırlaToolStripMenuItem.Text = "Menü";
@@ -522,9 +543,16 @@
             // veriTabanıYeriSıfırlaToolStripMenuItem
             // 
             veriTabanıYeriSıfırlaToolStripMenuItem.Name = "veriTabanıYeriSıfırlaToolStripMenuItem";
-            veriTabanıYeriSıfırlaToolStripMenuItem.Size = new Size(184, 22);
+            veriTabanıYeriSıfırlaToolStripMenuItem.Size = new Size(192, 22);
             veriTabanıYeriSıfırlaToolStripMenuItem.Text = "Veri Tabanı Yeri Sıfırla";
             veriTabanıYeriSıfırlaToolStripMenuItem.Click += btnResetSettings_Click;
+            // 
+            // güncellemeKontrolEtToolStripMenuItem
+            // 
+            güncellemeKontrolEtToolStripMenuItem.Name = "güncellemeKontrolEtToolStripMenuItem";
+            güncellemeKontrolEtToolStripMenuItem.Size = new Size(192, 22);
+            güncellemeKontrolEtToolStripMenuItem.Text = "Güncelleme Kontrol Et";
+            güncellemeKontrolEtToolStripMenuItem.Click += CheckUpdateButton_Click;
             // 
             // modülToolStripMenuItem
             // 
@@ -617,5 +645,8 @@
         private Button btnSaveToDb;
         private ToolStripMenuItem modülToolStripMenuItem;
         private ToolStripMenuItem eDefterKontorTakipToolStripMenuItem;
+        private ToolStripMenuItem güncellemeKontrolEtToolStripMenuItem;
+        private ProgressBar progressBar1;
+        private Label statusLabel;
     }
 }

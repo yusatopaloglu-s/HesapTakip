@@ -1302,9 +1302,10 @@ namespace HesapTakip
             }
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private async void MainForm_Load(object sender, EventArgs e)
         {
-
+            // İsteğe bağlı: Uygulama başladığında sessizce kontrol et
+            await CheckForUpdate();
         }
 
         private void eDefterToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1354,44 +1355,175 @@ namespace HesapTakip
             }
         }
 
-        public static async Task CheckForUpdate()
+        public static async Task CheckForUpdate(IProgress<int> progress = null, IProgress<string> statusProgress = null)
         {
-            string repoOwner = "yusatopaloglu-s"; 
+            string repoOwner = "yusatopaloglu-s";
             string repoName = "HesapTakip";
-            using (var client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
-                var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
-                dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
-                string latestVersion = release.tag_name;
-                string downloadUrl = release.assets[0].browser_download_url;
 
-                // Versiyon karşılaştırması
-                if (latestVersion != Application.ProductVersion)
+            try
+            {
+                using (var client = new HttpClient())
                 {
-                    var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
-                    if (result == DialogResult.Yes)
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
+                    client.Timeout = TimeSpan.FromSeconds(30);
+
+                    // Versiyon kontrolü
+                    statusProgress?.Report("Versiyon kontrol ediliyor...");
+                    progress?.Report(10);
+
+                    var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
+                    dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                    string latestVersion = release.tag_name;
+                    string downloadUrl = release.assets[0].browser_download_url;
+
+                    // Versiyon karşılaştırması
+                    if (latestVersion != Application.ProductVersion)
                     {
-                        string tempFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(downloadUrl));
-                        using (var response = await client.GetAsync(downloadUrl))
-                        using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                        statusProgress?.Report("Yeni sürüm bulundu...");
+                        progress?.Report(30);
+
+                        var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
+
+                        if (result == DialogResult.Yes)
                         {
-                            await response.Content.CopyToAsync(fs);
+                            await DownloadAndInstallUpdate(downloadUrl, progress, statusProgress);
                         }
-                        Process.Start(tempFile);
-                        Application.Exit();
+                        else
+                        {
+                            progress?.Report(100);
+                            statusProgress?.Report("Güncelleme iptal edildi");
+                        }
+                    }
+                    else
+                    {
+                        progress?.Report(100);
+                        statusProgress?.Report("Uygulamanız güncel");
+                        MessageBox.Show("Uygulamanız güncel.");
                     }
                 }
-                else
+            }
+            catch (Exception ex)
+            {
+                statusProgress?.Report("Hata oluştu");
+                MessageBox.Show($"Güncelleme kontrolü sırasında hata: {ex.Message}");
+            }
+        }
+
+        private static async Task DownloadAndInstallUpdate(string downloadUrl, IProgress<int> progress, IProgress<string> statusProgress)
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(downloadUrl));
+
+            try
+            {
+                using (var client = new HttpClient())
                 {
-                    MessageBox.Show("Uygulamanız güncel.");
+                    client.Timeout = Timeout.InfiniteTimeSpan;
+
+                    statusProgress?.Report("Dosya indiriliyor...");
+                    progress?.Report(40);
+
+                    using (var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                    {
+                        response.EnsureSuccessStatusCode();
+
+                        var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                        var canReportProgress = totalBytes != -1;
+
+                        using (var contentStream = await response.Content.ReadAsStreamAsync())
+                        using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            var buffer = new byte[8192];
+                            var totalBytesRead = 0L;
+                            int bytesRead;
+
+                            while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            {
+                                await fs.WriteAsync(buffer, 0, bytesRead);
+                                totalBytesRead += bytesRead;
+
+                                if (canReportProgress)
+                                {
+                                    var progressPercentage = (int)((double)totalBytesRead / totalBytes * 100);
+                                    // İndirme progress'i 40-90 arasında olacak şekilde ayarla
+                                    var overallProgress = 40 + (int)(progressPercentage * 0.5);
+                                    progress?.Report(overallProgress);
+
+                                    statusProgress?.Report($"İndiriliyor: {progressPercentage}% ({totalBytesRead / 1024 / 1024} MB / {totalBytes / 1024 / 1024} MB)");
+                                }
+                            }
+                        }
+                    }
+
+                    statusProgress?.Report("Kurulum başlatılıyor...");
+                    progress?.Report(95);
+
+                    // Dosyayı çalıştır
+                    Process.Start(tempFile);
+
+                    statusProgress?.Report("Kurulum tamamlandı");
+                    progress?.Report(100);
+
+                    // Uygulamayı kapatmadan önce kısa bir bekleme
+                    await Task.Delay(1000);
+
+                    Application.Exit();
+                }
+            }
+            catch (Exception ex)
+            {
+                statusProgress?.Report("İndirme hatası");
+                MessageBox.Show($"İndirme sırasında hata oluştu: {ex.Message}");
+
+                // Hata durumunda geçici dosyayı sil
+                if (File.Exists(tempFile))
+                {
+                    try { File.Delete(tempFile); } catch { }
                 }
             }
         }
 
+        private async void CheckUpdateButton_Click(object sender, EventArgs e)
+        {
+            // Progress bar'ı sıfırla ve göster
+            progressBar1.Value = 0;
+            progressBar1.Visible = true;
+            statusLabel.Text = "Güncelleme kontrol ediliyor...";
+
+            var progress = new Progress<int>(percent =>
+            {
+                progressBar1.Value = percent;
+            });
+
+            var statusProgress = new Progress<string>(status =>
+            {
+                statusLabel.Text = status;
+            });
+
+            try
+            {
+                await CheckForUpdate(progress, statusProgress);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Hata: {ex.Message}");
+            }
+            finally
+            {
+                // İşlem tamamlandığında progress bar'ı gizle
+                if (progressBar1.Value == 100)
+                {
+                    await Task.Delay(2000); // Tamamlandı mesajını göstermek için bekle
+                    progressBar1.Visible = false;
+                }
+            }
+        }
+
+
     }
 
 }
+
+
 
 
 
