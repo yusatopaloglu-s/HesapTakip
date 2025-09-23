@@ -210,7 +210,7 @@
             linkLabel1.AutoSize = true;
             linkLabel1.Enabled = false;
             linkLabel1.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            linkLabel1.Location = new Point(438, 530);
+            linkLabel1.Location = new Point(455, 526);
             linkLabel1.Name = "linkLabel1";
             linkLabel1.Size = new Size(145, 15);
             linkLabel1.TabIndex = 7;

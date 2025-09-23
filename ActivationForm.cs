@@ -54,7 +54,7 @@ namespace HesapTakip
         public static class SecureKeyManager
         {
             private const string KEY_FILE_NAME = "secure.key";
-            private const string KEY_SALT = "FpUhTKmoiAbhG742HoLueneoFja1nMhJ";
+            private const string PASSWORD = "FpUhTKmoiAbhG742HoLueneoFja1nMhJ"; // Sabit şifre
 
             public static string GenerateSecureKeyFile()
             {
@@ -70,12 +70,8 @@ namespace HesapTakip
                         // Hardware ID ile anahtar ve IV'i birleştir
                         string keyData = $"{hardwareId}|{Convert.ToBase64String(aes.Key)}|{Convert.ToBase64String(aes.IV)}";
 
-                        // Anahtar dosyasını şifrele ve kaydet
-                        byte[] encryptedData = ProtectedData.Protect(
-                            Encoding.UTF8.GetBytes(keyData),
-                            Encoding.UTF8.GetBytes(KEY_SALT),
-                            DataProtectionScope.LocalMachine
-                        );
+                        // Password-based encryption ile şifrele
+                        byte[] encryptedData = EncryptWithPassword(keyData, PASSWORD);
 
                         File.WriteAllBytes(KEY_FILE_NAME, encryptedData);
 
@@ -103,13 +99,9 @@ namespace HesapTakip
                     }
 
                     byte[] encryptedData = File.ReadAllBytes(KEY_FILE_NAME);
-                    byte[] decryptedData = ProtectedData.Unprotect(
-                        encryptedData,
-                        Encoding.UTF8.GetBytes(KEY_SALT),
-                        DataProtectionScope.LocalMachine
-                    );
 
-                    string keyData = Encoding.UTF8.GetString(decryptedData);
+                    // Password-based decryption
+                    string keyData = DecryptWithPassword(encryptedData, PASSWORD);
                     string[] parts = keyData.Split('|');
 
                     if (parts.Length != 3)
@@ -122,16 +114,69 @@ namespace HesapTakip
                     aesKey = Convert.FromBase64String(parts[1]);
                     aesIV = Convert.FromBase64String(parts[2]);
 
-                    /* MessageBox.Show($"Yüklenen Hardware ID: {hardwareId}\n" +
-                                   $"Key: {Convert.ToBase64String(aesKey)}\n" +
-                                   $"IV: {Convert.ToBase64String(aesIV)}"); */
-
                     return true;
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Dosya yükleme hatası: {ex.Message}");
                     return false;
+                }
+            }
+            // Password-based encryption metodu
+            private static byte[] EncryptWithPassword(string plainText, string password)
+            {
+                using (Aes aes = Aes.Create())
+                {
+                    // SABIT salt ve iteration kullan
+                    byte[] salt = Encoding.UTF8.GetBytes("FpUhTKmoiAbhG742"); // 16 byte salt
+                    Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
+                    aes.Key = pbkdf2.GetBytes(32); // 256-bit key
+                    aes.IV = pbkdf2.GetBytes(16);  // 128-bit IV
+
+                    aes.Padding = PaddingMode.PKCS7;
+                    aes.Mode = CipherMode.CBC;
+
+                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        using (CryptoStream cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                        {
+                            byte[] data = Encoding.UTF8.GetBytes(plainText);
+                            cs.Write(data, 0, data.Length);
+                            cs.FlushFinalBlock();
+                        }
+                        return ms.ToArray();
+                    }
+                }
+            }
+
+            // Password-based decryption metodu
+            private static string DecryptWithPassword(byte[] encryptedData, string password)
+            {
+                using (Aes aes = Aes.Create())
+                {
+                    // AYNI salt ve iteration
+                    byte[] salt = Encoding.UTF8.GetBytes("FpUhTKmoiAbhG742"); // 16 byte salt
+                    Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
+                    aes.Key = pbkdf2.GetBytes(32);
+                    aes.IV = pbkdf2.GetBytes(16);
+
+                    aes.Padding = PaddingMode.PKCS7;
+                    aes.Mode = CipherMode.CBC;
+
+                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+
+                    using (MemoryStream ms = new MemoryStream(encryptedData))
+                    {
+                        using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                        {
+                            using (StreamReader sr = new StreamReader(cs, Encoding.UTF8))
+                            {
+                                return sr.ReadToEnd();
+                            }
+                        }
+                    }
                 }
             }
 
@@ -153,6 +198,7 @@ namespace HesapTakip
                 throw new InvalidOperationException("IV yüklenemedi");
             }
         }
+
         public class LicenseValidator
         {
             public static bool ValidateLicense(string licenseKey, out DateTime expiryDate)
@@ -272,7 +318,7 @@ namespace HesapTakip
             }
         }
 
-        private bool ValidateLicenseWithKey(string licenseKey, byte[] aesKey, byte[] aesIV, out DateTime expiryDate)
+       private bool ValidateLicenseWithKey(string licenseKey, byte[] aesKey, byte[] aesIV, out DateTime expiryDate)
         {
             expiryDate = DateTime.MinValue;
 
