@@ -22,7 +22,7 @@ namespace HesapTakip
         public EDefterForm()
         {
             InitializeComponent();
-            connectionString = Properties.Settings.Default.DatabasePath;
+            connectionString = AppConfigHelper.DatabasePath;
             InitializeDatabase();
             connection = new MySqlConnection(connectionString);
             LoadCustomers();
