@@ -29,117 +29,124 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EDefterForm));
-            customerPanel = new Panel();
             dgvFirmaList = new DataGridView();
-            label4 = new Label();
-            dgvCustomers = new DataGridView();
-            panel1 = new Panel();
-            txtkontor = new TextBox();
-            gbKontor = new GroupBox();
-            lblTotal = new Label();
-            dgvKontorList = new DataGridView();
-            dtpDate = new DateTimePicker();
             btnekle = new Button();
             btnsil = new Button();
             btnedit = new Button();
             btnhepsi1 = new Button();
             btncikar = new Button();
-            customerPanel.SuspendLayout();
+            gbKontor = new GroupBox();
+            txtkontor = new TextBox();
+            lblTotal = new Label();
+            dgvKontorList = new DataGridView();
+            dtpDate = new DateTimePicker();
+            gb_edeftermusteri = new GroupBox();
             ((System.ComponentModel.ISupportInitialize)dgvFirmaList).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
-            panel1.SuspendLayout();
             gbKontor.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvKontorList).BeginInit();
+            gb_edeftermusteri.SuspendLayout();
             SuspendLayout();
-            // 
-            // customerPanel
-            // 
-            customerPanel.AutoSize = true;
-            customerPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            customerPanel.Controls.Add(dgvFirmaList);
-            customerPanel.Controls.Add(label4);
-            customerPanel.Controls.Add(dgvCustomers);
-            customerPanel.Location = new Point(0, 12);
-            customerPanel.Name = "customerPanel";
-            customerPanel.Size = new Size(261, 494);
-            customerPanel.TabIndex = 0;
             // 
             // dgvFirmaList
             // 
             dgvFirmaList.AllowUserToAddRows = false;
+            dgvFirmaList.AllowUserToDeleteRows = false;
             dgvFirmaList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvFirmaList.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvFirmaList.BackgroundColor = SystemColors.Control;
             dgvFirmaList.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvFirmaList.ColumnHeadersVisible = false;
-            dgvFirmaList.Location = new Point(3, 19);
+            dgvFirmaList.Location = new Point(0, 15);
             dgvFirmaList.Name = "dgvFirmaList";
             dgvFirmaList.ReadOnly = true;
             dgvFirmaList.RowHeadersVisible = false;
             dgvFirmaList.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             dgvFirmaList.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvFirmaList.Size = new Size(255, 472);
+            dgvFirmaList.Size = new Size(213, 528);
             dgvFirmaList.TabIndex = 5;
             dgvFirmaList.SelectionChanged += dgvCustomers_SelectionChanged;
             // 
-            // label4
+            // btnekle
             // 
-            label4.AutoSize = true;
-            label4.Location = new Point(80, 0);
-            label4.Name = "label4";
-            label4.Size = new Size(82, 15);
-            label4.TabIndex = 4;
-            label4.Text = "Müşteri Listesi";
+            btnekle.Location = new Point(460, 85);
+            btnekle.Name = "btnekle";
+            btnekle.Size = new Size(58, 23);
+            btnekle.TabIndex = 2;
+            btnekle.Text = "+";
+            btnekle.UseVisualStyleBackColor = true;
+            btnekle.Click += btnekle_Click;
             // 
-            // dgvCustomers
+            // btnsil
             // 
-            dgvCustomers.AllowUserToAddRows = false;
-            dgvCustomers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvCustomers.BackgroundColor = SystemColors.Control;
-            dgvCustomers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvCustomers.ColumnHeadersVisible = false;
-            dgvCustomers.Location = new Point(0, 19);
-            dgvCustomers.Name = "dgvCustomers";
-            dgvCustomers.ReadOnly = true;
-            dgvCustomers.RowHeadersVisible = false;
-            dgvCustomers.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
-            dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvCustomers.Size = new Size(255, 472);
-            dgvCustomers.TabIndex = 0;
+            btnsil.Location = new Point(524, 114);
+            btnsil.Name = "btnsil";
+            btnsil.Size = new Size(55, 23);
+            btnsil.TabIndex = 3;
+            btnsil.Text = "Sil";
+            btnsil.UseVisualStyleBackColor = true;
+            btnsil.Click += btnsil_Click;
             // 
-            // panel1
+            // btnedit
             // 
-            panel1.Controls.Add(txtkontor);
-            panel1.Controls.Add(gbKontor);
-            panel1.Location = new Point(267, 12);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(457, 552);
-            panel1.TabIndex = 1;
+            btnedit.Location = new Point(460, 114);
+            btnedit.Name = "btnedit";
+            btnedit.Size = new Size(58, 23);
+            btnedit.TabIndex = 4;
+            btnedit.Text = "Düzelt";
+            btnedit.UseVisualStyleBackColor = true;
+            btnedit.Visible = false;
+            // 
+            // btnhepsi1
+            // 
+            btnhepsi1.Location = new Point(460, 143);
+            btnhepsi1.Name = "btnhepsi1";
+            btnhepsi1.Size = new Size(119, 23);
+            btnhepsi1.TabIndex = 5;
+            btnhepsi1.Text = "Hepsinden 1 Düş";
+            btnhepsi1.UseVisualStyleBackColor = true;
+            btnhepsi1.Click += btnhepsi1_Click;
+            // 
+            // btncikar
+            // 
+            btncikar.Location = new Point(524, 85);
+            btncikar.Name = "btncikar";
+            btncikar.Size = new Size(55, 23);
+            btncikar.TabIndex = 6;
+            btncikar.Text = "-";
+            btncikar.UseVisualStyleBackColor = true;
+            btncikar.Click += btncikar_Click;
+            // 
+            // gbKontor
+            // 
+            gbKontor.AutoSize = true;
+            gbKontor.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbKontor.Controls.Add(btncikar);
+            gbKontor.Controls.Add(txtkontor);
+            gbKontor.Controls.Add(btnhepsi1);
+            gbKontor.Controls.Add(lblTotal);
+            gbKontor.Controls.Add(btnedit);
+            gbKontor.Controls.Add(dgvKontorList);
+            gbKontor.Controls.Add(btnsil);
+            gbKontor.Controls.Add(dtpDate);
+            gbKontor.Controls.Add(btnekle);
+            gbKontor.Location = new Point(231, 27);
+            gbKontor.Name = "gbKontor";
+            gbKontor.Size = new Size(585, 526);
+            gbKontor.TabIndex = 4;
+            gbKontor.TabStop = false;
+            gbKontor.Text = "e-Defter Kontor";
             // 
             // txtkontor
             // 
-            txtkontor.Location = new Point(357, 61);
+            txtkontor.Location = new Point(354, 56);
             txtkontor.Name = "txtkontor";
             txtkontor.Size = new Size(100, 23);
             txtkontor.TabIndex = 2;
             // 
-            // gbKontor
-            // 
-            gbKontor.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            gbKontor.Controls.Add(lblTotal);
-            gbKontor.Controls.Add(dgvKontorList);
-            gbKontor.Controls.Add(dtpDate);
-            gbKontor.Dock = DockStyle.Fill;
-            gbKontor.Location = new Point(0, 0);
-            gbKontor.Name = "gbKontor";
-            gbKontor.Size = new Size(457, 552);
-            gbKontor.TabIndex = 4;
-            gbKontor.TabStop = false;
-            gbKontor.Text = "Kontor";
-            // 
             // lblTotal
             // 
             lblTotal.AutoSize = true;
-            lblTotal.Location = new Point(354, 494);
+            lblTotal.Location = new Point(354, 492);
             lblTotal.Name = "lblTotal";
             lblTotal.Size = new Size(55, 15);
             lblTotal.TabIndex = 3;
@@ -147,9 +154,13 @@
             // 
             // dgvKontorList
             // 
+            dgvKontorList.AllowUserToAddRows = false;
+            dgvKontorList.AllowUserToDeleteRows = false;
+            dgvKontorList.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvKontorList.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvKontorList.BackgroundColor = SystemColors.Control;
             dgvKontorList.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvKontorList.Location = new Point(0, 87);
+            dgvKontorList.Location = new Point(6, 85);
             dgvKontorList.Name = "dgvKontorList";
             dgvKontorList.Size = new Size(451, 404);
             dgvKontorList.TabIndex = 0;
@@ -162,87 +173,40 @@
             dtpDate.CalendarMonthBackground = SystemColors.WindowFrame;
             dtpDate.CustomFormat = "dd.MM.yyyy";
             dtpDate.Format = DateTimePickerFormat.Custom;
-            dtpDate.Location = new Point(230, 32);
+            dtpDate.Location = new Point(354, 22);
             dtpDate.Name = "dtpDate";
             dtpDate.RightToLeftLayout = true;
-            dtpDate.Size = new Size(224, 23);
+            dtpDate.Size = new Size(100, 23);
             dtpDate.TabIndex = 1;
             dtpDate.Value = new DateTime(2025, 1, 1, 0, 0, 0, 0);
             // 
-            // btnekle
+            // gb_edeftermusteri
             // 
-            btnekle.Location = new Point(730, 102);
-            btnekle.Name = "btnekle";
-            btnekle.Size = new Size(55, 23);
-            btnekle.TabIndex = 2;
-            btnekle.Text = "+";
-            btnekle.UseVisualStyleBackColor = true;
-            btnekle.Click += btnekle_Click;
-            // 
-            // btnsil
-            // 
-            btnsil.Location = new Point(791, 131);
-            btnsil.Name = "btnsil";
-            btnsil.Size = new Size(55, 23);
-            btnsil.TabIndex = 3;
-            btnsil.Text = "Sil";
-            btnsil.UseVisualStyleBackColor = true;
-            btnsil.Click += btnsil_Click;
-            // 
-            // btnedit
-            // 
-            btnedit.Location = new Point(727, 131);
-            btnedit.Name = "btnedit";
-            btnedit.Size = new Size(58, 23);
-            btnedit.TabIndex = 4;
-            btnedit.Text = "Düzelt";
-            btnedit.UseVisualStyleBackColor = true;
-            btnedit.Visible = false;
-            // 
-            // btnhepsi1
-            // 
-            btnhepsi1.Location = new Point(727, 160);
-            btnhepsi1.Name = "btnhepsi1";
-            btnhepsi1.Size = new Size(119, 23);
-            btnhepsi1.TabIndex = 5;
-            btnhepsi1.Text = "Hepsinden 1 Düş";
-            btnhepsi1.UseVisualStyleBackColor = true;
-            btnhepsi1.Click += btnhepsi1_Click;
-            // 
-            // btncikar
-            // 
-            btncikar.Location = new Point(791, 102);
-            btncikar.Name = "btncikar";
-            btncikar.Size = new Size(55, 23);
-            btncikar.TabIndex = 6;
-            btncikar.Text = "-";
-            btncikar.UseVisualStyleBackColor = true;
-            btncikar.Click += btncikar_Click;
+            gb_edeftermusteri.AutoSize = true;
+            gb_edeftermusteri.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gb_edeftermusteri.Controls.Add(dgvFirmaList);
+            gb_edeftermusteri.Location = new Point(12, 27);
+            gb_edeftermusteri.Name = "gb_edeftermusteri";
+            gb_edeftermusteri.Size = new Size(219, 565);
+            gb_edeftermusteri.TabIndex = 1;
+            gb_edeftermusteri.TabStop = false;
+            gb_edeftermusteri.Text = "Müşteri Listesi";
             // 
             // EDefterForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(878, 566);
-            Controls.Add(btncikar);
-            Controls.Add(btnhepsi1);
-            Controls.Add(btnedit);
-            Controls.Add(btnsil);
-            Controls.Add(btnekle);
-            Controls.Add(panel1);
-            Controls.Add(customerPanel);
+            ClientSize = new Size(823, 574);
+            Controls.Add(gbKontor);
+            Controls.Add(gb_edeftermusteri);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "EDefterForm";
             Text = "e-Defter Kontor Takip";
-            customerPanel.ResumeLayout(false);
-            customerPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvFirmaList).EndInit();
-            ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
             gbKontor.ResumeLayout(false);
             gbKontor.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvKontorList).EndInit();
+            gb_edeftermusteri.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -250,7 +214,6 @@
         #endregion
 
         private Panel customerPanel;
-        private Label label4;
         private DataGridView dgvCustomers;
         private DataGridView dgvFirmaList;
         private Panel panel1;
@@ -264,5 +227,8 @@
         public DateTimePicker dtpDate;
         private Button btnhepsi1;
         private Button btncikar;
+        private SplitContainer splitContainer1;
+        private GroupBox groupBox1;
+        private GroupBox gb_edeftermusteri;
     }
 }

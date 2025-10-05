@@ -1,0 +1,642 @@
+﻿using System.Data;
+using System.Data.SQLite;
+using System.Diagnostics;
+
+namespace HesapTakip
+{
+    public class SqliteOperations : IDatabaseOperations
+    {
+        private string _connectionString;
+
+        public SqliteOperations(string connectionString)
+        {
+            Debug.WriteLine($"SqliteOperations constructor called with: {connectionString}");
+            _connectionString = connectionString;
+            EnsureDatabaseFile();
+        }
+
+
+        private void EnsureDatabaseFile()
+        {
+            try
+            {
+                // Connection string'den dosya yolunu al
+                string dataSource = GetDataSourceFromConnectionString();
+
+                if (string.IsNullOrEmpty(dataSource))
+                {
+                    throw new ArgumentException("Geçersiz SQLite connection string: Data Source bulunamadı");
+                }
+
+                // Dizin yoksa oluştur
+                string directory = Path.GetDirectoryName(dataSource);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                    Debug.WriteLine($"Dizin oluşturuldu: {directory}");
+                }
+
+                // Dosya yoksa oluştur
+                if (!File.Exists(dataSource))
+                {
+                    SQLiteConnection.CreateFile(dataSource);
+                    Debug.WriteLine($"SQLite database oluşturuldu: {dataSource}");
+
+                    // Tabloları oluştur
+                    InitializeDatabase();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SQLite database dosyası oluşturulamadı: {ex.Message}");
+                throw;
+            }
+        }
+
+        private string GetDataSourceFromConnectionString()
+        {
+            try
+            {
+                // Connection string'i parse et
+                var builder = new SQLiteConnectionStringBuilder(_connectionString);
+                return builder.DataSource;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Connection string parse hatası: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        public bool TestConnection()
+        {
+            try
+            {
+                Debug.WriteLine("SQLite TestConnection başlıyor...");
+                Debug.WriteLine($"SQLite Connection String: {_connectionString}");
+
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+                    Debug.WriteLine("SQLite bağlantısı açıldı");
+
+                    // Basit bir test sorgusu
+                    using (var cmd = new SQLiteCommand("SELECT 1", conn))
+                    {
+                        var result = cmd.ExecuteScalar();
+                        Debug.WriteLine($"SQLite test sorgusu sonucu: {result}");
+                    }
+
+                    // Tabloları kontrol et
+                    using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table'", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        Debug.WriteLine("Mevcut tablolar:");
+                        while (reader.Read())
+                        {
+                            Debug.WriteLine($" - {reader[0]}");
+                        }
+                    }
+
+                    Debug.WriteLine("SQLite bağlantı testi başarılı.");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SQLite bağlantı testi hatası: {ex.Message}");
+                Debug.WriteLine($"Hata türü: {ex.GetType()}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                return false;
+            }
+        }
+
+        public void InitializeDatabase()
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+
+                // Customers tablosu - SQLite uyumlu
+                EnsureTableAndColumns("Customers", new Dictionary<string, string>
+                {
+                    { "CustomerID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                    { "Name", "TEXT NOT NULL" },
+                    { "EDefter", "INTEGER DEFAULT 0" }
+                }, conn);
+
+                // Transactions tablosu - SQLite uyumlu
+                EnsureTableAndColumns("Transactions", new Dictionary<string, string>
+                {
+                    { "TransactionID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                    { "CustomerID", "INTEGER" },
+                    { "Date", "DATETIME" },
+                    { "Description", "TEXT" },
+                    { "Amount", "DECIMAL(18,2)" },
+                    { "Type", "TEXT" },
+                    { "IsDeleted", "INTEGER DEFAULT 0" }
+                }, conn);
+
+                // EDefterTakip tablosu - SQLite uyumlu
+                EnsureTableAndColumns("EDefterTakip", new Dictionary<string, string>
+                {
+                    { "TransactionID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                    { "CustomerID", "INTEGER" },
+                    { "Date", "DATETIME" },
+                    { "Kontor", "DECIMAL(18,2)" },
+                    { "Type", "TEXT NOT NULL" }
+                }, conn);
+
+                // Suggestions tablosu - SQLite uyumlu
+                EnsureTableAndColumns("Suggestions", new Dictionary<string, string>
+                {
+                    { "SuggestionID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                    { "Description", "TEXT NOT NULL UNIQUE" },
+                    { "CreatedDate", "DATETIME DEFAULT CURRENT_TIMESTAMP" }
+                }, conn);
+            }
+        }
+
+        public IDbConnection GetConnection()
+        {
+            return new SQLiteConnection(_connectionString);
+        }
+
+        public DataTable GetCustomers()
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT * FROM Customers", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddCustomer(string name, bool edefter)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "INSERT INTO Customers (Name, EDefter) VALUES (@name, @edefter)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", name.Trim());
+                    cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite AddCustomer hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool UpdateCustomer(int customerId, string newName, bool edefter)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "UPDATE Customers SET Name = @name, EDefter = @edefter WHERE CustomerID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", newName);
+                    cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@id", customerId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite UpdateCustomer hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool DeleteCustomer(int customerId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Önce Transactions tablosundan sil
+                            using (var cmd1 = new SQLiteCommand("DELETE FROM Transactions WHERE CustomerID = @id", conn, transaction))
+                            {
+                                cmd1.Parameters.AddWithValue("@id", customerId);
+                                cmd1.ExecuteNonQuery();
+                            }
+
+                            // Sonra Customers tablosundan sil
+                            using (var cmd2 = new SQLiteCommand("DELETE FROM Customers WHERE CustomerID = @id", conn, transaction))
+                            {
+                                cmd2.Parameters.AddWithValue("@id", customerId);
+                                cmd2.ExecuteNonQuery();
+                            }
+
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite DeleteCustomer hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public DataTable GetTransactions(int customerId)
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter(
+                "SELECT TransactionID, Date, Description, Amount, Type FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0 ORDER BY Date ASC",
+                conn))
+            {
+                adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerId);
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    @"INSERT INTO Transactions (CustomerID, Date, Description, Amount, Type) 
+                      VALUES (@cid, @date, @desc, @amount, @type)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@cid", customerId);
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    cmd.Parameters.AddWithValue("@amount", amount);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite AddTransaction hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    @"UPDATE Transactions SET Date = @date, Description = @desc, 
+                      Amount = @amount, Type = @type WHERE TransactionID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    cmd.Parameters.AddWithValue("@amount", amount);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@id", transactionId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite UpdateTransaction hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool DeleteTransaction(int transactionId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "UPDATE Transactions SET IsDeleted = 1 WHERE TransactionID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", transactionId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite DeleteTransaction hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public List<string> GetSuggestions()
+        {
+            var suggestions = new List<string>();
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand("SELECT Description FROM Suggestions", conn))
+                {
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                            suggestions.Add(reader["Description"].ToString());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite GetSuggestions hatası: {ex.Message}");
+            }
+            return suggestions;
+        }
+
+        public bool AddSuggestion(string description)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@desc", description.Trim());
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite AddSuggestion hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool RemoveSuggestion(string description)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "DELETE FROM Suggestions WHERE Description = @desc", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    return rowsAffected > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite RemoveSuggestion hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public decimal CalculateTotalBalance(int customerId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
+                      FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@customerID", customerId);
+                    var result = cmd.ExecuteScalar();
+                    return result != DBNull.Value && result != null ? Convert.ToDecimal(result) : 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite CalculateTotalBalance hatası: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns)
+        {
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                EnsureTableAndColumns(tableName, columns, conn);
+            }
+        }
+
+        private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns, SQLiteConnection conn)
+        {
+            using (var cmd = new SQLiteCommand())
+            {
+                cmd.Connection = conn;
+
+                try
+                {
+                    // Tablo var mı kontrolü - SQLite syntax
+                    cmd.CommandText = $"SELECT name FROM sqlite_master WHERE type='table' AND name=@tableName";
+                    cmd.Parameters.AddWithValue("@tableName", tableName);
+                    var exists = cmd.ExecuteScalar() != null;
+
+                    if (!exists)
+                    {
+                        var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
+                        cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef})";
+                        cmd.Parameters.Clear();
+                        cmd.ExecuteNonQuery();
+                        Debug.WriteLine($"{tableName} tablosu oluşturuldu.");
+                    }
+                    else
+                    {
+                        // Kolon kontrolü - SQLite syntax
+                        cmd.CommandText = $"PRAGMA table_info({tableName})";
+                        cmd.Parameters.Clear();
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            var existingColumns = new HashSet<string>();
+                            while (reader.Read())
+                            {
+                                existingColumns.Add(reader["name"].ToString());
+                            }
+
+                            foreach (var kv in columns)
+                            {
+                                if (!existingColumns.Contains(kv.Key))
+                                {
+                                    // SQLite'da ALTER TABLE ADD COLUMN
+                                    cmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {kv.Key} {kv.Value}";
+                                    try
+                                    {
+                                        cmd.ExecuteNonQuery();
+                                        Debug.WriteLine($"{tableName} tablosuna {kv.Key} sütunu eklendi.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Debug.WriteLine($"{tableName}.{kv.Key} sütunu eklenirken hata: {ex.Message}");
+                                    }
+                                    finally
+                                    {
+                                        cmd.Parameters.Clear();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"EnsureTableAndColumns hatası ({tableName}): {ex.Message}");
+                    throw;
+                }
+            }
+        }
+
+        public bool DeleteEDefterTransaction(int transactionId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "DELETE FROM EDefterTakip WHERE TransactionID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", transactionId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite DeleteEDefterTransaction hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public decimal CalculateEDefterTotal(int customerId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    @"SELECT SUM(Kontor * CASE WHEN Type = 'ekle' THEN 1 ELSE -1 END) 
+              FROM EDefterTakip WHERE CustomerID = @customerID", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@customerID", customerId);
+                    var result = cmd.ExecuteScalar();
+                    return result != DBNull.Value && result != null ? Convert.ToDecimal(result) : 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite CalculateEDefterTotal hatası: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public bool BulkUpdateEDefterTransactions(List<EDefterTransaction> transactions)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                {
+                    conn.Open();
+
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            foreach (var trans in transactions)
+                            {
+                                using (var cmd = new SQLiteCommand(
+                                    @"INSERT INTO EDefterTakip (CustomerID, Date, Kontor, Type) 
+                              VALUES (@cid, @date, @kontor, @type)", conn, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@cid", trans.CustomerID);
+                                    cmd.Parameters.AddWithValue("@date", trans.Date);
+                                    cmd.Parameters.AddWithValue("@kontor", trans.Kontor);
+                                    cmd.Parameters.AddWithValue("@type", trans.Type);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            System.Diagnostics.Debug.WriteLine($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public DataTable GetEDefterTransactions(int customerId)
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter(
+                "SELECT TransactionID, Date, Kontor, Type FROM EDefterTakip WHERE CustomerID = @customerID ORDER BY Date ASC",
+                conn))
+            {
+                adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerId);
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddEDefterTransaction(int customerId, DateTime date, decimal kontor, string type)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    @"INSERT INTO EDefterTakip (CustomerID, Date, Kontor, Type) 
+              VALUES (@cid, @date, @kontor, @type)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@cid", customerId);
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@kontor", kontor);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SQLite AddEDefterTransaction hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+    }
+}

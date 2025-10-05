@@ -4,6 +4,7 @@ namespace HesapTakip
 {
     public interface IDatabaseOperations
     {
+        // Bağlantı ve initialization
         bool TestConnection();
         void InitializeDatabase();
         IDbConnection GetConnection();
@@ -30,5 +31,21 @@ namespace HesapTakip
 
         // Tablo ve kolon kontrolü
         void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns);
+        // E-DEFTER İŞLEMLERİ 
+        DataTable GetEDefterTransactions(int customerId);
+        bool AddEDefterTransaction(int customerId, DateTime date, decimal kontor, string type);
+        bool DeleteEDefterTransaction(int transactionId);
+        decimal CalculateEDefterTotal(int customerId);
+        bool BulkUpdateEDefterTransactions(List<EDefterTransaction> transactions);
+    }
+
+    // E-Defter işlemleri için yardımcı sınıf
+    public class EDefterTransaction
+    {
+        public int CustomerID { get; set; }
+        public DateTime Date { get; set; }
+        public decimal Kontor { get; set; }
+        public string Type { get; set; } // "ekle" veya "cikar"
     }
 }
+

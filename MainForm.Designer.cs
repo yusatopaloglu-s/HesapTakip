@@ -37,7 +37,11 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
-            linkLabel1 = new LinkLabel();
+            link_yusa = new LinkLabel();
+            statusStrip1 = new StatusStrip();
+            progressBar1 = new ToolStripProgressBar();
+            statusLabel = new ToolStripStatusLabel();
+            toolStripStatusLabelVersion = new ToolStripStatusLabel();
             btnSaveToDb = new Button();
             btnImportExcel = new Button();
             btnResetSettings = new Button();
@@ -63,10 +67,6 @@
             label1 = new Label();
             dgvTransactions = new DataGridView();
             lstSuggestions = new ListBox();
-            statusStrip1 = new StatusStrip();
-            progressBar1 = new ToolStripProgressBar();
-            statusLabel = new ToolStripStatusLabel();
-            toolStripStatusLabelVersion = new ToolStripStatusLabel();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
@@ -80,17 +80,17 @@
             customerPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             gbTransactions.SuspendLayout();
+            statusStrip1.SuspendLayout();
             tableLayoutPanel2.SuspendLayout();
             totalPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
-            statusStrip1.SuspendLayout();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // splitContainer1
             // 
-            splitContainer1.Dock = DockStyle.Fill;
+            splitContainer1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             splitContainer1.Location = new Point(0, 24);
             splitContainer1.Name = "splitContainer1";
             // 
@@ -101,8 +101,8 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(gbTransactions);
-            splitContainer1.Size = new Size(884, 563);
-            splitContainer1.SplitterDistance = 268;
+            splitContainer1.Size = new Size(866, 569);
+            splitContainer1.SplitterDistance = 261;
             splitContainer1.TabIndex = 0;
             // 
             // customerPanel
@@ -117,13 +117,13 @@
             customerPanel.Dock = DockStyle.Fill;
             customerPanel.Location = new Point(0, 0);
             customerPanel.Name = "customerPanel";
-            customerPanel.Size = new Size(268, 563);
+            customerPanel.Size = new Size(261, 569);
             customerPanel.TabIndex = 0;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(80, 0);
+            label4.Location = new Point(90, 1);
             label4.Name = "label4";
             label4.Size = new Size(82, 15);
             label4.TabIndex = 4;
@@ -131,7 +131,8 @@
             // 
             // btnEditCustomer
             // 
-            btnEditCustomer.Location = new Point(122, 497);
+            btnEditCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnEditCustomer.Location = new Point(128, 514);
             btnEditCustomer.Name = "btnEditCustomer";
             btnEditCustomer.Size = new Size(116, 23);
             btnEditCustomer.TabIndex = 3;
@@ -141,7 +142,8 @@
             // 
             // btnDeleteCustomer
             // 
-            btnDeleteCustomer.Location = new Point(3, 526);
+            btnDeleteCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnDeleteCustomer.Location = new Point(6, 543);
             btnDeleteCustomer.Name = "btnDeleteCustomer";
             btnDeleteCustomer.Size = new Size(113, 23);
             btnDeleteCustomer.TabIndex = 2;
@@ -151,7 +153,8 @@
             // 
             // btnAddCustomer
             // 
-            btnAddCustomer.Location = new Point(0, 497);
+            btnAddCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnAddCustomer.Location = new Point(6, 514);
             btnAddCustomer.Name = "btnAddCustomer";
             btnAddCustomer.Size = new Size(116, 23);
             btnAddCustomer.TabIndex = 1;
@@ -162,7 +165,10 @@
             // dgvCustomers
             // 
             dgvCustomers.AllowUserToAddRows = false;
+            dgvCustomers.AllowUserToDeleteRows = false;
+            dgvCustomers.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             dgvCustomers.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvCustomers.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvCustomers.BackgroundColor = SystemColors.Control;
             dgvCustomers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvCustomers.ColumnHeadersVisible = false;
@@ -172,7 +178,7 @@
             dgvCustomers.RowHeadersVisible = false;
             dgvCustomers.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvCustomers.Size = new Size(265, 472);
+            dgvCustomers.Size = new Size(261, 489);
             dgvCustomers.TabIndex = 0;
             dgvCustomers.SelectionChanged += dgvCustomers_SelectionChanged;
             // 
@@ -180,7 +186,8 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            gbTransactions.Controls.Add(linkLabel1);
+            gbTransactions.Controls.Add(link_yusa);
+            gbTransactions.Controls.Add(statusStrip1);
             gbTransactions.Controls.Add(btnSaveToDb);
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
@@ -196,26 +203,51 @@
             gbTransactions.Controls.Add(tableLayoutPanel1);
             gbTransactions.Controls.Add(dgvTransactions);
             gbTransactions.Controls.Add(lstSuggestions);
-            gbTransactions.Controls.Add(statusStrip1);
             gbTransactions.Dock = DockStyle.Fill;
             gbTransactions.Location = new Point(0, 0);
             gbTransactions.Name = "gbTransactions";
-            gbTransactions.Size = new Size(612, 563);
+            gbTransactions.Size = new Size(601, 569);
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
             // 
-            // linkLabel1
+            // link_yusa
             // 
-            linkLabel1.AutoSize = true;
-            linkLabel1.Enabled = false;
-            linkLabel1.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            linkLabel1.Location = new Point(455, 526);
-            linkLabel1.Name = "linkLabel1";
-            linkLabel1.Size = new Size(145, 15);
-            linkLabel1.TabIndex = 7;
-            linkLabel1.TabStop = true;
-            linkLabel1.Text = "SMMM YUŞA TOPALOĞLU";
+            link_yusa.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            link_yusa.AutoSize = true;
+            link_yusa.Enabled = false;
+            link_yusa.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            link_yusa.Location = new Point(438, 536);
+            link_yusa.Name = "link_yusa";
+            link_yusa.Size = new Size(145, 15);
+            link_yusa.TabIndex = 7;
+            link_yusa.TabStop = true;
+            link_yusa.Text = "SMMM YUŞA TOPALOĞLU";
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion });
+            statusStrip1.Location = new Point(3, 544);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(595, 22);
+            statusStrip1.TabIndex = 19;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // progressBar1
+            // 
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(100, 16);
+            // 
+            // statusLabel
+            // 
+            statusLabel.Name = "statusLabel";
+            statusLabel.Size = new Size(44, 17);
+            statusLabel.Text = "Durum";
+            // 
+            // toolStripStatusLabelVersion
+            // 
+            toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
+            toolStripStatusLabelVersion.Size = new Size(0, 17);
             // 
             // btnSaveToDb
             // 
@@ -374,16 +406,18 @@
             // 
             // totalPanel
             // 
+            totalPanel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            totalPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             totalPanel.Controls.Add(lblTotal);
-            totalPanel.Location = new Point(276, 494);
+            totalPanel.Location = new Point(289, 497);
             totalPanel.Name = "totalPanel";
-            totalPanel.Size = new Size(181, 35);
+            totalPanel.Size = new Size(165, 15);
             totalPanel.TabIndex = 3;
             // 
             // lblTotal
             // 
             lblTotal.AutoSize = true;
-            lblTotal.Location = new Point(3, 3);
+            lblTotal.Location = new Point(0, 0);
             lblTotal.Name = "lblTotal";
             lblTotal.Size = new Size(119, 15);
             lblTotal.TabIndex = 0;
@@ -493,11 +527,15 @@
             // 
             // dgvTransactions
             // 
+            dgvTransactions.AllowUserToAddRows = false;
+            dgvTransactions.AllowUserToDeleteRows = false;
+            dgvTransactions.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            dgvTransactions.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvTransactions.BackgroundColor = SystemColors.Control;
             dgvTransactions.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvTransactions.Location = new Point(0, 131);
+            dgvTransactions.Location = new Point(6, 131);
             dgvTransactions.Name = "dgvTransactions";
-            dgvTransactions.Size = new Size(460, 360);
+            dgvTransactions.Size = new Size(454, 360);
             dgvTransactions.TabIndex = 0;
             // 
             // lstSuggestions
@@ -509,38 +547,13 @@
             lstSuggestions.TabIndex = 11;
             lstSuggestions.Visible = false;
             // 
-            // statusStrip1
-            // 
-            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion });
-            statusStrip1.Location = new Point(3, 538);
-            statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(606, 22);
-            statusStrip1.TabIndex = 19;
-            statusStrip1.Text = "statusStrip1";
-            // 
-            // progressBar1
-            // 
-            progressBar1.Name = "progressBar1";
-            progressBar1.Size = new Size(100, 16);
-            // 
-            // statusLabel
-            // 
-            statusLabel.Name = "statusLabel";
-            statusLabel.Size = new Size(44, 17);
-            statusLabel.Text = "Durum";
-            // 
-            // toolStripStatusLabelVersion
-            // 
-            toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
-            toolStripStatusLabelVersion.Size = new Size(0, 17);
-            // 
             // menuStrip1
             // 
             menuStrip1.Font = new Font("Segoe UI", 9F, FontStyle.Underline);
             menuStrip1.Items.AddRange(new ToolStripItem[] { veriTabanıYeriniSıfırlaToolStripMenuItem, modülToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(884, 24);
+            menuStrip1.Size = new Size(866, 24);
             menuStrip1.TabIndex = 1;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -583,7 +596,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(884, 587);
+            ClientSize = new Size(866, 593);
             Controls.Add(splitContainer1);
             Controls.Add(menuStrip1);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -602,6 +615,8 @@
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
             gbTransactions.ResumeLayout(false);
             gbTransactions.PerformLayout();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
             tableLayoutPanel2.ResumeLayout(false);
             tableLayoutPanel2.PerformLayout();
             totalPanel.ResumeLayout(false);
@@ -609,8 +624,6 @@
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).EndInit();
-            statusStrip1.ResumeLayout(false);
-            statusStrip1.PerformLayout();
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             ResumeLayout(false);
@@ -642,7 +655,7 @@
         private Button btnExportExcel;
         private Button btnDeleteTransaction;
         public DateTimePicker dtpDate;
-        private LinkLabel linkLabel1;
+        private LinkLabel link_yusa;
         private Button btnExportPdf;
         private Button btnRemoveDescipt;
         private Button btnAddDescipt;

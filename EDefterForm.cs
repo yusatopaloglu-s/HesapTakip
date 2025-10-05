@@ -1,148 +1,186 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Data;
-using System.Data.Common;
-using System.Drawing;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using MySql.Data.MySqlClient;
-using static HesapTakip.MainForm;
+
+
 
 namespace HesapTakip
 {
     public partial class EDefterForm : Form
     {
-        private string connectionString;
-        private DataSet dataSet = new DataSet();
+        private IDatabaseOperations _db;
+
         public EDefterForm()
         {
             InitializeComponent();
-            connectionString = AppConfigHelper.DatabasePath;
             InitializeDatabase();
-            connection = new MySqlConnection(connectionString);
             LoadCustomers();
             dtpDate.Value = DateTime.Today;
             dgvKontorList.CellFormatting += dgvKontorList_CellFormatting;
-
+            dgvFirmaList.SelectionChanged += dgvCustomers_SelectionChanged;
 
         }
-        private MySqlConnection connection;
-
         private void InitializeDatabase()
         {
+            try
+            {
+                string connectionString = AppConfigHelper.DatabasePath;
+                string databaseType = AppConfigHelper.DatabaseType;
 
+                if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(databaseType))
+                {
+                    MessageBox.Show("Database ayarları bulunamadı. Lütfen bağlantı ayarlarını yapılandırın.");
+                    this.Close();
+                    return;
+                }
+
+                // Factory'den database instance'ı al
+                _db = DatabaseFactory.Create(databaseType, connectionString);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Database başlatma hatası: {ex.Message}");
+                this.Close();
+            }
         }
+        private IDbDataAdapter CreateDataAdapter(IDbConnection connection, string query, int customerID)
+        {
+            var databaseType = AppConfigHelper.DatabaseType;
 
-        public void LoadCustomers()
+            switch (databaseType.ToUpper())
+            {
+                case "MYSQL":
+                    var mysqlAdapter = new MySql.Data.MySqlClient.MySqlDataAdapter(query, connection as MySql.Data.MySqlClient.MySqlConnection);
+                    mysqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                    return mysqlAdapter;
+
+                case "MSSQL":
+                    var mssqlAdapter = new System.Data.SqlClient.SqlDataAdapter(query, connection as System.Data.SqlClient.SqlConnection);
+                    mssqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                    return mssqlAdapter;
+
+                case "SQLITE":
+                    var sqliteAdapter = new System.Data.SQLite.SQLiteDataAdapter(query, connection as System.Data.SQLite.SQLiteConnection);
+                    sqliteAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                    return sqliteAdapter;
+
+                default:
+                    throw new NotSupportedException($"Desteklenmeyen database tipi: {databaseType}");
+            }
+        }
+        private void LoadCustomers()
         {
             try
             {
                 dgvFirmaList.Columns.Clear();
 
+                var dt = _db.GetCustomers();
 
-                using (var adapter = new MySqlDataAdapter("SELECT CustomerID, Name FROM Customers WHERE EDefter = 1", connection))
-                {
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt); 
-                    dgvFirmaList.DataSource = dt;
-                }
+                // Sadece E-Defter müşterilerini filtrele 
+                var edefterRows = dt.AsEnumerable()
+                    .Where(row => row["EDefter"] != DBNull.Value && Convert.ToBoolean(row["EDefter"]))
+                    .CopyToDataTable();
+
+                dgvFirmaList.DataSource = edefterRows;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Veri yükleme hatası: " + ex.Message + "\n" + "Ayarlar sıfırlandı. Uygulama kapatılıyor...");
-                Properties.Settings.Default.Reset();
-                Application.Exit();
+                MessageBox.Show("Veri yükleme hatası: " + ex.Message);
             }
+
+            // DÜZELTİLMİŞ: Null kontrolü ekle
             if (dgvFirmaList.Columns.Contains("CustomerID"))
                 dgvFirmaList.Columns["CustomerID"].Visible = false;
+
+            if (dgvFirmaList.Columns.Contains("EDefter"))
+                dgvFirmaList.Columns["EDefter"].Visible = false;
         }
 
         private void LoadTransactions(int customerID)
         {
             try
             {
-                connection.Open();
-                var transactionsAdapter = new MySqlDataAdapter(
-                    $"SELECT TransactionID, Date, Kontor, Type FROM EDefterTakip WHERE CustomerID = {customerID}",
-                    connection);
-                dataSet.Tables["EDefterTakip"]?.Clear();
-                transactionsAdapter.Fill(dataSet, "EDefterTakip");
-                dgvKontorList.DataSource = dataSet.Tables["EDefterTakip"];
+                var dt = _db.GetEDefterTransactions(customerID);
+                dgvKontorList.DataSource = dt;
+                FormatTransactionGrid();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("İşlemler yüklenirken hata: " + ex.Message);
             }
-            finally
+        }
+
+
+        private void FormatTransactionGrid()
+        {
+            // DÜZELTİLMİŞ: Null ve column varlık kontrolleri
+            if (dgvKontorList.Columns.Count == 0) return;
+
+            if (dgvKontorList.Columns.Contains("TransactionID"))
+                dgvKontorList.Columns["TransactionID"].Visible = false;
+
+            if (dgvKontorList.Columns.Contains("Date"))
+                dgvKontorList.Columns["Date"].HeaderText = "Tarih";
+
+            if (dgvKontorList.Columns.Contains("Kontor"))
+                dgvKontorList.Columns["Kontor"].HeaderText = "Kontor";
+
+            if (dgvKontorList.Columns.Contains("Type"))
+                dgvKontorList.Columns["Type"].Visible = false;
+
+            // DÜZELTİLMİŞ: Row sayısı kontrolü
+            if (dgvKontorList.Rows.Count > 0)
             {
-                if (connection.State == ConnectionState.Open)
-                    connection.Close();
-            }
-
-            dgvKontorList.Columns["TransactionID"].Visible = false;
-            dgvKontorList.Columns["Date"].HeaderText = "Tarih";
-            dgvKontorList.Columns["Kontor"].HeaderText = "Kontor";
-            dgvKontorList.Columns["Type"].Visible = false;
-
-            foreach (DataGridViewRow row in dgvKontorList.Rows)
-            {
-                if (row.IsNewRow) continue;
-                var typeCell = row.Cells["Type"];
-                var kontorCell = row.Cells["Kontor"];
-                if (typeCell.Value == null || kontorCell.Value == null) continue;
-
-                switch (typeCell.Value.ToString().ToLower())
+                foreach (DataGridViewRow row in dgvKontorList.Rows)
                 {
-                    case "ekle":
-                        kontorCell.Style.ForeColor = Color.Green;
-                        break;
-                    case "cikar":
-                        kontorCell.Style.ForeColor = Color.Red;
-                        break;
-                    default:
-                        kontorCell.Style.ForeColor = dgvKontorList.DefaultCellStyle.ForeColor;
-                        break;
+                    if (row.IsNewRow) continue;
+
+                    // DÜZELTİLMİŞ: Cell varlık ve null kontrolleri
+                    if (row.Cells["Type"]?.Value != null && row.Cells["Kontor"] != null)
+                    {
+                        var typeValue = row.Cells["Type"].Value.ToString().ToLower();
+                        var kontorCell = row.Cells["Kontor"];
+
+                        kontorCell.Style.ForeColor = typeValue switch
+                        {
+                            "ekle" => Color.Green,
+                            "cikar" => Color.Red,
+                            _ => dgvKontorList.DefaultCellStyle.ForeColor
+                        };
+                    }
                 }
             }
 
-            dgvKontorList.Sort(dgvKontorList.Columns["Date"], ListSortDirection.Ascending);
-            dgvKontorList.Columns["Date"].HeaderCell.SortGlyphDirection = SortOrder.Ascending;
+            // DÜZELTİLMİŞ: Column varlık kontrolü
+            if (dgvKontorList.Columns.Contains("Date"))
+            {
+                dgvKontorList.Sort(dgvKontorList.Columns["Date"], ListSortDirection.Ascending);
+                dgvKontorList.Columns["Date"].HeaderCell.SortGlyphDirection = SortOrder.Ascending;
+            }
         }
+
+
         private void CalculateAndDisplayTotal(int customerID)
         {
             try
             {
-                connection.Open();
-                using (var cmd = new MySqlCommand(
-                    @"SELECT SUM(Kontor * CASE WHEN Type = 'ekle' THEN 1 ELSE -1 END) 
-            FROM EDefterTakip 
-            WHERE CustomerID = @customerID", connection))
-                {
-                    cmd.Parameters.AddWithValue("@customerID", customerID);
-                    var result = cmd.ExecuteScalar();
-
-                    decimal total = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
-                    lblTotal.Text = $"Kontor: {total.ToString("N2")} ₺";
-
-
-                    lblTotal.ForeColor = total >= 0 ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkRed;
-
-                }
+                decimal total = _db.CalculateEDefterTotal(customerID);
+                lblTotal.Text = $"Kontor: {total.ToString("N2")} ₺";
+                lblTotal.ForeColor = total >= 0 ? Color.DarkGreen : Color.DarkRed;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Hesaplama hatası: " + ex.Message);
             }
-            finally
-            {
-                connection.Close();
-            }
         }
+        private void AddParameter(IDbCommand command, string parameterName, object value)
+        {
+            var param = command.CreateParameter();
+            param.ParameterName = parameterName;
+            param.Value = value;
+            command.Parameters.Add(param);
+        }
+
         private bool ValidateTransactionType()
         {
             if (GetSelectedTransactionType() == null)
@@ -163,10 +201,9 @@ namespace HesapTakip
         {
             dtpDate.Value = DateTime.Today;
             txtkontor.Clear();
-
         }
 
-        private string selectedTransactionType; 
+        private string selectedTransactionType;
 
         private void btnekle_Click(object sender, EventArgs e)
         {
@@ -176,92 +213,54 @@ namespace HesapTakip
                 MessageBox.Show("Geçersiz tutar formatı!");
                 return;
             }
+
             if (dgvFirmaList.CurrentRow != null)
             {
                 var customerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
 
                 if (!ValidateTransactionType()) return;
 
-                try
-                {
-                    if (connection.State != ConnectionState.Open)
-                        connection.Open();
-                    using (var cmd = new MySqlCommand())
-                    {
-                        cmd.Connection = connection; 
-                        cmd.CommandText = @"INSERT INTO EDefterTakip 
-                                            (CustomerID, Date, Kontor, Type) 
-                                            VALUES 
-                                            (@cid, @date, @kontor, @type)";
+                bool success = _db.AddEDefterTransaction(customerID, dtpDate.Value, kontor, GetSelectedTransactionType());
 
-                        cmd.Parameters.AddWithValue("@cid", customerID);
-                        cmd.Parameters.AddWithValue("@date", dtpDate.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-                        cmd.Parameters.AddWithValue("@kontor", kontor);
-                        cmd.Parameters.AddWithValue("@type", GetSelectedTransactionType());
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                catch (Exception ex)
+                if (success)
                 {
-                    MessageBox.Show("Kayıt eklenemedi: " + ex.Message);
+                    LoadTransactions(customerID);
+                    CalculateAndDisplayTotal(customerID);
+                    ClearTransactionInputs();
+                    MessageBox.Show("Kontör başarıyla eklendi!");
                 }
-                finally
+                else
                 {
-                    if (connection.State == ConnectionState.Open)
-                        connection.Close();
+                    MessageBox.Show("Kayıt eklenemedi!");
                 }
-
-                LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);
-                ClearTransactionInputs();
             }
         }
 
         private void btnsil_Click(object sender, EventArgs e)
         {
-            selectedTransactionType = "cikar";
-            if (dgvFirmaList.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("Lütfen bir müşteri seçin.");
-                return;
-            }
-
-            int customerID = Convert.ToInt32(dgvFirmaList.SelectedRows[0].Cells["CustomerID"].Value);
-
-            if (dgvKontorList.SelectedRows.Count == 0)
+            if (dgvKontorList.CurrentRow == null || dgvKontorList.CurrentRow.IsNewRow)
             {
                 MessageBox.Show("Lütfen silinecek işlemi seçin.");
                 return;
             }
 
-            int transactionID = Convert.ToInt32(dgvKontorList.SelectedRows[0].Cells["TransactionID"].Value);
+            int transactionID = Convert.ToInt32(dgvKontorList.CurrentRow.Cells["TransactionID"].Value);
+            int customerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
 
-            try
+            bool success = _db.DeleteEDefterTransaction(transactionID);
+
+            if (success)
             {
-                if (connection.State != ConnectionState.Open)
-                    connection.Open();
-                using (var cmd = new MySqlCommand("DELETE FROM EDefterTakip WHERE TransactionID = @transactionID AND CustomerID = @customerID", connection))
-                {
-                    cmd.Connection = connection;
-                    cmd.Parameters.AddWithValue("@transactionID", transactionID);
-                    cmd.Parameters.AddWithValue("@customerID", customerID);
-                    cmd.ExecuteNonQuery();
-                }
-                connection.Close();
-
                 LoadTransactions(customerID);
                 CalculateAndDisplayTotal(customerID);
+                MessageBox.Show("Kayıt başarıyla silindi!");
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show("Kayıt silinemedi: " + ex.Message);
-            }
-            finally
-            {
-                if (connection.State == ConnectionState.Open)
-                    connection.Close();
+                MessageBox.Show("Kayıt silinemedi!");
             }
         }
+
         public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvFirmaList.CurrentRow != null)
@@ -274,18 +273,13 @@ namespace HesapTakip
         }
         private void txtkontor_Validating(object sender, CancelEventArgs e)
         {
-            if (!decimal.TryParse(txtkontor.Text, NumberStyles.Currency, CultureInfo.CurrentCulture, out _))
+            // DÜZELTİLMİŞ: Daha açıklayıcı hata mesajı
+            if (!decimal.TryParse(txtkontor.Text, NumberStyles.Currency, CultureInfo.CurrentCulture, out decimal result) || result <= 0)
             {
-                MessageBox.Show(txtkontor, "Geçerli bir sayı giriniz");
-
+                MessageBox.Show("Lütfen geçerli bir pozitif sayı giriniz!", "Geçersiz Giriş");
                 e.Cancel = true;
             }
-            else
-            {
-                MessageBox.Show(txtkontor, "");
-            }
         }
-
 
         private void txtAmount_Leave(object sender, EventArgs e)
         {
@@ -294,6 +288,7 @@ namespace HesapTakip
                 txtkontor.Text = amount.ToString("N2");
             }
         }
+
 
         private void dgvKontorList_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
@@ -327,6 +322,7 @@ namespace HesapTakip
                 MessageBox.Show("Geçersiz tutar formatı!");
                 return;
             }
+
             if (dgvFirmaList.CurrentRow != null)
             {
                 var customerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
@@ -335,84 +331,70 @@ namespace HesapTakip
 
                 try
                 {
-                    if (connection.State != ConnectionState.Open)
-                        connection.Open();
-                    using (var cmd = new MySqlCommand())
+                    using (var connection = _db.GetConnection())
                     {
-                        cmd.Connection = connection;
-                        cmd.CommandText = @"INSERT INTO EDefterTakip 
-                                            (CustomerID, Date, Kontor, Type) 
-                                            VALUES 
-                                            (@cid, @date, @kontor, @type)";
+                        connection.Open();
 
-                        cmd.Parameters.AddWithValue("@cid", customerID);
-                        cmd.Parameters.AddWithValue("@date", dtpDate.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-                        cmd.Parameters.AddWithValue("@kontor", kontor);
-                        cmd.Parameters.AddWithValue("@type", GetSelectedTransactionType());
-                        cmd.ExecuteNonQuery();
+                        string query = @"INSERT INTO EDefterTakip 
+                                        (CustomerID, Date, Kontor, Type) 
+                                        VALUES 
+                                        (@cid, @date, @kontor, @type)";
+
+                        using (var cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = query;
+                            AddParameter(cmd, "@cid", customerID);
+                            AddParameter(cmd, "@date", dtpDate.Value);
+                            AddParameter(cmd, "@kontor", kontor);
+                            AddParameter(cmd, "@type", GetSelectedTransactionType());
+                            cmd.ExecuteNonQuery();
+                        }
                     }
+
+                    LoadTransactions(customerID);
+                    CalculateAndDisplayTotal(customerID);
+                    ClearTransactionInputs();
+                    MessageBox.Show("Kontör başarıyla çıkarıldı!");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Kayıt eklenemedi: " + ex.Message);
                 }
-                finally
-                {
-                    if (connection.State == ConnectionState.Open)
-                        connection.Close();
-                }
-
-                LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);
-                ClearTransactionInputs();
             }
-
-
         }
         private void btnhepsi1_Click(object sender, EventArgs e)
         {
+            var transactions = new List<EDefterTransaction>();
+
             foreach (DataGridViewRow row in dgvFirmaList.Rows)
             {
-                if (row.IsNewRow) continue;
+                if (row.IsNewRow || row.Cells["CustomerID"].Value == null) continue;
+
                 int customerID = Convert.ToInt32(row.Cells["CustomerID"].Value);
-
-                // Her müşteri için 1 adet "cikar" işlemi ekle
-                try
+                transactions.Add(new EDefterTransaction
                 {
-                    if (connection.State != ConnectionState.Open)
-                        connection.Open();
-                    using (var cmd = new MySqlCommand())
-                    {
-                        cmd.Connection = connection;
-                        cmd.CommandText = @"INSERT INTO EDefterTakip 
-                                    (CustomerID, Date, Kontor, Type) 
-                                    VALUES 
-                                    (@cid, @date, @kontor, @type)";
-
-                        cmd.Parameters.AddWithValue("@cid", customerID);
-                        cmd.Parameters.AddWithValue("@date", dtpDate.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-                        cmd.Parameters.AddWithValue("@kontor", 1); // Her firma için 1 düş
-                        cmd.Parameters.AddWithValue("@type", "cikar");
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Firma ID {customerID} için işlem eklenemedi: {ex.Message}");
-                }
-                finally
-                {
-                    if (connection.State == ConnectionState.Open)
-                        connection.Close();
-                }
+                    CustomerID = customerID,
+                    Date = dtpDate.Value,
+                    Kontor = 1,
+                    Type = "cikar"
+                });
             }
 
-            // Seçili müşteri varsa tabloyu güncelle
-            if (dgvFirmaList.CurrentRow != null)
+            bool success = _db.BulkUpdateEDefterTransactions(transactions);
+
+            if (success)
             {
-                int selectedCustomerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
-                LoadTransactions(selectedCustomerID);
-                CalculateAndDisplayTotal(selectedCustomerID);
+                if (dgvFirmaList.CurrentRow != null)
+                {
+                    int selectedCustomerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
+                    LoadTransactions(selectedCustomerID);
+                    CalculateAndDisplayTotal(selectedCustomerID);
+                }
+                MessageBox.Show($"{transactions.Count} firmadan 1 kontör çıkarıldı!");
+            }
+            else
+            {
+                MessageBox.Show("Toplu işlem sırasında hata oluştu!");
             }
         }
     }

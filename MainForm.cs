@@ -1,15 +1,10 @@
-﻿using MySql.Data.MySqlClient;
-using QuestPDF.Fluent;
+﻿using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
-using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
+
+
 
 namespace HesapTakip
 
@@ -22,92 +17,93 @@ namespace HesapTakip
 
     public partial class MainForm : Form
     {
-        private string connectionString;
+        private IDatabaseOperations _db;
+        private DataSet dataSet = new DataSet();
+        private List<string> _suggestions = new List<string>();
         private static bool _versionChecked = false;
 
         public MainForm()
         {
             InitializeComponent();
-
-            // SABİT CONFIG'TEN OKU
-            connectionString = AppConfigHelper.DatabasePath;
-
-            if (string.IsNullOrEmpty(connectionString))
+            InitializeApplication();
+        }
+        private void InitializeApplication()
+        {
+            //Factory pattern ile database başlat
+            if (!InitializeDatabase())
             {
-                // Eski settings'ten oku ve yeni config'e taşı
-                connectionString = Properties.Settings.Default.DatabasePath;
-                if (!string.IsNullOrEmpty(connectionString))
-                {
-                    AppConfigHelper.DatabasePath = connectionString;
-                }
+                // Database başlatılamazsa uygulamayı kapat
+                Application.Exit();
+                return;
             }
 
-            InitializeDatabase();
             LoadCustomers();
             InitializeAutoComplete();
             LoadSuggestions();
             dtpDate.Value = DateTime.Today;
             dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
             toolStripStatusLabelVersion.Text = $"v{GetCurrentVersion()}";
-            /*   if (!_versionChecked)
-               {
-                   _versionChecked = true;
-                   _ = CheckForUpdate();
-               }
-            */
         }
-                       
-        private MySqlConnection connection;       
-        private DataSet dataSet = new DataSet();
-        private List<string> _suggestions = new List<string>();
-                              
-        private void InitializeDatabase()
+        private bool InitializeDatabase()
         {
-            connection = new MySqlConnection(connectionString);
-
-            // Customers tablosu ve sütunları
-            EnsureTableAndColumns("Customers", new Dictionary<string, string>
+            try
             {
-                { "CustomerID", "INT PRIMARY KEY AUTO_INCREMENT" },
-                { "Name", "VARCHAR(255) NOT NULL" },
-                { "EDefter", "INT DEFAULT 0" }
-            });
+                string connectionString = AppConfigHelper.DatabasePath;
+                string databaseType = AppConfigHelper.DatabaseType;
 
-            // Transactions tablosu ve sütunları
-            EnsureTableAndColumns("Transactions", new Dictionary<string, string>
-            {
-                { "TransactionID", "INT PRIMARY KEY AUTO_INCREMENT" },
-                { "CustomerID", "INT" },
-                { "Date", "DATETIME" },
-                { "Description", "VARCHAR(255) NULL" },
-                { "Amount", "DECIMAL(18,2)" },
-                { "Type", "VARCHAR(50)" },
-                { "IsDeleted", "TINYINT(1) DEFAULT 0" }
-            });
+                Debug.WriteLine($"MainForm InitializeDatabase - Type: {databaseType}, Connection: {connectionString}");
 
-            // EDefterTakip tablosu ve sütunları
-            EnsureTableAndColumns("EDefterTakip", new Dictionary<string, string>
-            {
-                { "TransactionID", "INT PRIMARY KEY AUTO_INCREMENT" },
-                { "CustomerID", "INT" },
-                { "Date", "DATETIME" },
-                { "Kontor", "DECIMAL(18,2)" },
-                { "Type", "VARCHAR(255) NOT NULL" }
-            });
+                if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(databaseType))
+                {
+                    MessageBox.Show("Database ayarları bulunamadı. Lütfen bağlantı ayarlarını yapılandırın.");
+                    return OpenConnectionSettings();
+                }
 
-            // Suggestions tablosu ve sütunları (MySQL uyumlu)
-            EnsureTableAndColumns("Suggestions", new Dictionary<string, string>
+                // Factory'den database instance'ı al
+                _db = DatabaseFactory.Create(databaseType, connectionString);
+                Debug.WriteLine($"Database instance created: {_db.GetType().Name}");
+
+                // Database'i initialize et
+                _db.InitializeDatabase();
+                Debug.WriteLine("Database initialized successfully");
+
+                // Bağlantı testi
+                if (!_db.TestConnection())
+                {
+                    MessageBox.Show("Database bağlantısı başarısız. Lütfen ayarları kontrol edin.");
+                    return OpenConnectionSettings();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
             {
-                { "SuggestionID", "INT PRIMARY KEY AUTO_INCREMENT" },
-                { "Description", "VARCHAR(255) NOT NULL UNIQUE" }, // Changed from TEXT to VARCHAR(255)
-                { "CreatedDate", "DATETIME DEFAULT CURRENT_TIMESTAMP" }
-            });
+                MessageBox.Show($"Database başlatma hatası: {ex.Message}\nLütfen bağlantı ayarlarını kontrol edin.");
+                Debug.WriteLine($"InitializeDatabase ERROR: {ex.Message}");
+                Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                return OpenConnectionSettings();
+            }
+        }
+        // Connection settings formunu aç
+        private bool OpenConnectionSettings()
+        {
+            using (var settingsForm = new ConnectionSettingsForm())
+            {
+                if (settingsForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Yeni ayarlarla database'i yeniden başlat
+                    return InitializeDatabase();
+                }
+                else
+                {
+                    return false;
+                }
+            }
         }
 
-        
+
         private void btnResetSettings_Click(object sender, EventArgs e)
         {
-
             var result = MessageBox.Show(
                 "Tüm ayarlar sıfırlanacak ve bağlantı bilgileri silinecek. Emin misiniz?",
                 "Ayarları Sıfırla",
@@ -143,27 +139,18 @@ namespace HesapTakip
             try
             {
                 dgvCustomers.Columns.Clear();
+                var dt = _db.GetCustomers();
+                dgvCustomers.DataSource = dt;
 
-                // Müşteri listesini yükle
-                
-                using (var adapter = new MySqlDataAdapter("SELECT * FROM Customers", connection))
+                if (dgvCustomers.Columns["CustomerID"] != null)
                 {
-                    DataTable dt = new DataTable();
-                    adapter.Fill(dt);
-                    dgvCustomers.DataSource = dt;
+                    dgvCustomers.Columns["CustomerID"].Visible = false;
+                    dgvCustomers.Columns["EDefter"].Visible = false;
                 }
-
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Veri yükleme hatası: " + ex.Message + "\n" + "Ayarlar sıfırlandı. Uygulama kapatılıyor...");
-                Properties.Settings.Default.Reset();
-                Application.Exit();
-            }
-            if (dgvCustomers.Columns["CustomerID"] != null)
-            {
-                dgvCustomers.Columns["CustomerID"].Visible = false;
-                dgvCustomers.Columns["EDefter"].Visible = false;
+                MessageBox.Show("Müşteriler yüklenirken hata: " + ex.Message);
             }
         }
 
@@ -171,20 +158,15 @@ namespace HesapTakip
         {
             try
             {
-                using (var adapter = new MySqlDataAdapter(
-                    "SELECT TransactionID, Date, Description, Amount, Type FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0",
-                    connection))
-                {
-                    adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                    dataSet.Tables["Transactions"]?.Clear();
-                    adapter.Fill(dataSet, "Transactions");
-                    dgvTransactions.DataSource = dataSet.Tables["Transactions"];
-                }
+                var dt = _db.GetTransactions(customerID);
+                dataSet.Tables["Transactions"]?.Clear();
+                dataSet.Tables.Add(dt);
+                dgvTransactions.DataSource = dt;
                 FormatTransactionGrid();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Veri yükleme hatası: " + ex.Message);
+                MessageBox.Show("İşlemler yüklenirken hata: " + ex.Message);
             }
         }
 
@@ -223,11 +205,12 @@ namespace HesapTakip
                 dgvTransactions.Columns["Date"].HeaderCell.SortGlyphDirection = SortOrder.Ascending;
             }
         }
+
         private string GetSelectedTransactionType()
         {
             if (rbIncome.Checked) return "Gelir";
             if (rbExpense.Checked) return "Gider";
-            return null; // Validasyon için
+            return null;
         }
 
         private bool ValidateTransactionType()
@@ -243,7 +226,6 @@ namespace HesapTakip
         {
             using (var inputForm = new InputForm("Müşteri Adı:"))
             {
-                // E-Defter seçimi için ek kontrol ekle
                 var chkEDefter = new CheckBox
                 {
                     Text = "E-Defter",
@@ -255,22 +237,15 @@ namespace HesapTakip
 
                 if (inputForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.InputText))
                 {
-
+                    bool success = _db.AddCustomer(inputForm.InputText.Trim(), chkEDefter.Checked);
+                    if (success)
                     {
-
-                        {
-                            connection.Open();
-                            using (var cmd = new MySqlCommand(
-                                "INSERT INTO Customers (Name, EDefter) VALUES (@name, @edefter)",
-                                connection))
-                            {
-                                cmd.Parameters.AddWithValue("@name", inputForm.InputText.Trim());
-                                cmd.Parameters.AddWithValue("@edefter", chkEDefter.Checked ? 1 : 0);
-                                cmd.ExecuteNonQuery();
-                            }
-                            connection.Close();
-                        }
                         LoadCustomers();
+                        MessageBox.Show("Müşteri başarıyla eklendi!");
+                    }
+                    else
+                    {
+                        MessageBox.Show("Müşteri eklenirken hata oluştu!");
                     }
                 }
             }
@@ -279,8 +254,10 @@ namespace HesapTakip
         private void btnDeleteCustomer_Click(object sender, EventArgs e)
         {
             if (dgvCustomers.CurrentRow == null) return;
-            var customerID = dgvCustomers.CurrentRow.Cells["CustomerID"].Value.ToString();
-            var customerName = dgvCustomers.CurrentRow.Cells["Name"].Value?.ToString() ?? "this customer";
+
+            var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+            var customerName = dgvCustomers.CurrentRow.Cells["Name"].Value?.ToString() ?? "bu müşteri";
+
             var confirmResult = MessageBox.Show(
                 $"{customerName} müşterisini ve tüm hareketlerini silmek istediğinize emin misiniz?\nBu işlem geri alınamaz!",
                 "Müşteri Silme Onayı",
@@ -291,76 +268,35 @@ namespace HesapTakip
 
             try
             {
-               
-                using (var cmd = new MySqlCommand())
+                bool success = _db.DeleteCustomer(customerID);
+                if (success)
                 {
-                    cmd.Connection = connection;
-                    connection.Open();
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            cmd.Transaction = transaction;
-                            cmd.CommandText = "DELETE FROM Transactions WHERE CustomerID = @id";
-                            cmd.Parameters.AddWithValue("@id", customerID);
-                            cmd.ExecuteNonQuery();
-                            cmd.CommandText = "DELETE FROM Customers WHERE CustomerID = @id";
-                            cmd.ExecuteNonQuery();
-                            transaction.Commit();
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
-                    connection.Close();
+                    LoadCustomers();
+                    dgvTransactions.DataSource = null;
+                    MessageBox.Show($"{customerName} başarıyla silindi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                LoadCustomers();
-                dgvTransactions.DataSource = null;
-                MessageBox.Show($"{customerName} Başarıyla Silindi.",
-                        "Başarılı",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                else
+                {
+                    MessageBox.Show("Silme işlemi başarısız!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Silme Başarısız: {ex.Message}",
-                        "HATA",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                MessageBox.Show($"Silme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
         }
 
-        
         private void CalculateAndDisplayTotal(int customerID)
         {
             try
             {
-                connection.Open();
-                using (var cmd = new MySql.Data.MySqlClient.MySqlCommand(
-                    @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
-                      FROM Transactions 
-                      WHERE CustomerID = @customerID AND IsDeleted = 0", connection)) 
-                {
-                    cmd.Parameters.AddWithValue("@customerID", customerID);
-                    var result = cmd.ExecuteScalar();
-
-                    decimal total = result != DBNull.Value ? Convert.ToDecimal(result) : 0;
-                    lblTotal.Text = $"Toplam Bakiye: {total:N2} ₺";
-
-                    // Negatif bakiyeler için renk değişimi
-                    lblTotal.ForeColor = total >= 0 ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkRed;
-                }
+                decimal total = _db.CalculateTotalBalance(customerID);
+                lblTotal.Text = $"Toplam Bakiye: {total:N2} ₺";
+                lblTotal.ForeColor = total >= 0 ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkRed;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Hesaplama hatası: " + ex.Message);
-            }
-            finally
-            {
-                connection.Close();
             }
         }
 
@@ -372,30 +308,29 @@ namespace HesapTakip
                 MessageBox.Show("Geçersiz tutar formatı!");
                 return;
             }
-            if (dgvCustomers.CurrentRow != null)
-            {
-                var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
-                if (!ValidateTransactionType()) return;
-                                
-                using (var cmd = new MySqlCommand(
-                    @"INSERT INTO Transactions 
-              (CustomerID, Date, Description, Amount, Type) 
-              VALUES 
-              (@cid, @date, @desc, @amount, @type)", connection))
-                {
-                    connection.Open();
-                    cmd.Parameters.AddWithValue("@cid", customerID);
-                    cmd.Parameters.AddWithValue("@date", dtpDate.Value);
-                    cmd.Parameters.AddWithValue("@desc", txtDescription.Text);
-                    cmd.Parameters.AddWithValue("@amount", amount);
-                    cmd.Parameters.AddWithValue("@type", GetSelectedTransactionType());
-                    cmd.ExecuteNonQuery();
-                    connection.Close();
-                }
+            if (dgvCustomers.CurrentRow == null)
+            {
+                MessageBox.Show("Lütfen bir müşteri seçin!");
+                return;
+            }
+
+            if (!ValidateTransactionType()) return;
+
+            var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+
+            bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text, amount, GetSelectedTransactionType());
+
+            if (success)
+            {
                 LoadTransactions(customerID);
                 CalculateAndDisplayTotal(customerID);
                 ClearTransactionInputs();
+                MessageBox.Show("İşlem başarıyla eklendi!");
+            }
+            else
+            {
+                MessageBox.Show("İşlem eklenirken hata oluştu!");
             }
         }
         private void btnDeleteTransaction_Click(object sender, EventArgs e)
@@ -405,35 +340,38 @@ namespace HesapTakip
                 MessageBox.Show("Lütfen silmek için bir hareket seçin!");
                 return;
             }
+
             var confirmResult = MessageBox.Show(
                 "Seçili hareketi silmek istediğinize emin misiniz?",
                 "Silme Onayı",
                 MessageBoxButtons.YesNo
             );
-            if (confirmResult == DialogResult.Yes)
-            {
-                try
-                {
-                    int transactionID = Convert.ToInt32(dgvTransactions.CurrentRow.Cells["TransactionID"].Value);
-                    int customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
-                    using (var cmd = new MySqlCommand("UPDATE Transactions SET IsDeleted = 1 WHERE TransactionID = @id", connection))
-                    {
-                        connection.Open();
-                        cmd.Parameters.AddWithValue("@id", transactionID);
-                        cmd.ExecuteNonQuery();
-                        connection.Close();
-                    }
+            if (confirmResult != DialogResult.Yes) return;
+
+            try
+            {
+                int transactionID = Convert.ToInt32(dgvTransactions.CurrentRow.Cells["TransactionID"].Value);
+                int customerID = GetCurrentCustomerId();
+
+                bool success = _db.DeleteTransaction(transactionID);
+                if (success)
+                {
                     LoadTransactions(customerID);
                     CalculateAndDisplayTotal(customerID);
                     MessageBox.Show("Hareket başarıyla silindi!");
                 }
-                catch (Exception ex)
+                else
                 {
-                    MessageBox.Show("Silme hatası: " + ex.Message);
+                    MessageBox.Show("Silme işlemi başarısız!");
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Silme hatası: " + ex.Message);
+            }
         }
+
         public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvCustomers.CurrentRow != null)
@@ -450,7 +388,6 @@ namespace HesapTakip
             dtpDate.Value = DateTime.Today;
             txtDescription.Clear();
             txtAmount.Clear();
-
         }
 
         private void txtAmount_Validating(object sender, CancelEventArgs e)
@@ -477,7 +414,7 @@ namespace HesapTakip
         // RadioButton'ların arkaplan rengini değiştir
         private void UpdateTypeValidationUI()
         {
-            QuestPDF.Infrastructure.Color errorColor = QuestPDF.Infrastructure.Color.FromRGB(255, 182, 193); 
+            QuestPDF.Infrastructure.Color errorColor = QuestPDF.Infrastructure.Color.FromRGB(255, 182, 193);
 
             rbIncome.BackColor = GetSelectedTransactionType() != null
                 ? SystemColors.Window
@@ -601,41 +538,17 @@ namespace HesapTakip
         }
 
 
-        
-        private DataTable GetCustomersDataTable()
-        {
-            DataTable dt = new DataTable();
-            dt.TableName = "Customers";
-
-            using (var cmd = new MySql.Data.MySqlClient.MySqlCommand("SELECT * FROM Customers", connection))
-            {
-                connection.Open();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    dt.Load(reader);
-                }
-                connection.Close();
-            }
-            return dt;
-        }
-
-       
         private DataTable GetTransactionsDataTable(int customerID)
         {
-            DataTable dt = new DataTable();
-            using (var cmd = new MySqlCommand(
-                "SELECT Date, Description, Amount, Type FROM Transactions WHERE CustomerID = @customerID ORDER BY Date ASC",
-                connection))
+            try
             {
-                cmd.Parameters.AddWithValue("@customerID", customerID);
-                connection.Open();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    dt.Load(reader);
-                }
-                connection.Close();
+                return _db.GetTransactions(customerID);
             }
-            return dt;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Veri alınırken hata: {ex.Message}");
+                return new DataTable();
+            }
         }
 
         public class PDFGenerator
@@ -826,87 +739,87 @@ namespace HesapTakip
                 }
             }
         }
-                        
-        public static class DatabaseHelper
-        {
-            public static List<string> GetSuggestions(MySqlConnection conn)
-            {
-                var suggestions = new List<string>();
-                bool closeAfter = false;
-                try
-                {
-                    if (conn.State != ConnectionState.Open)
-                    {
-                        conn.Open();
-                        closeAfter = true;
-                    }
 
-                    using (var cmd = new MySqlCommand("SELECT Description FROM Suggestions", conn))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                            suggestions.Add(reader["Description"].ToString());
-                    }
-                }
-                finally
-                {
-                    if (closeAfter) conn.Close();
-                }
+        /*  public static class DatabaseHelper
+          {
+              public static List<string> GetSuggestions(MySqlConnection conn)
+              {
+                  var suggestions = new List<string>();
+                  bool closeAfter = false;
+                  try
+                  {
+                      if (conn.State != ConnectionState.Open)
+                      {
+                          conn.Open();
+                          closeAfter = true;
+                      }
 
-                return suggestions;
-            }
+                      using (var cmd = new MySqlCommand("SELECT Description FROM Suggestions", conn))
+                      using (var reader = cmd.ExecuteReader())
+                      {
+                          while (reader.Read())
+                              suggestions.Add(reader["Description"].ToString());
+                      }
+                  }
+                  finally
+                  {
+                      if (closeAfter) conn.Close();
+                  }
 
-            public static bool AddSuggestion(MySqlConnection conn, string description)
-            {
-                try
-                {
-                    bool closeAfter = false;
-                    if (conn.State != ConnectionState.Open)
-                    {
-                        conn.Open();
-                        closeAfter = true;
-                    }
+                  return suggestions;
+              }
 
-                    using (var cmd = new MySqlCommand("INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
-                    {
-                        cmd.Parameters.AddWithValue("@desc", description);
-                        cmd.ExecuteNonQuery();
-                    }
+              public static bool AddSuggestion(MySqlConnection conn, string description)
+              {
+                  try
+                  {
+                      bool closeAfter = false;
+                      if (conn.State != ConnectionState.Open)
+                      {
+                          conn.Open();
+                          closeAfter = true;
+                      }
 
-                    if (closeAfter) conn.Close();
-                    return true;
-                }
-                catch (MySql.Data.MySqlClient.MySqlException)
-                {
-                    // Genellikle UNIQUE ihlali gibi durumlarda false döndür
-                    return false;
-                }
-            }
+                      using (var cmd = new MySqlCommand("INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
+                      {
+                          cmd.Parameters.AddWithValue("@desc", description);
+                          cmd.ExecuteNonQuery();
+                      }
 
-            public static void RemoveSuggestion(MySqlConnection conn, string description)
-            {
-                bool closeAfter = false;
-                try
-                {
-                    if (conn.State != ConnectionState.Open)
-                    {
-                        conn.Open();
-                        closeAfter = true;
-                    }
+                      if (closeAfter) conn.Close();
+                      return true;
+                  }
+                  catch (MySql.Data.MySqlClient.MySqlException)
+                  {
+                      // Genellikle UNIQUE ihlali gibi durumlarda false döndür
+                      return false;
+                  }
+              }
 
-                    using (var cmd = new MySqlCommand("DELETE FROM Suggestions WHERE Description = @desc", conn))
-                    {
-                        cmd.Parameters.AddWithValue("@desc", description);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                finally
-                {
-                    if (closeAfter) conn.Close();
-                }
-            }
-        }
+              public static void RemoveSuggestion(MySqlConnection conn, string description)
+              {
+                  bool closeAfter = false;
+                  try
+                  {
+                      if (conn.State != ConnectionState.Open)
+                      {
+                          conn.Open();
+                          closeAfter = true;
+                      }
 
+                      using (var cmd = new MySqlCommand("DELETE FROM Suggestions WHERE Description = @desc", conn))
+                      {
+                          cmd.Parameters.AddWithValue("@desc", description);
+                          cmd.ExecuteNonQuery();
+                      }
+                  }
+                  finally
+                  {
+                      if (closeAfter) conn.Close();
+                  }
+              }
+          }
+          */
         private void InitializeAutoComplete()
         {
             txtDescription.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
@@ -916,45 +829,115 @@ namespace HesapTakip
 
         private void LoadSuggestions()
         {
-            var suggestions = DatabaseHelper.GetSuggestions(connection);
-            txtDescription.AutoCompleteCustomSource.Clear();
-            txtDescription.AutoCompleteCustomSource.AddRange(suggestions.ToArray());
-            lstSuggestions.DataSource = suggestions;
+            try
+            {
+                var suggestions = _db.GetSuggestions();
+                txtDescription.AutoCompleteCustomSource.Clear();
+                txtDescription.AutoCompleteCustomSource.AddRange(suggestions.ToArray());
+                lstSuggestions.DataSource = suggestions;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Öneriler yüklenirken hata: " + ex.Message);
+            }
         }
 
-        // EKLEME BUTONU
         private void btnAddDescript_Click(object sender, EventArgs e)
         {
             if (!string.IsNullOrWhiteSpace(txtDescription.Text))
             {
-                bool success = DatabaseHelper.AddSuggestion(connection, txtDescription.Text.Trim());
-
+                bool success = _db.AddSuggestion(txtDescription.Text.Trim());
                 if (success)
                 {
-                    LoadSuggestions(); // Listeyi yenile
+                    LoadSuggestions();
                     txtDescription.Clear();
+                    MessageBox.Show("Öneri başarıyla eklendi!");
                 }
                 else
+                {
                     MessageBox.Show("Bu açıklama zaten mevcut!");
+                }
             }
         }
 
-        // ÇIKARMA BUTONU
         private void btnRemoveDescript_Click(object sender, EventArgs e)
         {
-            if (lstSuggestions.SelectedItem != null)
+            try
             {
-                string selected = lstSuggestions.SelectedItem.ToString();
-                DatabaseHelper.RemoveSuggestion(connection, selected);
-                LoadSuggestions(); // Listeyi yenile
+                Debug.WriteLine("btnRemoveDescript_Click started");
+
+                if (lstSuggestions.SelectedItem != null)
+                {
+                    string selected = lstSuggestions.SelectedItem.ToString();
+                    Debug.WriteLine($"Selected suggestion to remove: {selected}");
+
+                    // Önce onay al
+                    var result = MessageBox.Show(
+                        $"'{selected}' önerisini silmek istediğinizden emin misiniz?",
+                        "Öneri Silme",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        Debug.WriteLine("User confirmed deletion");
+
+                        // Database tipini kontrol et
+                        string databaseType = AppConfigHelper.DatabaseType;
+                        Debug.WriteLine($"Current database type: {databaseType}");
+
+                        bool success = _db.RemoveSuggestion(selected);
+                        Debug.WriteLine($"RemoveSuggestion result: {success}");
+
+                        if (success)
+                        {
+                            LoadSuggestions();
+                            MessageBox.Show("Öneri başarıyla silindi!", "Başarılı",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Öneri silinirken hata oluştu veya öneri bulunamadı!", "Hata",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        Debug.WriteLine("User cancelled deletion");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Lütfen silmek için bir öneri seçin!", "Uyarı",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"btnRemoveDescript_Click CRITICAL ERROR: {ex.Message}");
+                Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+                MessageBox.Show($"Öneri silinirken beklenmeyen hata: {ex.Message}", "Kritik Hata",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            Debug.WriteLine("btnRemoveDescript_Click completed");
         }
+
         private void txtDescription_TextChanged(object sender, EventArgs e)
         {
-            var filtered = DatabaseHelper.GetSuggestions(connection)
-                .Where(s => s.Contains(txtDescription.Text, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            lstSuggestions.DataSource = filtered;
+            try
+            {
+                var allSuggestions = _db.GetSuggestions();
+                var filtered = allSuggestions
+                    .Where(s => s.Contains(txtDescription.Text, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                lstSuggestions.DataSource = filtered;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Öneri filtreleme hatası: {ex.Message}");
+            }
         }
 
         public class InputForm : Form
@@ -1041,39 +1024,26 @@ namespace HesapTakip
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter);
-                    LoadCustomers(); // Listeyi yenile
+                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter);
+                    if (success)
+                    {
+                        LoadCustomers();
+                        MessageBox.Show("Müşteri başarıyla güncellendi!");
+                    }
+                    else
+                    {
+                        MessageBox.Show("Müşteri güncellenirken hata oluştu!");
+                    }
                 }
             }
         }
-        private void UpdateCustomer(int customerId, string newName, bool edefter)
-        {
-            try
-            {
-                using (var cmd = new MySqlCommand(
-                    "UPDATE Customers SET Name = @name, EDefter = @edefter WHERE CustomerID = @id", connection))
-                {
-                    connection.Open();
-                    cmd.Parameters.AddWithValue("@name", newName);
-                    cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0); // Boolean to Integer
-                    cmd.Parameters.AddWithValue("@id", customerId);
-                    cmd.ExecuteNonQuery();
-                    connection.Close();
-                }
-                //MessageBox.Show("Müşteri başarıyla güncellendi!");
-            }
-            catch (MySql.Data.MySqlClient.MySqlException ex)
-            {
-                MessageBox.Show("Hata: " + ex.Message);
-            }
-        }
-        //
+
         private int GetCurrentCustomerId()
         {
             if (dgvCustomers.CurrentRow == null || dgvCustomers.CurrentRow.Cells["CustomerID"].Value == null)
             {
                 MessageBox.Show("Lütfen bir müşteri seçin!");
-                return -1; // Hata durumunda -1 döndür
+                return -1;
             }
             return Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
         }
@@ -1090,7 +1060,6 @@ namespace HesapTakip
             DateTime date = Convert.ToDateTime(row.Cells["Date"].Value);
             string desc = row.Cells["Description"].Value.ToString();
 
-            // Amount'ı her zaman InvariantCulture ile string'e çevir
             string amount = "";
             if (row.Cells["Amount"].Value is decimal dec)
                 amount = dec.ToString(CultureInfo.InvariantCulture);
@@ -1103,44 +1072,24 @@ namespace HesapTakip
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    UpdateTransaction(transactionId, editForm.TransactionDate, editForm.Description, editForm.Amount, editForm.Type);
-                    LoadTransactions(GetCurrentCustomerId());
-                }
-            }
-        }
-        private void UpdateTransaction(int transactionId, DateTime date, string desc, string amount, string type)
-        {
-            try
-            {
-                // Nokta ve virgül ayrımını düzelt
-                if (!decimal.TryParse(amount.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amountValue))
-                {
-                    MessageBox.Show("Tutar değeri geçersiz!");
-                    return;
-                }
+                    // Amount formatını düzelt
+                    if (!decimal.TryParse(editForm.Amount.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amountValue))
+                    {
+                        MessageBox.Show("Tutar değeri geçersiz!");
+                        return;
+                    }
 
-                using (var cmd = new MySqlCommand(
-                    @"UPDATE Transactions 
-              SET Date = @date, 
-                  Description = @desc, 
-                  Amount = @amount, 
-                  Type = @type 
-              WHERE TransactionID = @id", connection))
-                {
-                    connection.Open();
-                    cmd.Parameters.AddWithValue("@date", date);
-                    cmd.Parameters.AddWithValue("@desc", desc);
-                    cmd.Parameters.AddWithValue("@amount", amountValue); // DÜZELTİLDİ
-                    cmd.Parameters.AddWithValue("@type", type);
-                    cmd.Parameters.AddWithValue("@id", transactionId);
-                    cmd.ExecuteNonQuery();
-                    connection.Close();
+                    bool success = _db.UpdateTransaction(transactionId, editForm.TransactionDate, editForm.Description, amountValue, editForm.Type);
+                    if (success)
+                    {
+                        LoadTransactions(GetCurrentCustomerId());
+                        MessageBox.Show("Hareket başarıyla güncellendi!");
+                    }
+                    else
+                    {
+                        MessageBox.Show("Hareket güncellenirken hata oluştu!");
+                    }
                 }
-                MessageBox.Show("Hareket başarıyla güncellendi!");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Güncelleme hatası: " + ex.Message);
             }
         }
 
@@ -1225,7 +1174,7 @@ namespace HesapTakip
                     decimal tutar = worksheet.Cells[row, 3].GetValue<decimal>();
                     //decimal alacak = worksheet.Cells[row, 3].GetValue<decimal>();
                     string tur = worksheet.Cells[row, 4].Text;
-                                       
+
                     // DataTable'a ekle
                     dt.Rows.Add(tarih, aciklama, tutar, tur);
                 }
@@ -1256,39 +1205,39 @@ namespace HesapTakip
 
         private bool SaveToDatabase(DataTable data)
         {
-
-
-            var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
-
-
-
-
-            foreach (DataRow row in data.Rows)
+            try
             {
-                using (var cmd = new MySqlCommand(
+                var customerID = GetCurrentCustomerId();
+                if (customerID == -1) return false;
 
-                                        @"INSERT INTO Transactions
-                                        (CustomerID, Date, Description, Amount, Type)
-                                        VALUES 
-                                        (@cid,@date, @desc, @amount, @type)", connection))
-
+                int successCount = 0;
+                foreach (DataRow row in data.Rows)
                 {
-                    connection.Open();
-                    cmd.Parameters.AddWithValue("@cid", customerID);
-                    cmd.Parameters.AddWithValue("@date", row["Tarih"]);
-                    cmd.Parameters.AddWithValue("@desc", row["Açıklama"]);
-                    cmd.Parameters.AddWithValue("@amount", row["Tutar"]);
-                    cmd.Parameters.AddWithValue("@type", row["Tür"]);
-                    cmd.ExecuteNonQuery();
-                    connection.Close();
+                    // DataTable kolon isimlerini kontrol et
+                    DateTime date = row["Tarih"] != DBNull.Value ? Convert.ToDateTime(row["Tarih"]) : DateTime.Now;
+                    string description = row["Açıklama"]?.ToString() ?? "";
 
+                    if (!decimal.TryParse(row["Tutar"]?.ToString(), out decimal amount))
+                        continue;
+
+                    string type = row["Tür"]?.ToString() ?? "Gelir";
+
+                    bool success = _db.AddTransaction(customerID, date, description, amount, type);
+                    if (success) successCount++;
                 }
+
+                // Listeyi yenile
+                LoadTransactions(customerID);
+                CalculateAndDisplayTotal(customerID);
+
+                MessageBox.Show($"{successCount} kayıt başarıyla veritabanına kaydedildi!");
+                return successCount > 0;
             }
-
-
-            LoadTransactions(customerID);
-            CalculateAndDisplayTotal(customerID);
-            return true;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Kaydetme hatası: {ex.Message}");
+                return false;
+            }
         }
 
 
@@ -1353,53 +1302,13 @@ namespace HesapTakip
             await CheckForUpdate();
             */
         }
-       
+
         private void eDefterToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var eDefterForm = new EDefterForm();
-            eDefterForm.Show(); // Yeni pencereyi açar
+            eDefterForm.Show();
         }
 
-        private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns)
-        {
-            // Tablo var mı kontrolü
-            using (var cmd = new MySqlCommand())
-            {
-                cmd.Connection = connection;
-                connection.Open();
-                //
-                cmd.CommandText = $"SHOW TABLES LIKE '{tableName}'";
-                var exists = cmd.ExecuteScalar() != null;
-
-                if (!exists)
-                {
-                    var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
-                    cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef}) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci";
-                    cmd.ExecuteNonQuery();
-                }
-                else
-                {
-                    cmd.CommandText = $"SHOW COLUMNS FROM {tableName}";
-                    var reader = cmd.ExecuteReader();
-                    var existingColumns = new HashSet<string>();
-                    while (reader.Read())
-                    {
-                        existingColumns.Add(reader["Field"].ToString());
-                    }
-                    reader.Close();
-
-                    foreach (var kv in columns)
-                    {
-                        if (!existingColumns.Contains(kv.Key))
-                        {
-                            cmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {kv.Key} {kv.Value}";
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                }
-                connection.Close();
-            }
-        }
         public static async Task CheckForUpdate(IProgress<int> progress, IProgress<string> statusProgress)
         {
             string repoOwner = "yusatopaloglu-s";
@@ -1487,27 +1396,8 @@ namespace HesapTakip
 
             return assemblyVersion ?? new Version(1, 0, 0);
         }
-                
-        /*
-        // Mevcut versiyonu Assembly'den al
-        private static Version GetCurrentVersion()
-        {
-            // 1. Önce AssemblyVersion'ı dene
-            Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
-            // 2. Eğer AssemblyVersion boşsa, FileVersion'ı kullan
-            if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
-            {
-                var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
-                {
-                    return fileVersion;
-                }
-            }
 
-            return assemblyVersion ?? new Version(1, 0, 0);
-        }
-        */
         // Git tag'ını Version formatına parse et
         private static Version ParseVersion(string versionString)
         {
@@ -1732,5 +1622,7 @@ exit
                 statusLabel.Visible = false;
             }
         }
-        }
+
+
+    }
 }
