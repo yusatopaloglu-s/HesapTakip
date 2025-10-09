@@ -241,8 +241,7 @@
             // statusLabel
             // 
             statusLabel.Name = "statusLabel";
-            statusLabel.Size = new Size(44, 17);
-            statusLabel.Text = "Durum";
+            statusLabel.Size = new Size(0, 17);
             // 
             // toolStripStatusLabelVersion
             // 
@@ -409,15 +408,15 @@
             totalPanel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             totalPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             totalPanel.Controls.Add(lblTotal);
-            totalPanel.Location = new Point(289, 497);
+            totalPanel.Location = new Point(258, 509);
             totalPanel.Name = "totalPanel";
-            totalPanel.Size = new Size(165, 15);
+            totalPanel.Size = new Size(168, 25);
             totalPanel.TabIndex = 3;
             // 
             // lblTotal
             // 
             lblTotal.AutoSize = true;
-            lblTotal.Location = new Point(0, 0);
+            lblTotal.Location = new Point(3, 2);
             lblTotal.Name = "lblTotal";
             lblTotal.Size = new Size(119, 15);
             lblTotal.TabIndex = 0;
@@ -428,7 +427,7 @@
             btnAddTransaction.Location = new Point(466, 131);
             btnAddTransaction.Name = "btnAddTransaction";
             btnAddTransaction.Size = new Size(117, 23);
-            btnAddTransaction.TabIndex = 2;
+            btnAddTransaction.TabIndex = 4;
             btnAddTransaction.Text = "Hareket Ekle";
             btnAddTransaction.UseVisualStyleBackColor = true;
             btnAddTransaction.Click += btnAddTransaction_Click;
@@ -489,7 +488,7 @@
             txtDescription.Name = "txtDescription";
             txtDescription.PlaceholderText = "FaturaNo veya Tahsilat Türü Ekle-Çıkar";
             txtDescription.Size = new Size(221, 23);
-            txtDescription.TabIndex = 5;
+            txtDescription.TabIndex = 2;
             // 
             // dtpDate
             // 
@@ -503,7 +502,7 @@
             dtpDate.Name = "dtpDate";
             dtpDate.RightToLeftLayout = true;
             dtpDate.Size = new Size(221, 23);
-            dtpDate.TabIndex = 0;
+            dtpDate.TabIndex = 1;
             dtpDate.Value = new DateTime(2025, 1, 1, 0, 0, 0, 0);
             // 
             // txtAmount
@@ -512,7 +511,7 @@
             txtAmount.Location = new Point(230, 55);
             txtAmount.Name = "txtAmount";
             txtAmount.Size = new Size(221, 23);
-            txtAmount.TabIndex = 8;
+            txtAmount.TabIndex = 3;
             // 
             // label1
             // 
@@ -535,7 +534,7 @@
             dgvTransactions.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvTransactions.Location = new Point(6, 131);
             dgvTransactions.Name = "dgvTransactions";
-            dgvTransactions.Size = new Size(454, 360);
+            dgvTransactions.Size = new Size(454, 378);
             dgvTransactions.TabIndex = 0;
             // 
             // lstSuggestions
@@ -600,6 +599,7 @@
             Controls.Add(splitContainer1);
             Controls.Add(menuStrip1);
             Icon = (Icon)resources.GetObject("$this.Icon");
+            KeyPreview = true;
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
             Text = "Yuşa' Hesap Takip";

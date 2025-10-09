@@ -43,31 +43,32 @@ namespace HesapTakip
                 this.Close();
             }
         }
-        private IDbDataAdapter CreateDataAdapter(IDbConnection connection, string query, int customerID)
-        {
-            var databaseType = AppConfigHelper.DatabaseType;
+        /*  private IDbDataAdapter CreateDataAdapter(IDbConnection connection, string query, int customerID)
+          {
+              var databaseType = AppConfigHelper.DatabaseType;
 
-            switch (databaseType.ToUpper())
-            {
-                case "MYSQL":
-                    var mysqlAdapter = new MySql.Data.MySqlClient.MySqlDataAdapter(query, connection as MySql.Data.MySqlClient.MySqlConnection);
-                    mysqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                    return mysqlAdapter;
+              switch (databaseType.ToUpper())
+              {
+                  case "MYSQL":
+                      var mysqlAdapter = new MySql.Data.MySqlClient.MySqlDataAdapter(query, connection as MySql.Data.MySqlClient.MySqlConnection);
+                      mysqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                      return mysqlAdapter;
 
-                case "MSSQL":
-                    var mssqlAdapter = new System.Data.SqlClient.SqlDataAdapter(query, connection as System.Data.SqlClient.SqlConnection);
-                    mssqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                    return mssqlAdapter;
+                  case "MSSQL":
+                      var mssqlAdapter = new System.Data.SqlClient.SqlDataAdapter(query, connection as System.Data.SqlClient.SqlConnection);
+                      mssqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                      return mssqlAdapter;
 
-                case "SQLITE":
-                    var sqliteAdapter = new System.Data.SQLite.SQLiteDataAdapter(query, connection as System.Data.SQLite.SQLiteConnection);
-                    sqliteAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                    return sqliteAdapter;
+                  case "SQLITE":
+                      var sqliteAdapter = new System.Data.SQLite.SQLiteDataAdapter(query, connection as System.Data.SQLite.SQLiteConnection);
+                      sqliteAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
+                      return sqliteAdapter;
 
-                default:
-                    throw new NotSupportedException($"Desteklenmeyen database tipi: {databaseType}");
-            }
-        }
+                  default:
+                      throw new NotSupportedException($"Desteklenmeyen database tipi: {databaseType}");
+              }
+          }
+        */
         private void LoadCustomers()
         {
             try
@@ -88,7 +89,7 @@ namespace HesapTakip
                 MessageBox.Show("Veri yükleme hatası: " + ex.Message);
             }
 
-            // DÜZELTİLMİŞ: Null kontrolü ekle
+            // Null kontrolü ekle
             if (dgvFirmaList.Columns.Contains("CustomerID"))
                 dgvFirmaList.Columns["CustomerID"].Visible = false;
 
@@ -113,7 +114,7 @@ namespace HesapTakip
 
         private void FormatTransactionGrid()
         {
-            // DÜZELTİLMİŞ: Null ve column varlık kontrolleri
+            // Null ve column varlık kontrolleri
             if (dgvKontorList.Columns.Count == 0) return;
 
             if (dgvKontorList.Columns.Contains("TransactionID"))
@@ -128,14 +129,14 @@ namespace HesapTakip
             if (dgvKontorList.Columns.Contains("Type"))
                 dgvKontorList.Columns["Type"].Visible = false;
 
-            // DÜZELTİLMİŞ: Row sayısı kontrolü
+            // Row sayısı kontrolü
             if (dgvKontorList.Rows.Count > 0)
             {
                 foreach (DataGridViewRow row in dgvKontorList.Rows)
                 {
                     if (row.IsNewRow) continue;
 
-                    // DÜZELTİLMİŞ: Cell varlık ve null kontrolleri
+                    // Cell varlık ve null kontrolleri
                     if (row.Cells["Type"]?.Value != null && row.Cells["Kontor"] != null)
                     {
                         var typeValue = row.Cells["Type"].Value.ToString().ToLower();
@@ -151,7 +152,7 @@ namespace HesapTakip
                 }
             }
 
-            // DÜZELTİLMİŞ: Column varlık kontrolü
+            //Column varlık kontrolü
             if (dgvKontorList.Columns.Contains("Date"))
             {
                 dgvKontorList.Sort(dgvKontorList.Columns["Date"], ListSortDirection.Ascending);
@@ -165,7 +166,7 @@ namespace HesapTakip
             try
             {
                 decimal total = _db.CalculateEDefterTotal(customerID);
-                lblTotal.Text = $"Kontor: {total.ToString("N2")} ₺";
+                lblTotal.Text = $"Kontor: {total.ToString("N2")} ";
                 lblTotal.ForeColor = total >= 0 ? Color.DarkGreen : Color.DarkRed;
             }
             catch (Exception ex)

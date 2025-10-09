@@ -21,7 +21,12 @@ namespace HesapTakip
         private DataSet dataSet = new DataSet();
         private List<string> _suggestions = new List<string>();
         private static bool _versionChecked = false;
+        private async void MainForm_Load(object sender, EventArgs e)
+        {
+            // İsteğe bağlı: Uygulama başladığında sessizce kontrol et
+            // await CheckForUpdate();
 
+        }
         public MainForm()
         {
             InitializeComponent();
@@ -241,7 +246,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadCustomers();
-                        MessageBox.Show("Müşteri başarıyla eklendi!");
+                        //MessageBox.Show("Müşteri başarıyla eklendi!");
                     }
                     else
                     {
@@ -273,7 +278,7 @@ namespace HesapTakip
                 {
                     LoadCustomers();
                     dgvTransactions.DataSource = null;
-                    MessageBox.Show($"{customerName} başarıyla silindi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // MessageBox.Show($"{customerName} başarıyla silindi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -326,7 +331,7 @@ namespace HesapTakip
                 LoadTransactions(customerID);
                 CalculateAndDisplayTotal(customerID);
                 ClearTransactionInputs();
-                MessageBox.Show("İşlem başarıyla eklendi!");
+                // MessageBox.Show("İşlem başarıyla eklendi!");
             }
             else
             {
@@ -359,7 +364,7 @@ namespace HesapTakip
                 {
                     LoadTransactions(customerID);
                     CalculateAndDisplayTotal(customerID);
-                    MessageBox.Show("Hareket başarıyla silindi!");
+                    // MessageBox.Show("Hareket başarıyla silindi!");
                 }
                 else
                 {
@@ -740,86 +745,6 @@ namespace HesapTakip
             }
         }
 
-        /*  public static class DatabaseHelper
-          {
-              public static List<string> GetSuggestions(MySqlConnection conn)
-              {
-                  var suggestions = new List<string>();
-                  bool closeAfter = false;
-                  try
-                  {
-                      if (conn.State != ConnectionState.Open)
-                      {
-                          conn.Open();
-                          closeAfter = true;
-                      }
-
-                      using (var cmd = new MySqlCommand("SELECT Description FROM Suggestions", conn))
-                      using (var reader = cmd.ExecuteReader())
-                      {
-                          while (reader.Read())
-                              suggestions.Add(reader["Description"].ToString());
-                      }
-                  }
-                  finally
-                  {
-                      if (closeAfter) conn.Close();
-                  }
-
-                  return suggestions;
-              }
-
-              public static bool AddSuggestion(MySqlConnection conn, string description)
-              {
-                  try
-                  {
-                      bool closeAfter = false;
-                      if (conn.State != ConnectionState.Open)
-                      {
-                          conn.Open();
-                          closeAfter = true;
-                      }
-
-                      using (var cmd = new MySqlCommand("INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
-                      {
-                          cmd.Parameters.AddWithValue("@desc", description);
-                          cmd.ExecuteNonQuery();
-                      }
-
-                      if (closeAfter) conn.Close();
-                      return true;
-                  }
-                  catch (MySql.Data.MySqlClient.MySqlException)
-                  {
-                      // Genellikle UNIQUE ihlali gibi durumlarda false döndür
-                      return false;
-                  }
-              }
-
-              public static void RemoveSuggestion(MySqlConnection conn, string description)
-              {
-                  bool closeAfter = false;
-                  try
-                  {
-                      if (conn.State != ConnectionState.Open)
-                      {
-                          conn.Open();
-                          closeAfter = true;
-                      }
-
-                      using (var cmd = new MySqlCommand("DELETE FROM Suggestions WHERE Description = @desc", conn))
-                      {
-                          cmd.Parameters.AddWithValue("@desc", description);
-                          cmd.ExecuteNonQuery();
-                      }
-                  }
-                  finally
-                  {
-                      if (closeAfter) conn.Close();
-                  }
-              }
-          }
-          */
         private void InitializeAutoComplete()
         {
             txtDescription.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
@@ -851,7 +776,7 @@ namespace HesapTakip
                 {
                     LoadSuggestions();
                     txtDescription.Clear();
-                    MessageBox.Show("Öneri başarıyla eklendi!");
+                    // MessageBox.Show("Öneri başarıyla eklendi!");
                 }
                 else
                 {
@@ -892,8 +817,8 @@ namespace HesapTakip
                         if (success)
                         {
                             LoadSuggestions();
-                            MessageBox.Show("Öneri başarıyla silindi!", "Başarılı",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            // MessageBox.Show("Öneri başarıyla silindi!", "Başarılı",
+                            // MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                         {
@@ -1028,7 +953,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadCustomers();
-                        MessageBox.Show("Müşteri başarıyla güncellendi!");
+                        // MessageBox.Show("Müşteri başarıyla güncellendi!");
                     }
                     else
                     {
@@ -1083,7 +1008,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadTransactions(GetCurrentCustomerId());
-                        MessageBox.Show("Hareket başarıyla güncellendi!");
+                        // MessageBox.Show("Hareket başarıyla güncellendi!");
                     }
                     else
                     {
@@ -1240,7 +1165,7 @@ namespace HesapTakip
             }
         }
 
-
+        //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMI İÇİN ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
         private bool ValidateExcelFormat(ExcelWorksheet worksheet)
         {
             // Başlık kontrolü
@@ -1294,13 +1219,6 @@ namespace HesapTakip
                     }
                 }
             }
-        }
-
-        private async void MainForm_Load(object sender, EventArgs e)
-        {   /*
-            // İsteğe bağlı: Uygulama başladığında sessizce kontrol et
-            await CheckForUpdate();
-            */
         }
 
         private void eDefterToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1403,17 +1321,17 @@ namespace HesapTakip
         {
             try
             {
-                // "v1.2.3" formatını "1.2.3" yap
+
                 string cleanVersion = versionString.Trim().TrimStart('v', 'V');
 
-                // Sadece versiyon numarasını al (eğer başka karakterler varsa)
+
                 string versionOnly = System.Text.RegularExpressions.Regex.Match(cleanVersion, @"[\d\.]+").Value;
 
                 return Version.Parse(versionOnly);
             }
             catch
             {
-                // Parse edilemezse varsayılan versiyon dön
+
                 return new Version(0, 0, 0);
             }
         }
