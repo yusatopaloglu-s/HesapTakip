@@ -81,17 +81,18 @@ namespace HesapTakip
             return new MySqlConnection(_connectionString);
         }
 
-        public DataTable GetCustomers()
-        {
-            var dt = new DataTable();
-            using (var conn = new MySqlConnection(_connectionString))
-            using (var adapter = new MySqlDataAdapter("SELECT * FROM Customers", conn))
-            {
-                adapter.Fill(dt);
-            }
-            return dt;
-        }
-
+           public DataTable GetCustomers()
+           {
+               var dt = new DataTable();
+               using (var conn = new MySqlConnection(_connectionString))
+               using (var adapter = new MySqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode FROM Customers", conn))
+               {
+                   adapter.Fill(dt);
+               }
+               return dt;
+           }
+           
+ 
         public bool AddCustomer(string name, bool edefter, string taxid = null, string activitycode = null)
         {
             try

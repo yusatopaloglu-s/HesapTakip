@@ -43,32 +43,7 @@ namespace HesapTakip
                 this.Close();
             }
         }
-        /*  private IDbDataAdapter CreateDataAdapter(IDbConnection connection, string query, int customerID)
-          {
-              var databaseType = AppConfigHelper.DatabaseType;
 
-              switch (databaseType.ToUpper())
-              {
-                  case "MYSQL":
-                      var mysqlAdapter = new MySql.Data.MySqlClient.MySqlDataAdapter(query, connection as MySql.Data.MySqlClient.MySqlConnection);
-                      mysqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                      return mysqlAdapter;
-
-                  case "MSSQL":
-                      var mssqlAdapter = new System.Data.SqlClient.SqlDataAdapter(query, connection as System.Data.SqlClient.SqlConnection);
-                      mssqlAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                      return mssqlAdapter;
-
-                  case "SQLITE":
-                      var sqliteAdapter = new System.Data.SQLite.SQLiteDataAdapter(query, connection as System.Data.SQLite.SQLiteConnection);
-                      sqliteAdapter.SelectCommand.Parameters.AddWithValue("@customerID", customerID);
-                      return sqliteAdapter;
-
-                  default:
-                      throw new NotSupportedException($"Desteklenmeyen database tipi: {databaseType}");
-              }
-          }
-        */
         private void LoadCustomers()
         {
             try
@@ -95,6 +70,8 @@ namespace HesapTakip
 
             if (dgvFirmaList.Columns.Contains("EDefter"))
                 dgvFirmaList.Columns["EDefter"].Visible = false;
+            dgvFirmaList.Columns["Taxid"].Visible = false;
+            dgvFirmaList.Columns["ActivityCode"].Visible = false;
         }
 
         private void LoadTransactions(int customerID)

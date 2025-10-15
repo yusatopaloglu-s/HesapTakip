@@ -153,7 +153,7 @@ namespace HesapTakip
                     dgvCustomers.Columns["CustomerID"].Visible = false;
                     dgvCustomers.Columns["EDefter"].Visible = false;
                     dgvCustomers.Columns["Taxid"].Visible = false;
-                    dgvCustomers.Columns["ActivityCode"].Visible = false;
+                    dgvCustomers.Columns["ActivityCode"].Visible = true;
                 }
             }
             catch (Exception ex)
@@ -1374,7 +1374,13 @@ namespace HesapTakip
 
         private void eFaturaXMLExcelToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var efaturaxmlForm = new EFaturaxmlForm();
+            if (_db == null || !InitializeDatabase()) // Bağlantı kontrolü
+            {
+                MessageBox.Show("Veritabanı bağlantısı kurulamadı. Lütfen ayarları kontrol edin.");
+                return;
+            }
+
+            var efaturaxmlForm = new EFaturaxmlForm(_db); // _db'yi geçir
             efaturaxmlForm.Show();
         }
         public static async Task CheckForUpdate(IProgress<int> progress, IProgress<string> statusProgress)

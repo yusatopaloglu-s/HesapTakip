@@ -1,4 +1,5 @@
 ﻿using OfficeOpenXml;
+using System.Data;
 using System.Globalization;
 using System.Xml.Linq;
 
@@ -54,14 +55,15 @@ namespace HesapTakip
         private List<InvoiceData> BilancoAlisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeSatisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeAlisData = new List<InvoiceData>();
+        private IDatabaseOperations _db;
 
-
-        public EFaturaxmlForm()
+        public EFaturaxmlForm(IDatabaseOperations db)
         {
-
-            //InitializeControls();
+            _db = db;
             InitializeComponent();
             InitializeComboBox();
+           
+
         }
         private void InitializeComboBox()
         {
@@ -74,8 +76,29 @@ namespace HesapTakip
 
             });
             cmbTableSelector.SelectedIndex = 0;
+
             UpdateDataGridView();
+
+              if (_db != null)
+              {
+                  if (_db.GetCustomers() is DataTable customers)
+                  {
+                      foreach (DataRow row in customers.Rows)
+                      {
+                          cbx_customerlist.Items.Add(new { ID = row["CustomerID"], Name = row["Name"], ActivityCode = row["ActivityCode"] });
+                      }
+                      cbx_customerlist.DisplayMember = "Name";
+                      cbx_customerlist.ValueMember = "ActivityCode";
+                      cbx_customerlist.SelectedIndex = 0;
+                  }
+                  else
+                  {
+                     MessageBox.Show($"Müşteri verileri alınamadı:", "Hata");
+                  }
+              }
+              UpdateDataGridView(); 
         }
+        
         private void UploadButton_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog
@@ -148,6 +171,11 @@ namespace HesapTakip
         private void CmbTableSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateDataGridView();
+        }
+
+        private void CbxCustomerList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateDataGridView(); 
         }
         private void BtnClear_Click(object sender, EventArgs e)
         {
@@ -259,6 +287,13 @@ namespace HesapTakip
                     }
                 }
 
+                /* var activityCode = cbx_customerlist.SelectedValue?.ToString() ?? "";
+                if (string.IsNullOrEmpty(activityCode) && cbx_customerlist.Items.Count > 0 && cbx_customerlist.SelectedIndex == -1)
+                {
+                    cbx_customerlist.SelectedIndex = 0;
+                    activityCode = cbx_customerlist.SelectedValue?.ToString() ?? "";
+                }
+                */
                 var totalTaxAmount = invoiceType == "TEVKIFAT" ? xml.Descendants(cac + "TaxTotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0.00" : (taxAmount20 != 0.0 ? taxAmount20.ToString("F2", CultureInfo.InvariantCulture) : taxAmount18.ToString("F2", CultureInfo.InvariantCulture));
                 var legalMonetaryTotal = xml.Descendants(cac + "LegalMonetaryTotal");
                 var taxExclusiveAmount = legalMonetaryTotal.Descendants(cbc + "TaxExclusiveAmount").FirstOrDefault()?.Value ?? "0.00";
@@ -726,7 +761,7 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "boş", "");
                     }
                     break;
 
@@ -754,12 +789,12 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            label2 = new Label();
+            cbx_customerlist = new ComboBox();
             btnExportExcel = new Button();
             btn_clr = new Button();
             label1 = new Label();
             dgvData = new DataGridView();
-            cbx_customerlist = new ComboBox();
-            label2 = new Label();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -816,6 +851,28 @@ namespace HesapTakip
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
             // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Font = new Font("Segoe UI", 9F);
+            label2.Location = new Point(335, 11);
+            label2.Name = "label2";
+            label2.Size = new Size(167, 30);
+            label2.TabIndex = 7;
+            label2.Text = "Müşteri Seç\r\nİşletmelerde Faaliyet Kodu için";
+            label2.Visible = false;
+            // 
+            // cbx_customerlist
+            // 
+            cbx_customerlist.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbx_customerlist.FormattingEnabled = true;
+            cbx_customerlist.Location = new Point(335, 44);
+            cbx_customerlist.Name = "cbx_customerlist";
+            cbx_customerlist.Size = new Size(171, 23);
+            cbx_customerlist.TabIndex = 6;
+            cbx_customerlist.Visible = false;
+            cbx_customerlist.SelectedIndexChanged += CbxCustomerList_SelectedIndexChanged;
+            // 
             // btnExportExcel
             // 
             btnExportExcel.Location = new Point(207, 29);
@@ -860,24 +917,6 @@ namespace HesapTakip
             dgvData.ReadOnly = true;
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
-            // 
-            // cbx_customerlist
-            // 
-            cbx_customerlist.FormattingEnabled = true;
-            cbx_customerlist.Location = new Point(335, 44);
-            cbx_customerlist.Name = "cbx_customerlist";
-            cbx_customerlist.Size = new Size(171, 23);
-            cbx_customerlist.TabIndex = 6;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Font = new Font("Segoe UI", 9F);
-            label2.Location = new Point(335, 11);
-            label2.Name = "label2";
-            label2.Size = new Size(167, 30);
-            label2.TabIndex = 7;
-            label2.Text = "Müşteri Seç\r\nİşletmelerde Faaliyet Kodu için";
             // 
             // EFaturaxmlForm
             // 
