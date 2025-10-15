@@ -4,3 +4,4 @@ MySQL ve MSSQL ağ üzerinden çalışırken , SqLite yerel dosyada kayıt tutar
 Borç Alacak takibi. <br>
 E-defter gönderimi kontor takibi. <br>
 E-fatura xml-ubl kaynak dosyalarını Excel tablosuna çevirme modülü. <br>
+--Herhangi bir hata veya uyarı mesajı ile karşılaşırsanız Issues altına ekleyebilirsiniz
