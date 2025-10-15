@@ -1227,6 +1227,12 @@ namespace HesapTakip
             eDefterForm.Show();
         }
 
+        private void eFaturaXMLExcelToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+                var efaturaxmlForm = new EFaturaxmlForm();
+                efaturaxmlForm.Show();
+        }
+
         public static async Task CheckForUpdate(IProgress<int> progress, IProgress<string> statusProgress)
         {
             string repoOwner = "yusatopaloglu-s";

@@ -73,6 +73,7 @@
             güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
             modülToolStripMenuItem = new ToolStripMenuItem();
             eDefterKontorTakipToolStripMenuItem = new ToolStripMenuItem();
+            eFaturaXMLExcelToolStripMenuItem = new ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -579,7 +580,7 @@
             // 
             // modülToolStripMenuItem
             // 
-            modülToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { eDefterKontorTakipToolStripMenuItem });
+            modülToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { eDefterKontorTakipToolStripMenuItem, eFaturaXMLExcelToolStripMenuItem });
             modülToolStripMenuItem.Name = "modülToolStripMenuItem";
             modülToolStripMenuItem.Size = new Size(54, 20);
             modülToolStripMenuItem.Text = "Modül";
@@ -587,9 +588,16 @@
             // eDefterKontorTakipToolStripMenuItem
             // 
             eDefterKontorTakipToolStripMenuItem.Name = "eDefterKontorTakipToolStripMenuItem";
-            eDefterKontorTakipToolStripMenuItem.Size = new Size(181, 22);
+            eDefterKontorTakipToolStripMenuItem.Size = new Size(183, 22);
             eDefterKontorTakipToolStripMenuItem.Text = "eDefter Kontor Takip";
             eDefterKontorTakipToolStripMenuItem.Click += eDefterToolStripMenuItem_Click;
+            // 
+            // eFaturaXMLExcelToolStripMenuItem
+            // 
+            eFaturaXMLExcelToolStripMenuItem.Name = "eFaturaXMLExcelToolStripMenuItem";
+            eFaturaXMLExcelToolStripMenuItem.Size = new Size(183, 22);
+            eFaturaXMLExcelToolStripMenuItem.Text = "e-Fatura XML - Excel";
+            eFaturaXMLExcelToolStripMenuItem.Click += eFaturaXMLExcelToolStripMenuItem_Click;
             // 
             // MainForm
             // 
@@ -676,5 +684,6 @@
         private ToolStripProgressBar progressBar1;
         private ToolStripStatusLabel statusLabel;
         private ToolStripStatusLabel toolStripStatusLabelVersion;
+        private ToolStripMenuItem eFaturaXMLExcelToolStripMenuItem;
     }
 }
