@@ -45,6 +45,10 @@ namespace HesapTakip
         public ConnectionSettingsForm()
         {
             InitializeComponent();
+            foreach (Control ctrl in this.Controls)
+            {
+                ctrl.Font = new Font("Segoe UI", 9F);
+            }
             LoadCurrentSettings();
             UpdateFormByDatabaseType();
         }

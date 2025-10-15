@@ -1,7 +1,7 @@
 ###############################################################################
 # Set default behavior to automatically normalize line endings.
 ###############################################################################
-* text = working-tree-encoding=UTF-8
+* text=auto eol=lf
 *.cs text = working-tree-encoding=UTF-8
 *.csproj text = working-tree-encoding=UTF-8
 *.sln text = working-tree-encoding=UTF-8
