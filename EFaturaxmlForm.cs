@@ -278,6 +278,8 @@ namespace HesapTakip
                 string selectedTable = cmbTableSelector.SelectedItem?.ToString() ?? "";
                 bool isSatis = selectedTable == "Bilanço Satış" || selectedTable == "Luca İşletme Satış";
 
+                var defaultSubRecordType = "Mal Satışı"; // veya "Mal Alışı" için uygun değer
+
                 if (isSatis)
                 {
                     if (BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber)) return;
@@ -346,12 +348,13 @@ namespace HesapTakip
                 var invoiceLines = xml.Descendants(cac + "InvoiceLine");
                 foreach (var line in invoiceLines)
                 {
-                    var itemName = line.Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
+                    var itemName = line.Descendants(cac + "Item").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
                     var quantity = line.Descendants(cbc + "InvoicedQuantity").FirstOrDefault()?.Value ?? "0";
                     var unitPrice = line.Descendants(cac + "Price").Descendants(cbc + "PriceAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxableAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxableAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxPercent = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
+
 
                     var subRecordType = itemName switch
                     {
@@ -359,6 +362,8 @@ namespace HesapTakip
                         "Komisyon Faturası" => "Komisyon Giderleri ( GVK 40/1)",
                         "Reklam Bedeli" => "İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)",
                         "Platform Hizmet Bedeli" => "Komisyon Giderleri ( GVK 40/1)",
+                        "Uluslararası Hizmet Bedeli" => "Komisyon Giderleri ( GVK 40/1)",
+                        "Müşteri Duyuruları Faturası" => "İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)",
                         _ => ""
                     };
 
@@ -528,12 +533,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "1",
                                 TaxableAmount = taxableAmount1.ToString("N2", formatter2),
                                 TaxAmount = taxAmount1.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName // For AÇIKLAMA
                             });
                         }
 
@@ -553,12 +559,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "8",
                                 TaxableAmount = taxableAmount8.ToString("N2", formatter2),
                                 TaxAmount = taxAmount8.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName  // For AÇIKLAMA
                             });
                         }
 
@@ -578,12 +585,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "10",
                                 TaxableAmount = taxableAmount10.ToString("N2", formatter2),
                                 TaxAmount = taxAmount10.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName  // For AÇIKLAMA
                             });
                         }
 
@@ -603,12 +611,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "18",
                                 TaxableAmount = taxableAmount18.ToString("N2", formatter2),
                                 TaxAmount = taxAmount18.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName  // For AÇIKLAMA
                             });
                         }
 
@@ -628,12 +637,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "20",
                                 TaxableAmount = taxableAmount20.ToString("N2", formatter2),
                                 TaxAmount = taxAmount20.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName  // For AÇIKLAMA
                             });
                         }
 
@@ -653,12 +663,13 @@ namespace HesapTakip
                                 KdvExemptionCode = kdvExemptionCode,
                                 SaleType = saleType,
                                 ActivityCode = activityCode,
+                                SubRecordType = subRecordType,
                                 Percent = "0",
                                 TaxableAmount = taxExemptAmount0.ToString("N2", formatter2),
                                 TaxAmount = "0,00",
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
-                                ItemName = supplierName  // For AÇIKLAMA
+                                ItemName = itemName // For AÇIKLAMA
                             });
                         }
                     }
@@ -747,6 +758,8 @@ namespace HesapTakip
             btn_clr = new Button();
             label1 = new Label();
             dgvData = new DataGridView();
+            cbx_customerlist = new ComboBox();
+            label2 = new Label();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -789,6 +802,8 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            groupBox2.Controls.Add(label2);
+            groupBox2.Controls.Add(cbx_customerlist);
             groupBox2.Controls.Add(btnExportExcel);
             groupBox2.Controls.Add(btn_clr);
             groupBox2.Controls.Add(cmbTableSelector);
@@ -846,12 +861,31 @@ namespace HesapTakip
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
             // 
+            // cbx_customerlist
+            // 
+            cbx_customerlist.FormattingEnabled = true;
+            cbx_customerlist.Location = new Point(335, 44);
+            cbx_customerlist.Name = "cbx_customerlist";
+            cbx_customerlist.Size = new Size(171, 23);
+            cbx_customerlist.TabIndex = 6;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Font = new Font("Segoe UI", 9F);
+            label2.Location = new Point(335, 11);
+            label2.Name = "label2";
+            label2.Size = new Size(167, 30);
+            label2.TabIndex = 7;
+            label2.Text = "Müşteri Seç\r\nİşletmelerde Faaliyet Kodu için";
+            // 
             // EFaturaxmlForm
             // 
             ClientSize = new Size(1332, 431);
             Controls.Add(groupBox1);
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "EFaturaxmlForm";
+            Text = "E-Fatura XML & UBL -> Excel Dönüştürücü";
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
             groupBox2.ResumeLayout(false);
@@ -864,5 +898,7 @@ namespace HesapTakip
         private Button btnExportExcel;
         private Button btn_clr;
         private GroupBox groupBox2;
+        private Label label2;
+        private ComboBox cbx_customerlist;
     }
 }

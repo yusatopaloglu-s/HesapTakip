@@ -232,6 +232,28 @@ namespace HesapTakip
         {
             using (var inputForm = new InputForm("Müşteri Adı:"))
             {
+                var Taxid = new TextBox
+                {
+                    Text = "",
+                    Left = 20,
+                    Top = 50,
+                    Width = 200,
+                    PlaceholderText = "TCKN / Vergi No (Opsiyonel - Max 11 karakter)",
+                    MaxLength = 11 // En fazla 11 karakter
+                };
+                inputForm.Controls.Add(Taxid);
+
+                var ActivityCode = new TextBox
+                {
+                    Text = "",
+                    Left = 20,
+                    Top = 110,
+                    Width = 200,
+                    PlaceholderText = "Faaliyet Kodu (Opsiyonel - Max 6 karakter)",
+                    MaxLength = 6 // En fazla 6 karakter
+                };
+                inputForm.Controls.Add(ActivityCode);
+
                 var chkEDefter = new CheckBox
                 {
                     Text = "E-Defter",
@@ -243,7 +265,31 @@ namespace HesapTakip
 
                 if (inputForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.InputText))
                 {
-                    bool success = _db.AddCustomer(inputForm.InputText.Trim(), chkEDefter.Checked);
+                    // TaxID ve ActivityCode değerlerini al (boş bırakılabilir)
+                    string taxIdText = Taxid.Text.Trim();
+                    string activityCodeText = ActivityCode.Text.Trim();
+
+                    // TaxID sadece rakam kontrolü (opsiyonel)
+                    if (!string.IsNullOrEmpty(taxIdText) && !taxIdText.All(char.IsDigit))
+                    {
+                        MessageBox.Show("TCKN/Vergi No sadece rakamlardan oluşmalıdır!", "Hata",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // ActivityCode sadece rakam kontrolü (opsiyonel)
+                    if (!string.IsNullOrEmpty(activityCodeText) && !activityCodeText.All(char.IsDigit))
+                    {
+                        MessageBox.Show("Faaliyet Kodu sadece rakamlardan oluşmalıdır!", "Hata",
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Boş değerleri null olarak gönder
+                    string taxId = string.IsNullOrEmpty(taxIdText) ? null : taxIdText;
+                    string activityCode = string.IsNullOrEmpty(activityCodeText) ? null : activityCodeText;
+
+                    bool success = _db.AddCustomer(inputForm.InputText.Trim(), chkEDefter.Checked, taxId, activityCode);
                     if (success)
                     {
                         LoadCustomers();
@@ -929,39 +975,114 @@ namespace HesapTakip
             private int _customerId;
             private string _currentName;
             private bool _edefter;
+            private string _currentTaxId;
+            private string _currentActivityCode;
             private TextBox txtCustomerName;
             private CheckBox chkEDefter;
             private Button btnSave;
+            private TextBox txtCustomerTaxid;
+            private TextBox txtCustomerActivityCode;
 
-            public EditCustomerForm(int customerId, string currentName, bool edefter)
+
+            public EditCustomerForm(int customerId, string currentName, bool edefter, string taxId, string activityCode)
             {
-                txtCustomerName = new TextBox();
-                txtCustomerName.Location = new Point(20, 20);
-                txtCustomerName.Size = new System.Drawing.Size(200, 25);
-                this.Controls.Add(txtCustomerName);
-
-                chkEDefter = new CheckBox();
-                chkEDefter.Text = "E-Defter Müşterisi";
-                chkEDefter.Location = new Point(20, 50);
-                chkEDefter.Size = new System.Drawing.Size(200, 25);
-                chkEDefter.Checked = edefter;
-                this.Controls.Add(chkEDefter);
-
                 _customerId = customerId;
                 _currentName = currentName;
                 _edefter = edefter;
-                txtCustomerName.Text = _currentName;
+                _currentTaxId = taxId;
+                _currentActivityCode = activityCode;
 
-                btnSave = new Button();
-                btnSave.Location = new Point(20, 80);
-                btnSave.Size = new System.Drawing.Size(200, 25);
-                btnSave.Text = "Kaydet";
-                btnSave.Click += (sender, e) => { this.DialogResult = DialogResult.OK; this.Close(); };
+                InitializeForm();
+            }
+
+            private void InitializeForm()
+            {
+                this.Text = "Müşteri Düzenle";
+                this.Size = new System.Drawing.Size(300, 250);
+                this.StartPosition = FormStartPosition.CenterParent;
+                this.FormBorderStyle = FormBorderStyle.FixedDialog;
+                this.MaximizeBox = false;
+                this.MinimizeBox = false;
+
+                // Müşteri Adı
+                Label lblName = new Label { Text = "Müşteri Adı:", Location = new Point(20, 20), Width = 100 };
+                txtCustomerName = new TextBox { Location = new Point(120, 20), Width = 150, Text = _currentName };
+                this.Controls.Add(lblName);
+                this.Controls.Add(txtCustomerName);
+
+                // E-Defter CheckBox
+                chkEDefter = new CheckBox { Text = "E-Defter Müşterisi", Location = new Point(20, 50), Width = 200, Checked = _edefter };
+                this.Controls.Add(chkEDefter);
+
+                // TaxID
+                Label lblTaxId = new Label { Text = "TCKN/Vergi No:", Location = new Point(20, 80), Width = 100 };
+                txtCustomerTaxid = new TextBox
+                {
+                    Location = new Point(120, 80),
+                    Width = 150,
+                    Text = _currentTaxId,
+                    MaxLength = 11,
+                    PlaceholderText = "Max 11 karakter"
+                };
+                this.Controls.Add(lblTaxId);
+                this.Controls.Add(txtCustomerTaxid);
+
+                // Activity Code
+                Label lblActivityCode = new Label { Text = "Faaliyet Kodu:", Location = new Point(20, 110), Width = 100 };
+                txtCustomerActivityCode = new TextBox
+                {
+                    Location = new Point(120, 110),
+                    Width = 150,
+                    Text = _currentActivityCode,
+                    MaxLength = 6,
+                    PlaceholderText = "Max 6 karakter"
+                };
+                this.Controls.Add(lblActivityCode);
+                this.Controls.Add(txtCustomerActivityCode);
+
+                // Kaydet Butonu
+                btnSave = new Button { Text = "Kaydet", Location = new Point(120, 150), Width = 80 };
+                btnSave.Click += BtnSave_Click;
                 this.Controls.Add(btnSave);
+
+                // İptal Butonu
+                Button btnCancel = new Button { Text = "İptal", Location = new Point(210, 150), Width = 60 };
+                btnCancel.Click += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
+                this.Controls.Add(btnCancel);
+            }
+            private void BtnSave_Click(object sender, EventArgs e)
+            {
+                // Validasyon
+                if (string.IsNullOrWhiteSpace(txtCustomerName.Text))
+                {
+                    MessageBox.Show("Müşteri adı boş olamaz!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // TaxID validasyon (sadece rakam)
+                if (!string.IsNullOrEmpty(txtCustomerTaxid.Text) && !txtCustomerTaxid.Text.All(char.IsDigit))
+                {
+                    MessageBox.Show("TCKN/Vergi No sadece rakamlardan oluşmalıdır!", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ActivityCode validasyon (sadece rakam)
+                if (!string.IsNullOrEmpty(txtCustomerActivityCode.Text) && !txtCustomerActivityCode.Text.All(char.IsDigit))
+                {
+                    MessageBox.Show("Faaliyet Kodu sadece rakamlardan oluşmalıdır!", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
             }
 
             public string UpdatedName => txtCustomerName.Text.Trim();
             public bool UpdatedEDefter => chkEDefter.Checked;
+            public string UpdatedTaxId => string.IsNullOrEmpty(txtCustomerTaxid.Text.Trim()) ? null : txtCustomerTaxid.Text.Trim();
+            public string UpdatedActivityCode => string.IsNullOrEmpty(txtCustomerActivityCode.Text.Trim()) ? null : txtCustomerActivityCode.Text.Trim();
         }
         private void btnEditCustomer_Click(object sender, EventArgs e)
         {
@@ -975,11 +1096,18 @@ namespace HesapTakip
             string currentName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
             bool currentEDefter = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["EDefter"].Value);
 
-            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter))
+            // Null kontrolü ile TaxID ve ActivityCode değerlerini al
+            object taxIdValue = dgvCustomers.CurrentRow.Cells["TaxID"].Value;
+            object activityCodeValue = dgvCustomers.CurrentRow.Cells["ActivityCode"].Value;
+
+            string currentTaxId = taxIdValue != null && taxIdValue != DBNull.Value ? taxIdValue.ToString() : "";
+            string currentActivityCode = activityCodeValue != null && activityCodeValue != DBNull.Value ? activityCodeValue.ToString() : "";
+
+            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter, currentTaxId, currentActivityCode))
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter);
+                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter, editForm.UpdatedTaxId, editForm.UpdatedActivityCode);
                     if (success)
                     {
                         LoadCustomers();
@@ -992,7 +1120,6 @@ namespace HesapTakip
                 }
             }
         }
-
         private int GetCurrentCustomerId()
         {
             if (dgvCustomers.CurrentRow == null || dgvCustomers.CurrentRow.Cells["CustomerID"].Value == null)
@@ -1613,7 +1740,7 @@ exit
 
         private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-                        
+
             string url = "https://github.com/yusatopaloglu-s/HesapTakip";
 
             Process.Start(new ProcessStartInfo

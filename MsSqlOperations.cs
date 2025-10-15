@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
+using MySql.Data.MySqlClient;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
@@ -41,7 +42,9 @@ namespace HesapTakip
                 {
                     { "CustomerID", "INT IDENTITY(1,1) PRIMARY KEY" },
                     { "Name", "NVARCHAR(255) NOT NULL" },
-                    { "EDefter", "INT DEFAULT 0" }
+                    { "EDefter", "INT DEFAULT 0" },
+                    { "Taxid","NVARCHAR(11) DEFAULT NULL" },
+                    { "ActivityCode","NVARCHAR(6) DEFAULT NULL" }
                 }, conn);
 
                 // Transactions tablosu - MSSQL uyumlu
@@ -92,17 +95,19 @@ namespace HesapTakip
             return dt;
         }
 
-        public bool AddCustomer(string name, bool edefter)
+        public bool AddCustomer(string name, bool edefter, string taxid = null, string activitycode = null)
         {
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
                 using (var cmd = new SqlCommand(
-                    "INSERT INTO Customers (Name, EDefter) VALUES (@name, @edefter)", conn))
+                        "INSERT INTO Customers (Name, EDefter, Taxid, ActivityCode) VALUES (@name, @edefter, @taxid, @activitycode)", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", name.Trim());
                     cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@TaxID", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
+                    cmd.Parameters.AddWithValue("@ActivityCode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -114,18 +119,20 @@ namespace HesapTakip
             }
         }
 
-        public bool UpdateCustomer(int customerId, string newName, bool edefter)
+        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null)
         {
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
                 using (var cmd = new SqlCommand(
-                    "UPDATE Customers SET Name = @name, EDefter = @edefter WHERE CustomerID = @id", conn))
+                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode WHERE CustomerID = @id", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", newName);
                     cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
                     cmd.Parameters.AddWithValue("@id", customerId);
+                    cmd.Parameters.AddWithValue("@TaxID", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
+                    cmd.Parameters.AddWithValue("@ActivityCode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
