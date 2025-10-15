@@ -738,6 +738,7 @@ namespace HesapTakip
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EFaturaxmlForm));
             btnUpload = new Button();
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
@@ -849,6 +850,7 @@ namespace HesapTakip
             // 
             ClientSize = new Size(1332, 431);
             Controls.Add(groupBox1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "EFaturaxmlForm";
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();

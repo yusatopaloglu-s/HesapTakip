@@ -23,11 +23,9 @@ namespace HesapTakip
         private static bool _versionChecked = false;
         private async void MainForm_Load(object sender, EventArgs e)
         {
-
-            // İsteğe bağlı: Uygulama başladığında sessizce kontrol et
-            
             progressBar1.Visible = false;
-
+            // Açılışta sessizce versiyon kontrolü yap
+            _ = CheckForUpdatesSilentAsync();
         }
         public MainForm()
         {
@@ -47,6 +45,7 @@ namespace HesapTakip
             LoadCustomers();
             InitializeAutoComplete();
             LoadSuggestions();
+
             dtpDate.Value = DateTime.Today;
             dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
             toolStripStatusLabelVersion.Text = $"v{GetCurrentVersion()}";
@@ -483,7 +482,7 @@ namespace HesapTakip
 
                         // Add headers and data starting at row 2
                         transactionsSheet.Cells["A2"].LoadFromDataTable(dtTransactions, true);
-                        
+
                         // DYNAMIC RANGE HANDLING
                         int totalRows = dtTransactions.Rows.Count;
                         int startDataRow = 3; // Data starts at row 3 (row 1 = title, row 2 = headers)
@@ -495,7 +494,7 @@ namespace HesapTakip
                             // Format date column (column A)
                             ExcelRange dateRange = transactionsSheet.Cells[$"B{startDataRow}:B{endDataRow}"];
                             dateRange.Style.Numberformat.Format = "dd.mm.yyyy";
-                            
+
 
                             // Format amount column (column D)
                             ExcelRange amountRange = transactionsSheet.Cells[$"D{startDataRow}:D{endDataRow}"];
@@ -1233,10 +1232,9 @@ namespace HesapTakip
 
         private void eFaturaXMLExcelToolStripMenuItem_Click(object sender, EventArgs e)
         {
-                var efaturaxmlForm = new EFaturaxmlForm();
-                efaturaxmlForm.Show();
+            var efaturaxmlForm = new EFaturaxmlForm();
+            efaturaxmlForm.Show();
         }
-
         public static async Task CheckForUpdate(IProgress<int> progress, IProgress<string> statusProgress)
         {
             string repoOwner = "yusatopaloglu-s";
@@ -1307,6 +1305,42 @@ namespace HesapTakip
                 statusProgress?.Report("");
             }
         }
+        private async Task CheckForUpdatesSilentAsync()
+        {
+            string repoOwner = "yusatopaloglu-s";
+            string repoName = "HesapTakip";
+
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("HesapTakip");
+                    client.Timeout = TimeSpan.FromSeconds(10); // Daha kısa timeout
+
+                    var json = await client.GetStringAsync($"https://api.github.com/repos/{repoOwner}/{repoName}/releases/latest");
+                    dynamic release = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                    string latestVersion = release.tag_name;
+
+                    Version currentVersion = GetCurrentVersion();
+                    Version gitVersion = ParseVersion(latestVersion);
+
+                    if (gitVersion > currentVersion)
+                    {
+                        // UI thread'inde status label'ı güncelle
+                        this.Invoke(new Action(() =>
+                        {
+                            toolStripStatusLabelVersion.Text = $"v{currentVersion} - Yeni sürüm bulundu!";
+                            toolStripStatusLabelVersion.ForeColor = System.Drawing.Color.OrangeRed;
+                        }));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Hata durumunda sessiz kal
+                Debug.WriteLine($"Sessiz güncelleme hatası: {ex.Message}");
+            }
+        }
 
         // Versiyon metodlarını da ekleyelim
         private static Version GetCurrentVersion()
@@ -1324,7 +1358,6 @@ namespace HesapTakip
 
             return assemblyVersion ?? new Version(1, 0, 0);
         }
-
 
         // Git tag'ını Version formatına parse et
         private static Version ParseVersion(string versionString)
