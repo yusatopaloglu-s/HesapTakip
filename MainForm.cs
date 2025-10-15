@@ -481,7 +481,7 @@ namespace HesapTakip
 
                         // Add headers and data starting at row 2
                         transactionsSheet.Cells["A2"].LoadFromDataTable(dtTransactions, true);
-
+                        
                         // DYNAMIC RANGE HANDLING
                         int totalRows = dtTransactions.Rows.Count;
                         int startDataRow = 3; // Data starts at row 3 (row 1 = title, row 2 = headers)
@@ -491,8 +491,9 @@ namespace HesapTakip
                         if (totalRows > 0)
                         {
                             // Format date column (column A)
-                            ExcelRange dateRange = transactionsSheet.Cells[$"A{startDataRow}:A{endDataRow}"];
+                            ExcelRange dateRange = transactionsSheet.Cells[$"B{startDataRow}:B{endDataRow}"];
                             dateRange.Style.Numberformat.Format = "dd.mm.yyyy";
+                            
 
                             // Format amount column (column D)
                             ExcelRange amountRange = transactionsSheet.Cells[$"D{startDataRow}:D{endDataRow}"];
@@ -516,11 +517,12 @@ namespace HesapTakip
                         }
 
                         // Column settings
-                        transactionsSheet.Column(1).Width = 12; // Tarih
-                        transactionsSheet.Column(2).Width = 40; // Açıklama
-                        transactionsSheet.Column(3).Width = 15; // Tutar
-                        transactionsSheet.Column(4).AutoFit();  // Type (hidden)
-                        transactionsSheet.Column(5).Hidden = true; // Hide Type column
+                        transactionsSheet.Column(1).AutoFit();
+                        transactionsSheet.Column(2).Width = 12; // Tarih
+                        transactionsSheet.Column(3).Width = 40; // Açıklama
+                        transactionsSheet.Column(4).Width = 15; // Tutar
+                        transactionsSheet.Column(5).AutoFit();  // Type (hidden)
+                        transactionsSheet.Column(6).Hidden = true; // Hide Type column
 
                         // Auto-fit all columns
                         transactionsSheet.Cells[transactionsSheet.Dimension.Address].AutoFitColumns();
