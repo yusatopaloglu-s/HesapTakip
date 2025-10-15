@@ -37,6 +37,8 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
+            button2 = new Button();
+            button1 = new Button();
             link_yusa = new LinkLabel();
             statusStrip1 = new StatusStrip();
             progressBar1 = new ToolStripProgressBar();
@@ -187,6 +189,8 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(button2);
+            gbTransactions.Controls.Add(button1);
             gbTransactions.Controls.Add(link_yusa);
             gbTransactions.Controls.Add(statusStrip1);
             gbTransactions.Controls.Add(btnSaveToDb);
@@ -212,11 +216,30 @@
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
             // 
+            // button2
+            // 
+            button2.Location = new Point(466, 247);
+            button2.Name = "button2";
+            button2.Size = new Size(120, 23);
+            button2.TabIndex = 21;
+            button2.Text = "button2";
+            button2.UseVisualStyleBackColor = true;
+            button2.Visible = false;
+            // 
+            // button1
+            // 
+            button1.Location = new Point(466, 218);
+            button1.Name = "button1";
+            button1.Size = new Size(120, 23);
+            button1.TabIndex = 20;
+            button1.Text = "button1";
+            button1.UseVisualStyleBackColor = true;
+            button1.Visible = false;
+            // 
             // link_yusa
             // 
             link_yusa.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             link_yusa.AutoSize = true;
-            link_yusa.Enabled = false;
             link_yusa.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
             link_yusa.Location = new Point(438, 536);
             link_yusa.Name = "link_yusa";
@@ -224,6 +247,7 @@
             link_yusa.TabIndex = 7;
             link_yusa.TabStop = true;
             link_yusa.Text = "SMMM YUŞA TOPALOĞLU";
+            link_yusa.LinkClicked += link_yusa_LinkClicked;
             // 
             // statusStrip1
             // 
@@ -251,7 +275,7 @@
             // 
             // btnSaveToDb
             // 
-            btnSaveToDb.Location = new Point(466, 308);
+            btnSaveToDb.Location = new Point(463, 489);
             btnSaveToDb.Name = "btnSaveToDb";
             btnSaveToDb.Size = new Size(120, 23);
             btnSaveToDb.TabIndex = 16;
@@ -261,7 +285,7 @@
             // 
             // btnImportExcel
             // 
-            btnImportExcel.Location = new Point(466, 279);
+            btnImportExcel.Location = new Point(463, 460);
             btnImportExcel.Name = "btnImportExcel";
             btnImportExcel.Size = new Size(120, 23);
             btnImportExcel.TabIndex = 14;
@@ -284,7 +308,7 @@
             // 
             btnEditTransaction.Location = new Point(466, 189);
             btnEditTransaction.Name = "btnEditTransaction";
-            btnEditTransaction.Size = new Size(117, 23);
+            btnEditTransaction.Size = new Size(120, 23);
             btnEditTransaction.TabIndex = 12;
             btnEditTransaction.Text = "Hareket Düzenle";
             btnEditTransaction.UseVisualStyleBackColor = true;
@@ -312,7 +336,7 @@
             // 
             // btnExportPdf
             // 
-            btnExportPdf.Location = new Point(466, 337);
+            btnExportPdf.Location = new Point(466, 276);
             btnExportPdf.Name = "btnExportPdf";
             btnExportPdf.Size = new Size(120, 23);
             btnExportPdf.TabIndex = 8;
@@ -324,7 +348,7 @@
             // 
             btnDeleteTransaction.Location = new Point(466, 160);
             btnDeleteTransaction.Name = "btnDeleteTransaction";
-            btnDeleteTransaction.Size = new Size(117, 23);
+            btnDeleteTransaction.Size = new Size(120, 23);
             btnDeleteTransaction.TabIndex = 6;
             btnDeleteTransaction.Text = "Hareket Sil";
             btnDeleteTransaction.UseVisualStyleBackColor = true;
@@ -332,9 +356,9 @@
             // 
             // btnExportExcel
             // 
-            btnExportExcel.Location = new Point(466, 366);
+            btnExportExcel.Location = new Point(466, 305);
             btnExportExcel.Name = "btnExportExcel";
-            btnExportExcel.Size = new Size(120, 25);
+            btnExportExcel.Size = new Size(120, 23);
             btnExportExcel.TabIndex = 5;
             btnExportExcel.Text = "Excel'e Aktar";
             btnExportExcel.UseVisualStyleBackColor = true;
@@ -427,7 +451,7 @@
             // 
             btnAddTransaction.Location = new Point(466, 131);
             btnAddTransaction.Name = "btnAddTransaction";
-            btnAddTransaction.Size = new Size(117, 23);
+            btnAddTransaction.Size = new Size(120, 23);
             btnAddTransaction.TabIndex = 4;
             btnAddTransaction.Text = "Hareket Ekle";
             btnAddTransaction.UseVisualStyleBackColor = true;
@@ -685,5 +709,7 @@
         private ToolStripStatusLabel statusLabel;
         private ToolStripStatusLabel toolStripStatusLabelVersion;
         private ToolStripMenuItem eFaturaXMLExcelToolStripMenuItem;
+        private Button button2;
+        private Button button1;
     }
 }

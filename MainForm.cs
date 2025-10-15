@@ -546,11 +546,38 @@ namespace HesapTakip
         }
 
 
+        /* private DataTable GetTransactionsDataTable(int customerID)
+         {
+             try
+             {
+                 return _db.GetTransactions(customerID);
+             }
+             catch (Exception ex)
+             {
+                 MessageBox.Show($"Veri alınırken hata: {ex.Message}");
+                 return new DataTable();
+             }
+         }
+         */
         private DataTable GetTransactionsDataTable(int customerID)
         {
             try
             {
-                return _db.GetTransactions(customerID);
+                var dt = _db.GetTransactions(customerID);
+
+                // Header'ları Türkçe'ye çevir
+                if (dt.Columns.Contains("TransactionID"))
+                    dt.Columns["TransactionID"].ColumnName = "İşlemID";
+                if (dt.Columns.Contains("Date"))
+                    dt.Columns["Date"].ColumnName = "Tarih";
+                if (dt.Columns.Contains("Description"))
+                    dt.Columns["Description"].ColumnName = "Açıklama";
+                if (dt.Columns.Contains("Amount"))
+                    dt.Columns["Amount"].ColumnName = "Tutar";
+                if (dt.Columns.Contains("Type"))
+                    dt.Columns["Type"].ColumnName = "Tür";
+
+                return dt;
             }
             catch (Exception ex)
             {
@@ -1584,6 +1611,16 @@ exit
             }
         }
 
+        private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+                        
+            string url = "https://github.com/yusatopaloglu-s/HesapTakip";
 
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
     }
 }
