@@ -152,6 +152,8 @@ namespace HesapTakip
                 {
                     dgvCustomers.Columns["CustomerID"].Visible = false;
                     dgvCustomers.Columns["EDefter"].Visible = false;
+                    dgvCustomers.Columns["Taxid"].Visible = false;
+                    dgvCustomers.Columns["ActivityCode"].Visible = false;
                 }
             }
             catch (Exception ex)
@@ -591,20 +593,6 @@ namespace HesapTakip
             }
         }
 
-
-        /* private DataTable GetTransactionsDataTable(int customerID)
-         {
-             try
-             {
-                 return _db.GetTransactions(customerID);
-             }
-             catch (Exception ex)
-             {
-                 MessageBox.Show($"Veri alınırken hata: {ex.Message}");
-                 return new DataTable();
-             }
-         }
-         */
         private DataTable GetTransactionsDataTable(int customerID)
         {
             try

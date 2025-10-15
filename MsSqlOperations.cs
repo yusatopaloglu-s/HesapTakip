@@ -106,8 +106,8 @@ namespace HesapTakip
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", name.Trim());
                     cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
-                    cmd.Parameters.AddWithValue("@TaxID", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
-                    cmd.Parameters.AddWithValue("@ActivityCode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
+                    cmd.Parameters.AddWithValue("@taxid", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
+                    cmd.Parameters.AddWithValue("@activitycode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -131,8 +131,8 @@ namespace HesapTakip
                     cmd.Parameters.AddWithValue("@name", newName);
                     cmd.Parameters.AddWithValue("@edefter", edefter ? 1 : 0);
                     cmd.Parameters.AddWithValue("@id", customerId);
-                    cmd.Parameters.AddWithValue("@TaxID", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
-                    cmd.Parameters.AddWithValue("@ActivityCode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
+                    cmd.Parameters.AddWithValue("@taxid", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
+                    cmd.Parameters.AddWithValue("@activitycode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
