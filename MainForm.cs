@@ -23,8 +23,10 @@ namespace HesapTakip
         private static bool _versionChecked = false;
         private async void MainForm_Load(object sender, EventArgs e)
         {
+
             // İsteğe bağlı: Uygulama başladığında sessizce kontrol et
-            // await CheckForUpdate();
+            
+            progressBar1.Visible = false;
 
         }
         public MainForm()
