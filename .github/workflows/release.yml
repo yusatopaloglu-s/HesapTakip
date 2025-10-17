@@ -26,7 +26,6 @@ jobs:
     - name: Projeyi derle
       run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
 
-          
     - name: Yayin dosyasini arsivle
       run: Compress-Archive -Path publish\* -DestinationPath HesapTakip.zip
 
@@ -36,4 +35,3 @@ jobs:
         files: HesapTakip.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
