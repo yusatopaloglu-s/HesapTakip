@@ -1614,14 +1614,13 @@ namespace HesapTakip
         private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string batchContent = $@"
-@echo off
+            string batchContent = $@"@echo off
 chcp 65001 >nul
-echo HesapTakip Güncelleme Aracı
+echo HesapTakip Guncelleme Araci
 echo ===========================
 echo.
 
-echo Uygulama kapatılıyor...
+echo Uygulama kapatiliyor...
 timeout /t 2 /nobreak >nul
 
 taskkill /f /im ""HesapTakip.exe"" >nul 2>&1
@@ -1629,27 +1628,24 @@ taskkill /f /im ""HesapTakip"" >nul 2>&1
 
 echo Ayarlar korunuyor...
 
-:: Özel config dosyasını yedekle
 if exist ""{appPath}\HesapTakip.config"" (
     copy ""{appPath}\HesapTakip.config"" ""{appPath}\HesapTakip.config.backup"" >nul
     echo Config yedeklendi
 )
 
-:: Yeni dosyaları kopyala
-echo Güncelleme dosyaları kopyalanıyor...
+echo Guncelleme dosyalari kopyalaniyor...
 xcopy ""{updateFilesPath}\*"" ""{appPath}"" /Y /E /I /Q
 
-:: Config dosyasını geri yükle
 if exist ""{appPath}\HesapTakip.config.backup"" (
     copy ""{appPath}\HesapTakip.config.backup"" ""{appPath}\HesapTakip.config"" >nul
     del ""{appPath}\HesapTakip.config.backup"" >nul
-    echo Config geri yüklendi
+    echo Config geri yuklendi
 )
 
 if %errorlevel% equ 0 (
     echo.
-    echo ✓ Güncelleme başarıyla tamamlandı!
-    echo ✓ Uygulama yeniden başlatılıyor...
+    echo Guncelleme basariyla tamamlandi!
+    echo Uygulama yeniden baslatiliyor...
     echo.
     
     timeout /t 2 /nobreak >nul
@@ -1657,18 +1653,21 @@ if %errorlevel% equ 0 (
     start """" ""HesapTakip.exe""
 ) else (
     echo.
-    echo ✗ Hata: Güncelleme sırasında problem oluştu!
+    echo Hata: Guncelleme sirasinda problem olustu!
     pause
 )
 
-echo Temizlik yapılıyor...
+echo Temizlik yapiliyor...
 if exist ""{updateFilesPath}"" rmdir /s /q ""{updateFilesPath}""
 
 exit
 ";
 
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
-            File.WriteAllText(batchFile, batchContent, System.Text.Encoding.UTF8);
+
+            // BOM'suz UTF-8 veya ANSI encoding kullan
+            File.WriteAllText(batchFile, batchContent, new System.Text.UTF8Encoding(false));
+            // Veya: File.WriteAllText(batchFile, batchContent, System.Text.Encoding.Default);
 
             statusProgress?.Report("Güncelleme işlemi başlatılıyor...");
 
@@ -1681,7 +1680,6 @@ exit
                 CreateNoWindow = false
             });
         }
-
         private static void CleanupTempFiles(string tempZipFile)
         {
             try
