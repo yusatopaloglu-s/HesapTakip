@@ -153,7 +153,7 @@ namespace HesapTakip
                     dgvCustomers.Columns["CustomerID"].Visible = false;
                     dgvCustomers.Columns["EDefter"].Visible = false;
                     dgvCustomers.Columns["Taxid"].Visible = false;
-                    dgvCustomers.Columns["ActivityCode"].Visible = true;
+                    dgvCustomers.Columns["ActivityCode"].Visible = false;
                 }
             }
             catch (Exception ex)

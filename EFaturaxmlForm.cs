@@ -62,7 +62,7 @@ namespace HesapTakip
             _db = db;
             InitializeComponent();
             InitializeComboBox();
-           
+
 
         }
         private void InitializeComboBox()
@@ -79,26 +79,40 @@ namespace HesapTakip
 
             UpdateDataGridView();
 
-              if (_db != null)
-              {
-                  if (_db.GetCustomers() is DataTable customers)
-                  {
-                      foreach (DataRow row in customers.Rows)
-                      {
-                          cbx_customerlist.Items.Add(new { ID = row["CustomerID"], Name = row["Name"], ActivityCode = row["ActivityCode"] });
-                      }
-                      cbx_customerlist.DisplayMember = "Name";
-                      cbx_customerlist.ValueMember = "ActivityCode";
-                      cbx_customerlist.SelectedIndex = 0;
-                  }
-                  else
-                  {
-                     MessageBox.Show($"Müşteri verileri alınamadı:", "Hata");
-                  }
-              }
-              UpdateDataGridView(); 
+            if (_db != null)
+            {
+                if (_db.GetCustomers() is DataTable customers)
+                {
+                    // ComboBox'ı temizle
+                    cbx_customerlist.Items.Clear();
+
+                    // Boş seçenek ekle (null değer için)
+                    cbx_customerlist.Items.Add(new { ID = -1, Name = "Seçiniz", ActivityCode = (string)null });
+
+                    foreach (DataRow row in customers.Rows)
+                    {
+                        var activityCode = row["ActivityCode"] == DBNull.Value ? null : row["ActivityCode"].ToString();
+                        cbx_customerlist.Items.Add(new
+                        {
+                            ID = row["CustomerID"],
+                            Name = row["Name"],
+                            ActivityCode = activityCode
+                        });
+                    }
+
+                    cbx_customerlist.DisplayMember = "Name";
+                    cbx_customerlist.ValueMember = "ActivityCode";
+                    cbx_customerlist.SelectedIndex = 0;
+
+                }
+                else
+                {
+                    MessageBox.Show($"Müşteri verileri alınamadı:", "Hata");
+                }
+            }
+            UpdateDataGridView();
         }
-        
+
         private void UploadButton_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog
@@ -170,12 +184,32 @@ namespace HesapTakip
         }
         private void CmbTableSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
+
+            var selectedItem = cbx_customerlist.SelectedItem;
+
+
             UpdateDataGridView();
         }
 
+        
         private void CbxCustomerList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdateDataGridView(); 
+            if (cbx_customerlist.SelectedItem != null)
+            {
+                dynamic selectedItem = cbx_customerlist.SelectedItem;
+                string activityCode = selectedItem.ActivityCode ?? ""; // null kontrolü
+
+                // TextBox'ı güncelle
+                txtbox_act.Text = activityCode;
+
+            }
+            else
+            {
+                txtbox_act.Text = "";
+            }
+
+            UpdateDataGridView();
+
         }
         private void BtnClear_Click(object sender, EventArgs e)
         {
@@ -287,21 +321,23 @@ namespace HesapTakip
                     }
                 }
 
-                /* var activityCode = cbx_customerlist.SelectedValue?.ToString() ?? "";
-                if (string.IsNullOrEmpty(activityCode) && cbx_customerlist.Items.Count > 0 && cbx_customerlist.SelectedIndex == -1)
+                string activityCode = "";
+                if (cbx_customerlist.SelectedItem != null)
                 {
-                    cbx_customerlist.SelectedIndex = 0;
-                    activityCode = cbx_customerlist.SelectedValue?.ToString() ?? "";
+                    dynamic selectedItem = cbx_customerlist.SelectedItem;
+                    activityCode = selectedItem.ActivityCode ?? "";
                 }
-                */
+
+                // TextBox'ı güncelle (görsel doğrulama için)
+                txtbox_act.Text = activityCode;
+
                 var totalTaxAmount = invoiceType == "TEVKIFAT" ? xml.Descendants(cac + "TaxTotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0.00" : (taxAmount20 != 0.0 ? taxAmount20.ToString("F2", CultureInfo.InvariantCulture) : taxAmount18.ToString("F2", CultureInfo.InvariantCulture));
                 var legalMonetaryTotal = xml.Descendants(cac + "LegalMonetaryTotal");
                 var taxExclusiveAmount = legalMonetaryTotal.Descendants(cbc + "TaxExclusiveAmount").FirstOrDefault()?.Value ?? "0.00";
                 var payableAmount = legalMonetaryTotal.Descendants(cbc + "PayableAmount").FirstOrDefault()?.Value ?? "0.00";
                 var depositCode = xml.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cac + "TaxCategory").Descendants(cbc + "TaxExemptionReasonCode").FirstOrDefault()?.Value ?? "";
                 var depositAmount = depositCode == "351" ? (double.TryParse(taxExclusiveAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var exclusive) && double.TryParse(taxableAmount18.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var tax18) && double.TryParse(taxableAmount8.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var tax8) ? (exclusive - (tax18 + tax8)).ToString("F2", CultureInfo.InvariantCulture) : "0.00") : "0.00";
-
-                var activityCode = "";
+                               
                 var taxOffice = "";
                 var lastName = string.IsNullOrEmpty(supplierNameNode) ? supplierFamilyName : "";
                 var firstName = string.IsNullOrEmpty(supplierNameNode) ? supplierFirstName : supplierNameNode;
@@ -761,7 +797,7 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "boş", "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "", "");
                     }
                     break;
 
@@ -789,6 +825,7 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            txtbox_act = new TextBox();
             label2 = new Label();
             cbx_customerlist = new ComboBox();
             btnExportExcel = new Button();
@@ -837,6 +874,7 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            groupBox2.Controls.Add(txtbox_act);
             groupBox2.Controls.Add(label2);
             groupBox2.Controls.Add(cbx_customerlist);
             groupBox2.Controls.Add(btnExportExcel);
@@ -851,6 +889,15 @@ namespace HesapTakip
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
             // 
+            // txtbox_act
+            // 
+            txtbox_act.Location = new Point(335, 68);
+            txtbox_act.Name = "txtbox_act";
+            txtbox_act.ReadOnly = true;
+            txtbox_act.Size = new Size(100, 23);
+            txtbox_act.TabIndex = 8;
+            txtbox_act.Visible = false;
+            // 
             // label2
             // 
             label2.AutoSize = true;
@@ -860,7 +907,6 @@ namespace HesapTakip
             label2.Size = new Size(167, 30);
             label2.TabIndex = 7;
             label2.Text = "Müşteri Seç\r\nİşletmelerde Faaliyet Kodu için";
-            label2.Visible = false;
             // 
             // cbx_customerlist
             // 
@@ -870,7 +916,6 @@ namespace HesapTakip
             cbx_customerlist.Name = "cbx_customerlist";
             cbx_customerlist.Size = new Size(171, 23);
             cbx_customerlist.TabIndex = 6;
-            cbx_customerlist.Visible = false;
             cbx_customerlist.SelectedIndexChanged += CbxCustomerList_SelectedIndexChanged;
             // 
             // btnExportExcel
@@ -939,5 +984,6 @@ namespace HesapTakip
         private GroupBox groupBox2;
         private Label label2;
         private ComboBox cbx_customerlist;
+        private TextBox txtbox_act;
     }
 }
