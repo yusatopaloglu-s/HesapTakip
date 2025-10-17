@@ -192,6 +192,7 @@ namespace HesapTakip
                 dgvTransactions.Columns["Description"].HeaderText = "Açıklama";
             if (dgvTransactions.Columns["Amount"] != null)
                 dgvTransactions.Columns["Amount"].HeaderText = "Tutar";
+                dgvTransactions.Columns["Amount"].Width = 90;
 
             foreach (DataGridViewRow row in dgvTransactions.Rows)
             {
@@ -241,7 +242,7 @@ namespace HesapTakip
                     Top = 50,
                     Width = 200,
                     PlaceholderText = "TCKN / Vergi No (Opsiyonel - Max 11 karakter)",
-                    MaxLength = 11 // En fazla 11 karakter
+                    MaxLength = 11
                 };
                 inputForm.Controls.Add(Taxid);
 
@@ -252,7 +253,7 @@ namespace HesapTakip
                     Top = 110,
                     Width = 200,
                     PlaceholderText = "Faaliyet Kodu (Opsiyonel - Max 6 karakter)",
-                    MaxLength = 6 // En fazla 6 karakter
+                    MaxLength = 6
                 };
                 inputForm.Controls.Add(ActivityCode);
 
@@ -267,11 +268,11 @@ namespace HesapTakip
 
                 if (inputForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(inputForm.InputText))
                 {
-                    // TaxID ve ActivityCode değerlerini al (boş bırakılabilir)
+
                     string taxIdText = Taxid.Text.Trim();
                     string activityCodeText = ActivityCode.Text.Trim();
 
-                    // TaxID sadece rakam kontrolü (opsiyonel)
+
                     if (!string.IsNullOrEmpty(taxIdText) && !taxIdText.All(char.IsDigit))
                     {
                         MessageBox.Show("TCKN/Vergi No sadece rakamlardan oluşmalıdır!", "Hata",
@@ -279,7 +280,7 @@ namespace HesapTakip
                         return;
                     }
 
-                    // ActivityCode sadece rakam kontrolü (opsiyonel)
+
                     if (!string.IsNullOrEmpty(activityCodeText) && !activityCodeText.All(char.IsDigit))
                     {
                         MessageBox.Show("Faaliyet Kodu sadece rakamlardan oluşmalıdır!", "Hata",
@@ -295,7 +296,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadCustomers();
-                        //MessageBox.Show("Müşteri başarıyla eklendi!");
+
                     }
                     else
                     {
@@ -327,7 +328,7 @@ namespace HesapTakip
                 {
                     LoadCustomers();
                     dgvTransactions.DataSource = null;
-                    // MessageBox.Show($"{customerName} başarıyla silindi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                 }
                 else
                 {
@@ -413,7 +414,7 @@ namespace HesapTakip
                 {
                     LoadTransactions(customerID);
                     CalculateAndDisplayTotal(customerID);
-                    // MessageBox.Show("Hareket başarıyla silindi!");
+
                 }
                 else
                 {
@@ -465,7 +466,7 @@ namespace HesapTakip
             }
         }
 
-        // RadioButton'ların arkaplan rengini değiştir
+
         private void UpdateTypeValidationUI()
         {
             QuestPDF.Infrastructure.Color errorColor = QuestPDF.Infrastructure.Color.FromRGB(255, 182, 193);
@@ -840,7 +841,7 @@ namespace HesapTakip
                 {
                     LoadSuggestions();
                     txtDescription.Clear();
-                    // MessageBox.Show("Öneri başarıyla eklendi!");
+
                 }
                 else
                 {
@@ -860,7 +861,7 @@ namespace HesapTakip
                     string selected = lstSuggestions.SelectedItem.ToString();
                     Debug.WriteLine($"Selected suggestion to remove: {selected}");
 
-                    // Önce onay al
+
                     var result = MessageBox.Show(
                         $"'{selected}' önerisini silmek istediğinizden emin misiniz?",
                         "Öneri Silme",
@@ -881,8 +882,7 @@ namespace HesapTakip
                         if (success)
                         {
                             LoadSuggestions();
-                            // MessageBox.Show("Öneri başarıyla silindi!", "Başarılı",
-                            // MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                         }
                         else
                         {
@@ -1040,14 +1040,14 @@ namespace HesapTakip
             }
             private void BtnSave_Click(object sender, EventArgs e)
             {
-                // Validasyon
+
                 if (string.IsNullOrWhiteSpace(txtCustomerName.Text))
                 {
                     MessageBox.Show("Müşteri adı boş olamaz!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // TaxID validasyon (sadece rakam)
+
                 if (!string.IsNullOrEmpty(txtCustomerTaxid.Text) && !txtCustomerTaxid.Text.All(char.IsDigit))
                 {
                     MessageBox.Show("TCKN/Vergi No sadece rakamlardan oluşmalıdır!", "Hata",
@@ -1055,7 +1055,7 @@ namespace HesapTakip
                     return;
                 }
 
-                // ActivityCode validasyon (sadece rakam)
+
                 if (!string.IsNullOrEmpty(txtCustomerActivityCode.Text) && !txtCustomerActivityCode.Text.All(char.IsDigit))
                 {
                     MessageBox.Show("Faaliyet Kodu sadece rakamlardan oluşmalıdır!", "Hata",
@@ -1084,7 +1084,7 @@ namespace HesapTakip
             string currentName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
             bool currentEDefter = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["EDefter"].Value);
 
-            // Null kontrolü ile TaxID ve ActivityCode değerlerini al
+
             object taxIdValue = dgvCustomers.CurrentRow.Cells["TaxID"].Value;
             object activityCodeValue = dgvCustomers.CurrentRow.Cells["ActivityCode"].Value;
 
@@ -1099,7 +1099,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadCustomers();
-                        // MessageBox.Show("Müşteri başarıyla güncellendi!");
+
                     }
                     else
                     {
@@ -1142,7 +1142,7 @@ namespace HesapTakip
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    // Amount formatını düzelt
+
                     if (!decimal.TryParse(editForm.Amount.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amountValue))
                     {
                         MessageBox.Show("Tutar değeri geçersiz!");
@@ -1153,7 +1153,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadTransactions(GetCurrentCustomerId());
-                        // MessageBox.Show("Hareket başarıyla güncellendi!");
+
                     }
                     else
                     {
@@ -1374,7 +1374,7 @@ namespace HesapTakip
 
         private void eFaturaXMLExcelToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (_db == null || !InitializeDatabase()) // Bağlantı kontrolü
+            if (_db == null || !InitializeDatabase())
             {
                 MessageBox.Show("Veritabanı bağlantısı kurulamadı. Lütfen ayarları kontrol edin.");
                 return;
@@ -1490,7 +1490,7 @@ namespace HesapTakip
             }
         }
 
-        // Versiyon metodlarını da ekleyelim
+
         private static Version GetCurrentVersion()
         {
             Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
@@ -1507,7 +1507,7 @@ namespace HesapTakip
             return assemblyVersion ?? new Version(1, 0, 0);
         }
 
-        // Git tag'ını Version formatına parse et
+
         private static Version ParseVersion(string versionString)
         {
             try
