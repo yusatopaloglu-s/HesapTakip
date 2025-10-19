@@ -376,8 +376,11 @@ namespace HesapTakip
                 MessageBox.Show("Veritabanı bağlantısı başlatılamadı!");
                 return;
             }
-            ExpenseCategoryForm categoryForm = new ExpenseCategoryForm(_db);
-            categoryForm.ShowDialog();
+            using (var categoryForm = new ExpenseCategoryForm(_db))
+            {
+                categoryForm.ShowDialog();
+            }
+            LoadExpenseMatchings(); 
         }
         private void LoadExpenseMatchings()
         {
