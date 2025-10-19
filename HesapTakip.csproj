@@ -26,8 +26,6 @@
     <Compile Remove="AssemblyInfo.cs" />
     <Compile Remove="EFaturaxml2.cs" />
     <Compile Remove="ExportManager.cs" />
-    <Compile Remove="Form1.cs" />
-    <Compile Remove="Form1.Designer.cs" />
     <Compile Remove="KontorForm.cs" />
     <Compile Remove="Program - lisanslı olan.cs" />
     <Compile Remove="XMLParser.cs" />
@@ -37,7 +35,6 @@
   <ItemGroup>
     <EmbeddedResource Remove="ActivationForm.resx" />
     <EmbeddedResource Remove="EFaturaxml2.resx" />
-    <EmbeddedResource Remove="Form1.resx" />
     <EmbeddedResource Remove="KontorForm.resx" />
   </ItemGroup>
 
@@ -86,6 +83,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="expense_categories.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Properties\Settings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

@@ -1,0 +1,486 @@
+[
+    {
+        "Label": "Mal Alışı",
+        "Info": "Mal Alışı"
+    },
+    {
+        "Label": "Mal Alışı (7440 Sayılı Kanun)",
+        "Info": "Mal Alışı"
+    },
+    {
+        "Label": "Beyannameye Konu Olan Damga Vergisi Giderleri ( GVK 57/8-b ) (Vergi Kodu 0040)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Dışarıdan Sağlanan Fayda ve Hizmetler",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Diğer Zirai İşletme Hesabı Esasında Giderler",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Elektrik Giderleri (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Genel Mahiyetteki Diğer Giderler (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Giyim Giderleri (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İnternet Reklam Hizmet Alım Giderleri (GVK 57/8e)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İnternet Reklam Hizmetlerine Aracılık Giderleri (GVK 57/8e)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İş Güvenliği ve İş Sağlığı Hizmet Alımları (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşçi Sigorta Primleri (GVK 57/4)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşçi Tedavi ve İlaç Giderleri (GVK 57/4)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşçi Yemek Giderleri (GVK 57/4)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşletme ile İlgili Olmak Şartıyla Sözleşmeye Bağlı Ödenen Zarar, Ziyan, Tazminatlar (GVK 57/9)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşletme ile ilgili ödenen Seyahat ve İkamet Giderleri (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşletme ile ilgili ödenen vergi, resim ve harçlar (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "İşletmede Çalıştırılanlara ücret, prim ve hizmet ödemeleri (GVK 57/3)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Kira Giderleri (GVK 57/8)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Kiralama yoluyla edinilen ve üretimde kullanılan vasıtalar için yapılan ödemeler (GVK 57/7)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Muhasebe/Mali Müşavirlik Giderleri",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Otoyol ve Gişe (OGS, HGS vb.) (GVK 57/8c )",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Satın alınan hayvanların, zirai mahsullerin ve diğer maddeler için yapılan ödemeler(GVK 57/2)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Tek Başına Alınabilen Damga Vergisi (GVK 57/8-b) (Vergi Kodu 9047)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Telefon, Faks, İnternet ve Diğer Haberleşme Giderleri",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Tohum, gübre, fide, yem, ilaç vb. maddeler için yapılan ödemeler (GVK 57/1)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Zirai faaliyet yanında işletme sahiplerinin şahsi veya ailevi ihtiyaçları içinde kullanılan Taşıtların giderlerinin yarısı (GVK 57/11)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Zirai tesisat, makine ve taşıt giderleri(yakıt/yağ/elektirik/yedek parça vb.) (GVK 57/5)",
+        "Info": "Zirai İşletme Hesabı Esasında Giderler (GVK Md.57)"
+    },
+    {
+        "Label": "Diğer Sabit Kıymet Ek Maliyet",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Faiz Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Gümrükleme ve Antrepo Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Kur Farkı Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Nakliye Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Navlun ve Sigorta Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Sabit Kıymetin Ekonomik Faydasını Artıran Bakım Onarım ve Ek Harcamalar",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Sabit Kıymetin Ekonomik Ömrünü Uzatan Bakım Onarım ve Ek Harcamalar",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Vade Farkı Giderleri",
+        "Info": "Sabit Kıymet Ek Maliyet"
+    },
+    {
+        "Label": "Amortisman Giderleri (40/7)- Binek İkinci El Araç",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Amortisman Giderleri (40/7)- Binek Sıfır Araç (KDV-ÖTV Dâhil)",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Amortisman Giderleri (40/7)- Binek Sıfır Araç (KDV-ÖTV Hariç)",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Amortisman Giderleri (GVK 40/7)",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Amortisman Giderleri (GVK 57/6)",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Kiralama Yoluyla Edinilen veya İşletmede Kayıtlı Olan Yat, Kotra, Tekne, Sürat Teknesi Gibi Motorlu Deniz, Uçak ve Helikopter Gibi Hava Taşıtlarından İşletmenin Esas Faaliyet Konusu İle İlgili Olmayanların Amortismanları",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "VUK Hükümlerine Aykırı Olarak Ayrılan Amortismanlar",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Zirai Faaliyet Yanında İşletme Sahiplerinin Şahsi veya Ailevi İhtiyaçları İçinde Kullanılan Taşıtların Amortismanlarının Tamamı (GVK 57/11)",
+        "Info": "Sabit Kıymet Alışı"
+    },
+    {
+        "Label": "Araç Kiralama Giderleri ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Avukatlık, Hukuk ve Müşavirlik Giderleri (  GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Çalışan Tedavi ve İlaç Gideri (GVK 40/2)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Dernek ve Vakıflara Yapılan Gıda, Temizlik, Giyecek ve Yakacak Bağışları ( GVK 40/10 )",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Dışarıdan Sağlanan Fayda ve Hizmetler ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Diğer (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Diğer Haberleşme Giderleri (Faks,internet vb) (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Diğer Hizmet Giderleri ( GVK 40/1 )",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Diğer Sarf Malzeme Giderleri ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Diğer Vergi Resim ve Harçlar ( GVK 40/6 )",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Doğalgaz Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Doğrudan Gider Yazılan Demirbaş ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Elektrik Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Faiz ve Finansman Giderleri ( GVK 40/1 - 40/3- 40/9)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Gıda Harcamaları (GVK 40/1-40/2)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Giyim Giderleri (GVK 40/2)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Güvenlik Harcamaları (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Hizmetli ve İşçilerin GVK 27 nci Maddede Yazılı Giyim Giderleri ( GVK 40/2)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Isı yalıtımı ve Enerji Tassarufu Giderleri (GVK 40/7)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İnternet Reklam Hizmetlerine Aracilik Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İş Güvenliği ve İş Sağlığı Hizmet Alımları (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İşle İlgili Olmak Şartıyla Mukavelenameye Bağlı veya İlama veya Kanun Emrine İstinaden Ödenen Zarar, Ziyan ve Tazminat (GVK 40/3)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İşyeri Aidat Gideri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "İşyeri Sigorta Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Kargo ve Posta Giderleri ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Kırtasiye Harcamaları (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Kira Gideri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Komisyon Giderleri ( GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Konaklama Giderleri (GVK 40/4)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Muhasebe/Mali Müşavirlik Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Nakliye Giderleri ( GVK 40/1 )",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Normal Bakım Onarım Giderleri ( GVK 40/1 - 40/7 )",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Ofis Giderleri(Çay, Kahve, Şeker, Temizlik vb.) (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Otopark Gideri (GVK Md. 40/5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Otoyol ve Gişe (OGS, HGS vb.) (GVK 40/4-5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Pazarlama Satış Dağıtım Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Seyahat ve Ulaşım Giderleri (Oto Kiralama, Otobüs, Taksi, Uçak vb) (GVK 40/4-5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Sıfır Araçlara Ait KDV Gideri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Sıfır Araçlara Ait ÖTV (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Sözleşme/yargı/kanun emri gereği doğan zarar/ziyan/tazminatlar (GVK 40/3)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Su Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Taşıt Akaryakıt Giderleri (GVK 40/1-40/5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Taşıt Bakım Onarım Giderleri ( GVK 40/5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Tek Başına Alınabilen Damga Vergisi (GVK 40/1) (Vergi Kodu 9047)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Telefon Giderleri (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Temsil ve Ağırlama Gideri (İş yemeği vb.) (GVK 40/1)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Ulaşım Giderleri (Oto Kiralama, Taksi, Uçak vb) (GVK 40/4-5)",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Yıllara Yaygın İnşaat Maliyetleri",
+        "Info": "İndirilecek Giderler (GVK Md. 40)"
+    },
+    {
+        "Label": "Bağış ve Yardımlar",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Basın yoluyla işlenen fiillerden veya radyo ve televizyon yayınlarından doğacak maddî ve manevî zararlardan dolayı ödenen tazminat giderleri.(4756 Md.28)",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Brüt Ücret",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Diğer K.K.E.G.",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Faiz, komisyon, vade farkı, kâr payı, kur farkı ve benzeri adlar altında yapılan gider ve maliyetler (Öz sermayeyi aşan yabancı kaynaklar için)",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Hazine Tarafından Karşılanan Özürlü Personelin Sigorta Primi",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Her türlü alkol ve alkollü içkiler ile tütün ve tütün mamullerine ait ilan ve reklâm giderlerinin % 50'si(3571 Md.8)",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "İkramiye Ödemeleri",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "İlişkili kişilerle emsallere uygunluk ilkesine aykırı olarak oluşan giderler(5615 Sy. Md. 3).",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "İşletmenin esas faaliyet konusu ile ilgili olmayan vasıta giderleri (4008 Md.25)",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "İşsizlik İşveren Payı",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "İşsizlik Sigortası Fonu’ndan Karşılanan Sigorta Primleri",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Kayıp ve Zayi Olan Mallara Ait Giderler",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "KDV Kanunu Md. 30/d Uyarınca İndirilemeyen KDV Tutarı",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Kiralama Yoluyla Edinilen veya İşletmede Kayıtlı Olan Yat, Kotra, Tekne, Sürat Teknesi Gibi Motorlu Deniz, Uçak ve Helikopter Gibi Hava Taşıtlarından İşletmenin Esas Faaliyet Konusu İle İlgili Olmayanların Giderleri",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Özel iletişim vergisi",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Prim Ödemeleri",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Sgk İşveren Payı",
+        "Info": "Gider Kabul Edilmeyen Ödemeler (GVK Md. 41)"
+    },
+    {
+        "Label": "Brüt Ücret",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "Diğer Çalışan/Personel Bordro Giderleri",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "İhbar Tazminatı",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "İkramiye Ödemeleri",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "İŞKUR İşbaşı Eğitim Gideri ( GVK 40/11 )",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "İşsizlik İşveren Payı",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "Kıdem Tazminatı",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "Sgk İşveren Payı",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    },
+    {
+        "Label": "Prim Ödemeleri",
+        "Info": "Çalışan/Personel Bordro Giderleri"
+    }
+]

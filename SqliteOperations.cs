@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace HesapTakip
 {
@@ -156,6 +157,41 @@ namespace HesapTakip
                     { "Description", "TEXT NOT NULL UNIQUE" },
                     { "CreatedDate", "DATETIME DEFAULT CURRENT_TIMESTAMP" }
                 }, conn);
+                // ExpenseCategories tablosu
+                EnsureTableAndColumns("ExpenseCategories", new Dictionary<string, string>
+                {
+                    { "CategoryID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                    { "Label", "TEXT NOT NULL" },
+                    { "Info", "TEXT NOT NULL" }
+                }, conn);
+
+                // ExpenseCategories tablosunu JSON dosyasından doldur
+                if (!TableHasData("ExpenseCategories", conn))
+                {
+                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                    if (File.Exists(jsonFilePath))
+                    {
+                        string jsonContent = File.ReadAllText(jsonFilePath);
+                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                        using (var cmd = new SQLiteCommand())
+                        {
+                            cmd.Connection = conn;
+                            foreach (var category in categories)
+                            {
+                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                cmd.Parameters.Clear();
+                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                    }
+                }
             }
         }
 
@@ -642,6 +678,20 @@ namespace HesapTakip
                 System.Diagnostics.Debug.WriteLine($"SQLite AddEDefterTransaction hatası: {ex.Message}");
                 return false;
             }
+        }
+        private bool TableHasData(string tableName, SQLiteConnection conn)
+        {
+            using (var cmd = new SQLiteCommand($"SELECT COUNT(*) FROM {tableName}", conn))
+            {
+                var count = Convert.ToInt32(cmd.ExecuteScalar());
+                return count > 0;
+            }
+        }
+
+        private class ExpenseCategory
+        {
+            public string Label { get; set; }
+            public string Info { get; set; }
         }
 
     }

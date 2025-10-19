@@ -3,6 +3,7 @@ using MySql.Data.MySqlClient;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace HesapTakip
 {
@@ -76,6 +77,42 @@ namespace HesapTakip
                     { "Description", "NVARCHAR(255) NOT NULL UNIQUE" },
                     { "CreatedDate", "DATETIME DEFAULT GETDATE()" }
                 }, conn);
+
+                // ExpenseCategories tablosu
+                EnsureTableAndColumns("ExpenseCategories", new Dictionary<string, string>
+                {
+                    { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
+                    { "Label", "NVARCHAR(255) NOT NULL" },
+                    { "Info", "NVARCHAR(255) NOT NULL" }
+                }, conn);
+
+                // ExpenseCategories tablosunu JSON dosyasından doldur
+                if (!TableHasData("ExpenseCategories", conn))
+                {
+                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                    if (File.Exists(jsonFilePath))
+                    {
+                        string jsonContent = File.ReadAllText(jsonFilePath);
+                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                        using (var cmd = new SqlCommand())
+                        {
+                            cmd.Connection = conn;
+                            foreach (var category in categories)
+                            {
+                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                cmd.Parameters.Clear();
+                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                    }
+                }
             }
         }
 
@@ -564,6 +601,21 @@ namespace HesapTakip
                 System.Diagnostics.Debug.WriteLine($"MSSQL BulkUpdateEDefterTransactions hatası: {ex.Message}");
                 return false;
             }
+        }
+
+        private bool TableHasData(string tableName, SqlConnection conn)
+        {
+            using (var cmd = new SqlCommand($"SELECT COUNT(*) FROM {tableName}", conn))
+            {
+                var count = Convert.ToInt32(cmd.ExecuteScalar());
+                return count > 0;
+            }
+        }
+
+        private class ExpenseCategory
+        {
+            public string Label { get; set; }
+            public string Info { get; set; }
         }
     }
 }

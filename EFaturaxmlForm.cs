@@ -2,6 +2,7 @@
 using System.Data;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 
@@ -354,6 +355,19 @@ namespace HesapTakip
 
 
         }
+
+        public class TextCleaner
+        {
+            public static string CleanText(string input)
+            {
+                if (string.IsNullOrEmpty(input))
+                    return input;
+
+                // Noktalama işaretlerini kaldır, sadece harf, rakam ve boşlukları koru
+                return Regex.Replace(input, @"[^\w\s]", "");
+            }
+        }
+
         private void ProcessXml(XDocument xml)
         {
             try
@@ -370,9 +384,9 @@ namespace HesapTakip
                 var supplierFirstName = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "";
                 var supplierFamilyName = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "";
                 var customerTaxId = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyIdentification").Descendants(cbc + "ID").FirstOrDefault()?.Value ?? "";
-                var customerNameNode = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
-                var customerFirstName = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "";
-                var customerFamilyName = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "";
+                var customerNameNode = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? ""); 
+                var customerFirstName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "");
+                var customerFamilyName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "");
                 var uuid = xml.Descendants(cbc + "UUID").FirstOrDefault()?.Value ?? "";
                 var paymentMeansCode = xml.Descendants(cac + "PaymentMeans").Descendants(cbc + "PaymentMeansCode").FirstOrDefault()?.Value ?? "";
 
@@ -982,14 +996,15 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
-            txtbox_act = new TextBox();
+            BtnExportCSV = new Button();
             label2 = new Label();
             cbx_customerlist = new ComboBox();
             btnExportExcel = new Button();
             btn_clr = new Button();
             label1 = new Label();
+            txtbox_act = new TextBox();
             dgvData = new DataGridView();
-            BtnExportCSV = new Button();
+            btn_alttur = new Button();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -1032,6 +1047,7 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            groupBox2.Controls.Add(btn_alttur);
             groupBox2.Controls.Add(BtnExportCSV);
             groupBox2.Controls.Add(label2);
             groupBox2.Controls.Add(cbx_customerlist);
@@ -1044,18 +1060,19 @@ namespace HesapTakip
             groupBox2.Dock = DockStyle.Top;
             groupBox2.Location = new Point(3, 19);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1326, 127);
+            groupBox2.Size = new Size(1326, 118);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
             // 
-            // txtbox_act
+            // BtnExportCSV
             // 
-            txtbox_act.Location = new Point(335, 68);
-            txtbox_act.Name = "txtbox_act";
-            txtbox_act.ReadOnly = true;
-            txtbox_act.Size = new Size(100, 23);
-            txtbox_act.TabIndex = 8;
-            txtbox_act.Visible = false;
+            BtnExportCSV.Location = new Point(199, 42);
+            BtnExportCSV.Name = "BtnExportCSV";
+            BtnExportCSV.Size = new Size(100, 24);
+            BtnExportCSV.TabIndex = 9;
+            BtnExportCSV.Text = "CSV";
+            BtnExportCSV.UseVisualStyleBackColor = true;
+            BtnExportCSV.Click += BtnExportCSV_Click;
             // 
             // label2
             // 
@@ -1081,7 +1098,7 @@ namespace HesapTakip
             // 
             btnExportExcel.Location = new Point(199, 14);
             btnExportExcel.Name = "btnExportExcel";
-            btnExportExcel.Size = new Size(103, 27);
+            btnExportExcel.Size = new Size(100, 24);
             btnExportExcel.TabIndex = 4;
             btnExportExcel.Text = "Excel";
             btnExportExcel.UseVisualStyleBackColor = true;
@@ -1089,9 +1106,9 @@ namespace HesapTakip
             // 
             // btn_clr
             // 
-            btn_clr.Location = new Point(199, 78);
+            btn_clr.Location = new Point(199, 72);
             btn_clr.Name = "btn_clr";
-            btn_clr.Size = new Size(103, 27);
+            btn_clr.Size = new Size(100, 24);
             btn_clr.TabIndex = 5;
             btn_clr.Text = "Tabloyu Boşalt";
             btn_clr.UseVisualStyleBackColor = true;
@@ -1105,6 +1122,15 @@ namespace HesapTakip
             label1.Size = new Size(78, 15);
             label1.TabIndex = 3;
             label1.Text = "Tablo Tipi Seç";
+            // 
+            // txtbox_act
+            // 
+            txtbox_act.Location = new Point(335, 51);
+            txtbox_act.Name = "txtbox_act";
+            txtbox_act.ReadOnly = true;
+            txtbox_act.Size = new Size(100, 23);
+            txtbox_act.TabIndex = 8;
+            txtbox_act.Visible = false;
             // 
             // dgvData
             // 
@@ -1122,15 +1148,14 @@ namespace HesapTakip
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
             // 
-            // BtnExportCSV
+            // btn_alttur
             // 
-            BtnExportCSV.Location = new Point(199, 47);
-            BtnExportCSV.Name = "BtnExportCSV";
-            BtnExportCSV.Size = new Size(103, 27);
-            BtnExportCSV.TabIndex = 9;
-            BtnExportCSV.Text = "CSV";
-            BtnExportCSV.UseVisualStyleBackColor = true;
-            BtnExportCSV.Click += BtnExportCSV_Click;
+            btn_alttur.Location = new Point(592, 14);
+            btn_alttur.Name = "btn_alttur";
+            btn_alttur.Size = new Size(100, 39);
+            btn_alttur.TabIndex = 10;
+            btn_alttur.Text = "Kayıt Alt Türü Eşleme";
+            btn_alttur.UseVisualStyleBackColor = true;
             // 
             // EFaturaxmlForm
             // 
@@ -1155,5 +1180,6 @@ namespace HesapTakip
         private ComboBox cbx_customerlist;
         private TextBox txtbox_act;
         private Button BtnExportCSV;
+        private Button btn_alttur;
     }
 }
