@@ -58,12 +58,14 @@ namespace HesapTakip
         private List<InvoiceData> LucaIsletmeSatisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeAlisData = new List<InvoiceData>();
         private IDatabaseOperations _db;
+        private Dictionary<string, string> _expenseMatchings; // ItemName -> SubRecordType
 
         public EFaturaxmlForm(IDatabaseOperations db)
         {
             _db = db;
             InitializeComponent();
             InitializeComboBox();
+            LoadExpenseMatchings();
 
 
         }
@@ -367,7 +369,37 @@ namespace HesapTakip
                 return Regex.Replace(input, @"[^\w\s]", "");
             }
         }
-
+        private void btn_alttur_Click(object sender, EventArgs e)
+        {
+            if (_db == null)
+            {
+                MessageBox.Show("Veritabanı bağlantısı başlatılamadı!");
+                return;
+            }
+            ExpenseCategoryForm categoryForm = new ExpenseCategoryForm(_db);
+            categoryForm.ShowDialog();
+        }
+        private void LoadExpenseMatchings()
+        {
+            try
+            {
+                var matchingsTable = _db.GetExpenseMatchings();
+                _expenseMatchings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (DataRow row in matchingsTable.Rows)
+                {
+                    string itemName = row["ItemName"].ToString();
+                    string subRecordType = row["SubRecordType"].ToString();
+                    if (!string.IsNullOrEmpty(itemName) && !_expenseMatchings.ContainsKey(itemName))
+                    {
+                        _expenseMatchings[itemName] = subRecordType;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Eşleştirmeler yüklenirken hata: {ex.Message}");
+            }
+        }
         private void ProcessXml(XDocument xml)
         {
             try
@@ -428,40 +460,7 @@ namespace HesapTakip
                     double taxableVal = double.TryParse(taxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0.0;
                     double taxVal = double.TryParse(taxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
 
-                    /* switch (percent)
-                     {
-                         case "0":
-                         case "0.0":
-                             taxExemptAmount0 = taxableVal;
-                             break;
-                         case "1":
-                         case "1.0":
-                             taxableAmount1 = taxableVal;
-                             taxAmount1 = taxVal;
-                             break;
-                         case "8":
-                         case "8.0":
-                             taxableAmount8 = taxableVal;
-                             taxAmount8 = taxVal;
-                             break;
-                         case "10":
-                         case "10.0":
-                             taxableAmount10 = taxableVal;
-                             taxAmount10 = taxVal;
-                             break;
-                         case "18":
-                         case "18.0":
-                             taxableAmount18 = taxableVal;
-                             taxAmount18 = taxVal;
-                             break;
-                         case "20":
-                         case "20.0":
-                             taxableAmount20 = taxableVal;
-                             taxAmount20 = taxVal;
-                             break;
-                     }
-                 }
-                 */
+                   
                     if (percentVal == 0.0)
                     {
                         taxExemptAmount0 = taxableVal;
@@ -597,17 +596,22 @@ namespace HesapTakip
                     var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxPercent = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
 
+                  // string itemName = item.Element("Description")?.Value?.Trim() ?? ""; // Örnek: itemName alımı
+                    string subRecordType = "";
 
-                    var subRecordType = itemName switch
+                    if (!string.IsNullOrEmpty(itemName) && _expenseMatchings != null && _expenseMatchings.TryGetValue(itemName, out string matchedType))
                     {
-                        "Kargo Fatura" => "Kargo ve Posta Giderleri ( GVK 40/1)",
-                        "Komisyon Faturası" => "Komisyon Giderleri ( GVK 40/1)",
-                        "Reklam Bedeli" => "İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)",
-                        "Platform Hizmet Bedeli" => "Komisyon Giderleri ( GVK 40/1)",
-                        "Uluslararası Hizmet Bedeli" => "Komisyon Giderleri ( GVK 40/1)",
-                        "Müşteri Duyuruları Faturası" => "İnternet Reklam Hizmet Alım Giderleri (GVK 40/1)",
-                        _ => ""
-                    };
+                        subRecordType = matchedType;
+                    }
+                    else
+                    {
+                        // Eşleşme yoksa varsayılan veya uyarı
+                        subRecordType = ""; // Veya boş bırak
+                                                              // Opsiyonel: Log veya uyarı
+                       // Console.WriteLine($"Eşleşme bulunamadı: {itemName}");
+                    }
+
+
 
                     if (isSatis)
                     {
@@ -996,6 +1000,7 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            btn_alttur = new Button();
             BtnExportCSV = new Button();
             label2 = new Label();
             cbx_customerlist = new ComboBox();
@@ -1004,7 +1009,6 @@ namespace HesapTakip
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
-            btn_alttur = new Button();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -1063,6 +1067,16 @@ namespace HesapTakip
             groupBox2.Size = new Size(1326, 118);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
+            // 
+            // btn_alttur
+            // 
+            btn_alttur.Location = new Point(535, 14);
+            btn_alttur.Name = "btn_alttur";
+            btn_alttur.Size = new Size(100, 39);
+            btn_alttur.TabIndex = 10;
+            btn_alttur.Text = "Kayıt Alt Türü Eşleme";
+            btn_alttur.UseVisualStyleBackColor = true;
+            btn_alttur.Click += btn_alttur_Click;
             // 
             // BtnExportCSV
             // 
@@ -1147,15 +1161,6 @@ namespace HesapTakip
             dgvData.ReadOnly = true;
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
-            // 
-            // btn_alttur
-            // 
-            btn_alttur.Location = new Point(592, 14);
-            btn_alttur.Name = "btn_alttur";
-            btn_alttur.Size = new Size(100, 39);
-            btn_alttur.TabIndex = 10;
-            btn_alttur.Text = "Kayıt Alt Türü Eşleme";
-            btn_alttur.UseVisualStyleBackColor = true;
             // 
             // EFaturaxmlForm
             // 

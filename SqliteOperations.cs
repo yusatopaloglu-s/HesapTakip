@@ -192,6 +192,13 @@ namespace HesapTakip
                         throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
                     }
                 }
+                // ExpenseMatching tablosu
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+        {
+            { "MatchingID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+            { "ItemName", "TEXT NOT NULL" },
+            { "SubRecordType", "TEXT NOT NULL" }
+        }, conn);
             }
         }
 
@@ -692,6 +699,67 @@ namespace HesapTakip
         {
             public string Label { get; set; }
             public string Info { get; set; }
+        }
+        public DataTable GetCategories()
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT CategoryID, Label, Info FROM ExpenseCategories", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+        public bool AddExpenseMatching(string itemName, string subRecordType)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "INSERT INTO ExpenseMatching (ItemName, SubRecordType) VALUES (@itemName, @subRecordType)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.Parameters.AddWithValue("@subRecordType", subRecordType);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool DeleteExpenseMatching(string itemName)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "DELETE FROM ExpenseMatching WHERE ItemName = @itemName", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public DataTable GetExpenseMatchings()
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT ItemName, SubRecordType FROM ExpenseMatching", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
         }
 
     }

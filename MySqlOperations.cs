@@ -1,7 +1,5 @@
 using MySql.Data.MySqlClient;
 using System.Data;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
 
 namespace HesapTakip
@@ -111,6 +109,14 @@ namespace HesapTakip
                         throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
                     }
                 }
+
+                // ExpenseMatching tablosu
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                 {
+                   { "MatchingID", "INT PRIMARY KEY AUTO_INCREMENT" },
+                   { "ItemName", "VARCHAR(255) NOT NULL" },
+                   { "SubRecordType", "VARCHAR(255) NOT NULL" }
+                   }, conn);
             }
         }
 
@@ -119,18 +125,18 @@ namespace HesapTakip
             return new MySqlConnection(_connectionString);
         }
 
-           public DataTable GetCustomers()
-           {
-               var dt = new DataTable();
-               using (var conn = new MySqlConnection(_connectionString))
-               using (var adapter = new MySqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode FROM Customers", conn))
-               {
-                   adapter.Fill(dt);
-               }
-               return dt;
-           }
-           
- 
+        public DataTable GetCustomers()
+        {
+            var dt = new DataTable();
+            using (var conn = new MySqlConnection(_connectionString))
+            using (var adapter = new MySqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode FROM Customers", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+
         public bool AddCustomer(string name, bool edefter, string taxid = null, string activitycode = null)
         {
             try
@@ -566,6 +572,68 @@ namespace HesapTakip
         {
             public string Label { get; set; }
             public string Info { get; set; }
+        }
+
+        public DataTable GetCategories()
+        {
+            var dt = new DataTable();
+            using (var conn = new MySqlConnection(_connectionString))
+            using (var adapter = new MySqlDataAdapter("SELECT CategoryID, Label, Info FROM ExpenseCategories", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+        public bool AddExpenseMatching(string itemName, string subRecordType)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(_connectionString))
+                using (var cmd = new MySqlCommand(
+                    "INSERT INTO ExpenseMatching (ItemName, SubRecordType) VALUES (@itemName, @subRecordType)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.Parameters.AddWithValue("@subRecordType", subRecordType);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool DeleteExpenseMatching(string itemName)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(_connectionString))
+                using (var cmd = new MySqlCommand(
+                    "DELETE FROM ExpenseMatching WHERE ItemName = @itemName", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public DataTable GetExpenseMatchings()
+        {
+            var dt = new DataTable();
+            using (var conn = new MySqlConnection(_connectionString))
+            using (var adapter = new MySqlDataAdapter("SELECT ItemName, SubRecordType FROM ExpenseMatching", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
         }
     }
 }

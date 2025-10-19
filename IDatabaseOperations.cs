@@ -37,6 +37,12 @@ namespace HesapTakip
         bool DeleteEDefterTransaction(int transactionId);
         decimal CalculateEDefterTotal(int customerId);
         bool BulkUpdateEDefterTransactions(List<EDefterTransaction> transactions);
+
+        //DBS Kategorileri
+        DataTable GetCategories();
+        bool AddExpenseMatching(string itemName, string subRecordType);
+        bool DeleteExpenseMatching(string itemName);
+        DataTable GetExpenseMatchings();
     }
 
     // E-Defter işlemleri için yardımcı sınıf
