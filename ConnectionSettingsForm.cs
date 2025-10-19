@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
+
 namespace HesapTakip
 {
     public partial class ConnectionSettingsForm : Form
@@ -84,6 +85,13 @@ namespace HesapTakip
                     txtUser.Text = AppConfigHelper.GetUserFromConnectionString();
                     txtPort.Text = AppConfigHelper.GetPortFromConnectionString();
                     // Password security nedeniyle þifre yüklenmez
+                    // Windows auth kontrolü
+                    chkUseWindowsAuth.Checked = AppConfigHelper.IsWindowsAuthEnabled;
+                    if (chkUseWindowsAuth.Checked)
+                    {
+                        txtUser.Text = "";
+                        txtPassword.Text = "";
+                    }
                 }
             }
             catch (Exception ex)
@@ -117,6 +125,12 @@ namespace HesapTakip
             lblPort.Visible = !isSQLite;
             txtPort.Visible = !isSQLite;
             btnTestConnection.Visible = !isSQLite;
+            // Windows Kimlik Doðrulamasý Checkbox'ý sadece MSSQL için göster
+            chkUseWindowsAuth.Visible = isMSSQL;
+            if (isMSSQL)
+            {
+                ChkUseWindowsAuth_CheckedChanged(null, null); // Alanlarý güncelle
+            }
 
             // Port varsayýlan deðerleri - SADECE BOÞSA veya TÝP DEÐÝÞTÝYSE
             if (isMySQL)
@@ -219,7 +233,16 @@ namespace HesapTakip
                 btnTestConnection.Enabled = true;
             }
         }
-
+        private void ChkUseWindowsAuth_CheckedChanged(object sender, EventArgs e)
+        {
+            bool useWindowsAuth = chkUseWindowsAuth.Checked;
+            // Kullanýcý adý ve þifre alanlarýný etkinleþtir/devre dýþý býrak
+            lblUser.Visible = !useWindowsAuth;
+            txtUser.Visible = !useWindowsAuth;
+            lblPassword.Visible = !useWindowsAuth;
+            txtPassword.Visible = !useWindowsAuth;
+        }
+     
         private bool ValidateInputs()
         {
             string databaseType = cmbDatabaseType.SelectedItem?.ToString();
@@ -272,28 +295,36 @@ namespace HesapTakip
                     return false;
                 }
 
-                if (string.IsNullOrEmpty(txtUser.Text))
-                {
-                    MessageBox.Show("Lütfen kullanýcý adýný girin!", "Uyarý",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return false;
-                }
-
                 if (string.IsNullOrEmpty(txtPort.Text))
                 {
                     MessageBox.Show("Lütfen port numarasýný girin!", "Uyarý",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
+
+                if (databaseType == "MSSQL" && chkUseWindowsAuth.Checked)
+                {
+                    // Windows auth için kullanýcý adý ve þifre zorunlu deðil
+                    return true;
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(txtUser.Text))
+                    {
+                        MessageBox.Show("Lütfen kullanýcý adýný girin!", "Uyarý",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return false;
+                    }
+                }
             }
 
             return true;
         }
-
         private string BuildConnectionString()
         {
             string databaseType = cmbDatabaseType.SelectedItem.ToString();
             Debug.WriteLine($"BuildConnectionString for: {databaseType}");
+            Debug.WriteLine($"chkUseWindowsAuth.Checked: {chkUseWindowsAuth.Checked}");
 
             if (databaseType == "SQLite")
             {
@@ -309,7 +340,18 @@ namespace HesapTakip
             }
             else // MSSQL
             {
-                string connectionString = $"Server={txtServer.Text},{txtPort.Text};Database={txtDatabase.Text};User={txtUser.Text};Password={txtPassword.Text};";
+                string connectionString;
+                bool windowsAuth = chkUseWindowsAuth.Checked && databaseType == "MSSQL";
+                Debug.WriteLine($"MSSQL Windows Auth durumu: {windowsAuth}");
+
+                if (windowsAuth)
+                {
+                    connectionString = $"Server={txtServer.Text},{txtPort.Text};Database={txtDatabase.Text};Integrated Security=true;";
+                }
+                else
+                {
+                    connectionString = $"Server={txtServer.Text},{txtPort.Text};Database={txtDatabase.Text};User Id={txtUser.Text};Password={txtPassword.Text};";
+                }
                 Debug.WriteLine($"MSSQL Connection String: {connectionString}");
                 return connectionString;
             }
@@ -331,6 +373,18 @@ namespace HesapTakip
                 Port = txtPort.Text;
                 SqliteFilePath = txtSqliteFilePath.Text;
 
+                // MSSQL için Windows auth ayarýný kaydet
+                if (DatabaseType == "MSSQL")
+                {
+                    AppConfigHelper.IsWindowsAuthEnabled = chkUseWindowsAuth.Checked;
+                    if (chkUseWindowsAuth.Checked)
+                    {
+                        User = "";
+                        Password = "";
+                    }
+                    Debug.WriteLine($"MSSQL Windows Auth: {chkUseWindowsAuth.Checked}");
+                }
+
                 // SQLite için dosya dizinini oluþtur
                 if (DatabaseType == "SQLite")
                 {
@@ -340,7 +394,6 @@ namespace HesapTakip
                         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                         {
                             Directory.CreateDirectory(directory);
-                            Debug.WriteLine($"SQLite dizin oluþturuldu: {directory}");
                         }
                     }
                     catch (Exception ex)
@@ -351,21 +404,57 @@ namespace HesapTakip
                     }
                 }
 
+                // BAÐLANTI DÝZESÝNÝ OLUÞTUR VE TEST ET
+                string connectionString = BuildConnectionString();
+                Debug.WriteLine($"Kaydetmeden önce connection string: {connectionString}");
+
+                // Test baðlantýsýný yap
+                bool testResult = false;
+                if (DatabaseType == "MySQL")
+                {
+                    var db = new MySqlOperations(connectionString);
+                    testResult = db.TestConnection();
+                }
+                else if (DatabaseType == "MSSQL")
+                {
+                    var db = new MsSqlOperations(connectionString);
+                    testResult = db.TestConnection();
+                }
+
+                if (!testResult)
+                {
+                    MessageBox.Show($"Baðlantý testi baþarýsýz! Connection String: {connectionString}", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // SADECE BÝR KEZ KAYDET VE EK ÇAÐRIYI ÖNLE
+                AppConfigHelper.SaveConnectionString(Server, Database, User, Password, Port, DatabaseType, SqliteFilePath, chkUseWindowsAuth.Checked && DatabaseType == "MSSQL");
+                Debug.WriteLine("Kullanýcý ayarlarý kaydedildi...");
+
                 // DialogResult'ý OK yap ve formu kapat
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ayarlar kaydedilirken hata: {ex.Message}", "Hata",
+                MessageBox.Show($"Ayarlar kaydedilirken hata: {ex.Message}\nStack Trace: {ex.StackTrace}", "Hata",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void btnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            base.OnFormClosing(e);
+            Debug.WriteLine("FormClosing event triggered");
+            Debug.WriteLine("FormClosing event triggered. Checking for additional SaveConnectionString calls...");
+            // Eðer baþka bir SaveConnectionString çaðrýsý varsa, bunu engelle
+            // Þu anda manuel bir engelleme eklemiyoruz, ancak kaynaðý bulmamýz lazým
         }
     }
 }

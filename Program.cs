@@ -69,6 +69,11 @@ namespace HesapTakip
                     Debug.WriteLine("Kullanýcý ayarlarý kaydetti...");
 
                     // SQLite için dosya yolunu da gönder
+                    // --- DÜZELTME BAÞLANGIÇ ---
+                    bool useWindowsAuth = false;
+                    if (settingsForm.DatabaseType == "MSSQL")
+                        useWindowsAuth = AppConfigHelper.IsWindowsAuthEnabled;
+
                     AppConfigHelper.SaveConnectionString(
                         settingsForm.Server,
                         settingsForm.Database,
@@ -76,8 +81,11 @@ namespace HesapTakip
                         settingsForm.Password,
                         settingsForm.Port,
                         settingsForm.DatabaseType,
-                        settingsForm.SqliteFilePath
+                        settingsForm.SqliteFilePath,
+                        useWindowsAuth // MSSQL için Windows Auth bilgisini ilet
                     );
+                    // --- DÜZELTME SONU ---
+
 
                     Debug.WriteLine($"Ayarlar kaydedildi - Type: '{settingsForm.DatabaseType}'");
 

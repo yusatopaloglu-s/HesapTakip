@@ -160,6 +160,7 @@ namespace HesapTakip
             else
                 return dbType; // Olduğu gibi dön
         }
+
         private static void MigrateFromUserConfig(string userConfigPath)
         {
             try
@@ -191,26 +192,19 @@ namespace HesapTakip
         }
 
 
-        public static void SaveConnectionString(string server, string database, string user, string password, string port, string databaseType, string sqliteFilePath = "")
+        public static void SaveConnectionString(string server, string database, string user, string password, string port, string databaseType, string sqliteFilePath = "", bool useWindowsAuth = false)
         {
             DatabaseType = databaseType;
 
             string connectionString;
             if (databaseType == "SQLite")
             {
-                // SQLite için dosya yolunu kontrol et ve normalize et
                 if (string.IsNullOrEmpty(sqliteFilePath))
                 {
-                    // Varsayılan dosya yolu
                     sqliteFilePath = Path.Combine(AppDataFolder, $"{database}.sqlite");
                 }
-
-                // Dosya yolunu tam path yap
                 sqliteFilePath = Path.GetFullPath(sqliteFilePath);
-
                 connectionString = $"Data Source={sqliteFilePath};";
-
-                Debug.WriteLine($"SQLite Connection String: {connectionString}");
             }
             else if (databaseType == "MySQL")
             {
@@ -218,13 +212,38 @@ namespace HesapTakip
             }
             else // MSSQL
             {
-                connectionString = $"Server={server},{port};Database={database};User={user};Password={password};";
+                if (useWindowsAuth)
+                {
+                    connectionString = $"Server={server},{port};Database={database};Integrated Security=true;";
+                    user = "";      // Kullanıcı adı ve şifreyi temizle
+                    password = "";
+                }
+                else
+                {
+                    connectionString = $"Server={server},{port};Database={database};User Id={user};Password={password};";
+                }
+                Debug.WriteLine($"MSSQL Connection String: {connectionString}");
+            }
+
+            // Boş parametreleri temizle (isteğe bağlı güvenlik önlemi)
+            if (string.IsNullOrEmpty(user) && string.IsNullOrEmpty(password) && !useWindowsAuth)
+            {
+                Debug.WriteLine("Uyarı: Kullanıcı adı ve şifre boş, ancak Windows Auth kapalı. Bağlantı başarısız olabilir.");
             }
 
             DatabasePath = connectionString;
+
+            // Windows auth ayarını kaydet
+            if (databaseType == "MSSQL")
+            {
+                IsWindowsAuthEnabled = useWindowsAuth;
+                Debug.WriteLine($"MSSQL Windows Auth Enabled: {useWindowsAuth}");
+            }
+
+            Debug.WriteLine($"Final SaveConnectionString: {connectionString}");
         }
 
-        // SQLite için Data Source değerini alma
+
         public static string GetDataSourceFromConnectionString()
         {
             try
@@ -303,7 +322,63 @@ namespace HesapTakip
             }
             return string.Empty;
         }
+        // YENİ: Windows Authentication ayarını kaydetmek/yüklemek için
+        public static bool IsWindowsAuthEnabled
+        {
+            get
+            {
+                try
+                {
+                    if (File.Exists(ConfigFilePath))
+                    {
+                        XmlDocument doc = new XmlDocument();
+                        doc.Load(ConfigFilePath);
+                        var node = doc.SelectSingleNode("//IsWindowsAuthEnabled");
+                        if (node != null && bool.TryParse(node.InnerText, out bool value))
+                        {
+                            return value;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"IsWindowsAuthEnabled okuma hatası: {ex.Message}");
+                }
+                return false; // Varsayılan false
+            }
+            set
+            {
+                try
+                {
+                    XmlDocument doc = new XmlDocument();
 
+                    if (File.Exists(ConfigFilePath))
+                    {
+                        doc.Load(ConfigFilePath);
+                    }
+                    else
+                    {
+                        doc.AppendChild(doc.CreateXmlDeclaration("1.0", "utf-8", null));
+                        doc.AppendChild(doc.CreateElement("Configuration"));
+                    }
+
+                    var node = doc.SelectSingleNode("//IsWindowsAuthEnabled");
+                    if (node == null)
+                    {
+                        node = doc.CreateElement("IsWindowsAuthEnabled");
+                        doc.DocumentElement.AppendChild(node);
+                    }
+
+                    node.InnerText = value.ToString();
+                    doc.Save(ConfigFilePath);
+                    Debug.WriteLine($"IsWindowsAuthEnabled successfully set to: {value}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"IsWindowsAuthEnabled kaydetme hatası: {ex.Message}");
+                }
+            }
+        }
         public static bool HasValidConnectionString()
         {
             if (string.IsNullOrEmpty(DatabasePath))
@@ -334,11 +409,11 @@ namespace HesapTakip
                     foreach (string versionDir in versionDirs)
                     {
                         string userConfigPath = Path.Combine(versionDir, "user.config");
-                        if (File.Exists(userConfigPath))
-                        {
-                            // Eski user.config'ten ayarları oku ve yeni konuma taşı
-                            MigrateFromUserConfig(userConfigPath);
-                        }
+                    if (File.Exists(userConfigPath))
+                    {
+                        // Eski user.config'ten ayarları oku ve yeni konuma taşı
+                        MigrateFromUserConfig(userConfigPath);
+                    }
                     }
                 }
             }

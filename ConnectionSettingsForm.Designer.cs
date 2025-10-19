@@ -1,4 +1,4 @@
-using System.Windows.Forms;
+        using System.Windows.Forms;
 
 namespace HesapTakip
 {
@@ -19,211 +19,251 @@ namespace HesapTakip
 
         private void InitializeComponent()
         {
-            this.lblDatabaseType = new Label();
-            this.cmbDatabaseType = new ComboBox();
-            this.lblSqliteFilePath = new Label();
-            this.txtSqliteFilePath = new TextBox();
-            this.btnBrowseSqlite = new Button();
-            this.lblServer = new Label();
-            this.txtServer = new TextBox();
-            this.lblDatabase = new Label();
-            this.txtDatabase = new TextBox();
-            this.lblUser = new Label();
-            this.txtUser = new TextBox();
-            this.lblPassword = new Label();
-            this.txtPassword = new TextBox();
-            this.lblPort = new Label();
-            this.txtPort = new TextBox();
-            this.btnTestConnection = new Button();
-            this.btnSave = new Button();
-            this.btnCancel = new Button();
-            this.SuspendLayout();
-
+            lblDatabaseType = new Label();
+            cmbDatabaseType = new ComboBox();
+            lblSqliteFilePath = new Label();
+            txtSqliteFilePath = new TextBox();
+            btnBrowseSqlite = new Button();
+            lblServer = new Label();
+            txtServer = new TextBox();
+            lblDatabase = new Label();
+            txtDatabase = new TextBox();
+            lblUser = new Label();
+            txtUser = new TextBox();
+            lblPassword = new Label();
+            txtPassword = new TextBox();
+            lblPort = new Label();
+            txtPort = new TextBox();
+            btnTestConnection = new Button();
+            btnSave = new Button();
+            btnCancel = new Button();
+            chkUseWindowsAuth = new CheckBox();
+            SuspendLayout();
             // 
             // lblDatabaseType
             // 
-            this.lblDatabaseType.AutoSize = true;
-            this.lblDatabaseType.Location = new System.Drawing.Point(20, 20);
-            this.lblDatabaseType.Name = "lblDatabaseType";
-            this.lblDatabaseType.Size = new System.Drawing.Size(82, 13);
-            this.lblDatabaseType.Text = "Veritabaný Tipi:";
+            lblDatabaseType.AutoSize = true;
+            lblDatabaseType.Location = new Point(23, 23);
+            lblDatabaseType.Margin = new Padding(4, 0, 4, 0);
+            lblDatabaseType.Name = "lblDatabaseType";
+            lblDatabaseType.Size = new Size(86, 15);
+            lblDatabaseType.TabIndex = 15;
+            lblDatabaseType.Text = "Veritabaný Tipi:";
             // 
             // cmbDatabaseType
             // 
-            this.cmbDatabaseType.DropDownStyle = ComboBoxStyle.DropDownList;
-            this.cmbDatabaseType.FormattingEnabled = true;
-            this.cmbDatabaseType.Items.AddRange(new object[] { "SQLite", "MySQL", "MSSQL" });
-            this.cmbDatabaseType.Location = new System.Drawing.Point(120, 17);
-            this.cmbDatabaseType.Name = "cmbDatabaseType";
-            this.cmbDatabaseType.Size = new System.Drawing.Size(200, 21);
-            this.cmbDatabaseType.TabIndex = 0;
-            this.cmbDatabaseType.SelectedIndexChanged += new System.EventHandler(this.cmbDatabaseType_SelectedIndexChanged);
+            cmbDatabaseType.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbDatabaseType.FormattingEnabled = true;
+            cmbDatabaseType.Items.AddRange(new object[] { "SQLite", "MySQL", "MSSQL" });
+            cmbDatabaseType.Location = new Point(140, 20);
+            cmbDatabaseType.Margin = new Padding(4, 3, 4, 3);
+            cmbDatabaseType.Name = "cmbDatabaseType";
+            cmbDatabaseType.Size = new Size(233, 23);
+            cmbDatabaseType.TabIndex = 0;
+            cmbDatabaseType.SelectedIndexChanged += cmbDatabaseType_SelectedIndexChanged;
             // 
             // lblSqliteFilePath
             // 
-            this.lblSqliteFilePath.AutoSize = true;
-            this.lblSqliteFilePath.Location = new System.Drawing.Point(20, 50);
-            this.lblSqliteFilePath.Name = "lblSqliteFilePath";
-            this.lblSqliteFilePath.Size = new System.Drawing.Size(94, 13);
-            this.lblSqliteFilePath.Text = "SQLite Dosya Yolu:";
+            lblSqliteFilePath.AutoSize = true;
+            lblSqliteFilePath.Location = new Point(23, 77);
+            lblSqliteFilePath.Margin = new Padding(4, 0, 4, 0);
+            lblSqliteFilePath.Name = "lblSqliteFilePath";
+            lblSqliteFilePath.Size = new Size(106, 15);
+            lblSqliteFilePath.TabIndex = 14;
+            lblSqliteFilePath.Text = "SQLite Dosya Yolu:";
             // 
             // txtSqliteFilePath
             // 
-            this.txtSqliteFilePath.Location = new System.Drawing.Point(120, 47);
-            this.txtSqliteFilePath.Name = "txtSqliteFilePath";
-            this.txtSqliteFilePath.Size = new System.Drawing.Size(250, 20);
-            this.txtSqliteFilePath.TabIndex = 1;
+            txtSqliteFilePath.Location = new Point(140, 73);
+            txtSqliteFilePath.Margin = new Padding(4, 3, 4, 3);
+            txtSqliteFilePath.Name = "txtSqliteFilePath";
+            txtSqliteFilePath.Size = new Size(291, 23);
+            txtSqliteFilePath.TabIndex = 1;
             // 
             // btnBrowseSqlite
             // 
-            this.btnBrowseSqlite.Location = new System.Drawing.Point(380, 45);
-            this.btnBrowseSqlite.Name = "btnBrowseSqlite";
-            this.btnBrowseSqlite.Size = new System.Drawing.Size(75, 23);
-            this.btnBrowseSqlite.TabIndex = 2;
-            this.btnBrowseSqlite.Text = "Gözat";
-            this.btnBrowseSqlite.UseVisualStyleBackColor = true;
-            this.btnBrowseSqlite.Click += new System.EventHandler(this.btnBrowseSqlite_Click);
+            btnBrowseSqlite.Location = new Point(443, 71);
+            btnBrowseSqlite.Margin = new Padding(4, 3, 4, 3);
+            btnBrowseSqlite.Name = "btnBrowseSqlite";
+            btnBrowseSqlite.Size = new Size(88, 27);
+            btnBrowseSqlite.TabIndex = 2;
+            btnBrowseSqlite.Text = "Gözat";
+            btnBrowseSqlite.UseVisualStyleBackColor = true;
+            btnBrowseSqlite.Click += btnBrowseSqlite_Click;
             // 
             // lblServer
             // 
-            this.lblServer.AutoSize = true;
-            this.lblServer.Location = new System.Drawing.Point(20, 50);
-            this.lblServer.Name = "lblServer";
-            this.lblServer.Size = new System.Drawing.Size(44, 13);
-            this.lblServer.Text = "Sunucu:";
+            lblServer.AutoSize = true;
+            lblServer.Location = new Point(23, 77);
+            lblServer.Margin = new Padding(4, 0, 4, 0);
+            lblServer.Name = "lblServer";
+            lblServer.Size = new Size(50, 15);
+            lblServer.TabIndex = 13;
+            lblServer.Text = "Sunucu:";
             // 
             // txtServer
             // 
-            this.txtServer.Location = new System.Drawing.Point(120, 47);
-            this.txtServer.Name = "txtServer";
-            this.txtServer.Size = new System.Drawing.Size(200, 20);
-            this.txtServer.TabIndex = 1;
+            txtServer.Location = new Point(140, 73);
+            txtServer.Margin = new Padding(4, 3, 4, 3);
+            txtServer.Name = "txtServer";
+            txtServer.Size = new Size(233, 23);
+            txtServer.TabIndex = 1;
             // 
             // lblDatabase
             // 
-            this.lblDatabase.AutoSize = true;
-            this.lblDatabase.Location = new System.Drawing.Point(20, 80);
-            this.lblDatabase.Name = "lblDatabase";
-            this.lblDatabase.Size = new System.Drawing.Size(75, 13);
-            this.lblDatabase.Text = "Veritabaný Adý:";
+            lblDatabase.AutoSize = true;
+            lblDatabase.Location = new Point(23, 111);
+            lblDatabase.Margin = new Padding(4, 0, 4, 0);
+            lblDatabase.Name = "lblDatabase";
+            lblDatabase.Size = new Size(84, 15);
+            lblDatabase.TabIndex = 12;
+            lblDatabase.Text = "Veritabaný Adý:";
             // 
             // txtDatabase
             // 
-            this.txtDatabase.Location = new System.Drawing.Point(120, 77);
-            this.txtDatabase.Name = "txtDatabase";
-            this.txtDatabase.Size = new System.Drawing.Size(200, 20);
-            this.txtDatabase.TabIndex = 2;
+            txtDatabase.Location = new Point(140, 108);
+            txtDatabase.Margin = new Padding(4, 3, 4, 3);
+            txtDatabase.Name = "txtDatabase";
+            txtDatabase.Size = new Size(233, 23);
+            txtDatabase.TabIndex = 2;
             // 
             // lblUser
             // 
-            this.lblUser.AutoSize = true;
-            this.lblUser.Location = new System.Drawing.Point(20, 110);
-            this.lblUser.Name = "lblUser";
-            this.lblUser.Size = new System.Drawing.Size(67, 13);
-            this.lblUser.Text = "Kullanýcý Adý:";
+            lblUser.AutoSize = true;
+            lblUser.Location = new Point(23, 146);
+            lblUser.Margin = new Padding(4, 0, 4, 0);
+            lblUser.Name = "lblUser";
+            lblUser.Size = new Size(76, 15);
+            lblUser.TabIndex = 11;
+            lblUser.Text = "Kullanýcý Adý:";
             // 
             // txtUser
             // 
-            this.txtUser.Location = new System.Drawing.Point(120, 107);
-            this.txtUser.Name = "txtUser";
-            this.txtUser.Size = new System.Drawing.Size(200, 20);
-            this.txtUser.TabIndex = 3;
+            txtUser.Location = new Point(140, 142);
+            txtUser.Margin = new Padding(4, 3, 4, 3);
+            txtUser.Name = "txtUser";
+            txtUser.Size = new Size(233, 23);
+            txtUser.TabIndex = 3;
             // 
             // lblPassword
             // 
-            this.lblPassword.AutoSize = true;
-            this.lblPassword.Location = new System.Drawing.Point(20, 140);
-            this.lblPassword.Name = "lblPassword";
-            this.lblPassword.Size = new System.Drawing.Size(31, 13);
-            this.lblPassword.Text = "Þifre:";
+            lblPassword.AutoSize = true;
+            lblPassword.Location = new Point(23, 181);
+            lblPassword.Margin = new Padding(4, 0, 4, 0);
+            lblPassword.Name = "lblPassword";
+            lblPassword.Size = new Size(35, 15);
+            lblPassword.TabIndex = 10;
+            lblPassword.Text = "Þifre:";
             // 
             // txtPassword
             // 
-            this.txtPassword.Location = new System.Drawing.Point(120, 137);
-            this.txtPassword.Name = "txtPassword";
-            this.txtPassword.PasswordChar = '*';
-            this.txtPassword.Size = new System.Drawing.Size(200, 20);
-            this.txtPassword.TabIndex = 4;
+            txtPassword.Location = new Point(140, 177);
+            txtPassword.Margin = new Padding(4, 3, 4, 3);
+            txtPassword.Name = "txtPassword";
+            txtPassword.PasswordChar = '*';
+            txtPassword.Size = new Size(233, 23);
+            txtPassword.TabIndex = 4;
             // 
             // lblPort
             // 
-            this.lblPort.AutoSize = true;
-            this.lblPort.Location = new System.Drawing.Point(20, 170);
-            this.lblPort.Name = "lblPort";
-            this.lblPort.Size = new System.Drawing.Size(29, 13);
-            this.lblPort.Text = "Port:";
+            lblPort.AutoSize = true;
+            lblPort.Location = new Point(23, 215);
+            lblPort.Margin = new Padding(4, 0, 4, 0);
+            lblPort.Name = "lblPort";
+            lblPort.Size = new Size(32, 15);
+            lblPort.TabIndex = 9;
+            lblPort.Text = "Port:";
             // 
             // txtPort
             // 
-            this.txtPort.Location = new System.Drawing.Point(120, 167);
-            this.txtPort.Name = "txtPort";
-            this.txtPort.Size = new System.Drawing.Size(100, 20);
-            this.txtPort.TabIndex = 5;
+            txtPort.Location = new Point(140, 212);
+            txtPort.Margin = new Padding(4, 3, 4, 3);
+            txtPort.Name = "txtPort";
+            txtPort.Size = new Size(116, 23);
+            txtPort.TabIndex = 5;
             // 
             // btnTestConnection
             // 
-            this.btnTestConnection.Location = new System.Drawing.Point(120, 200);
-            this.btnTestConnection.Name = "btnTestConnection";
-            this.btnTestConnection.Size = new System.Drawing.Size(100, 30);
-            this.btnTestConnection.TabIndex = 6;
-            this.btnTestConnection.Text = "Baðlantýyý Test Et";
-            this.btnTestConnection.UseVisualStyleBackColor = true;
-            this.btnTestConnection.Click += new System.EventHandler(this.btnTestConnection_Click);
+            btnTestConnection.Location = new Point(140, 250);
+            btnTestConnection.Margin = new Padding(4, 3, 4, 3);
+            btnTestConnection.Name = "btnTestConnection";
+            btnTestConnection.Size = new Size(117, 35);
+            btnTestConnection.TabIndex = 6;
+            btnTestConnection.Text = "Baðlantýyý Test Et";
+            btnTestConnection.UseVisualStyleBackColor = true;
+            btnTestConnection.Click += btnTestConnection_Click;
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(250, 250);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(100, 30);
-            this.btnSave.TabIndex = 7;
-            this.btnSave.Text = "Kaydet";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            btnSave.Location = new Point(292, 288);
+            btnSave.Margin = new Padding(4, 3, 4, 3);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(117, 35);
+            btnSave.TabIndex = 7;
+            btnSave.Text = "Kaydet";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click;
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(360, 250);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(100, 30);
-            this.btnCancel.TabIndex = 8;
-            this.btnCancel.Text = "Ýptal";
-            this.btnCancel.UseVisualStyleBackColor = true;
-            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            btnCancel.Location = new Point(420, 288);
+            btnCancel.Margin = new Padding(4, 3, 4, 3);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(117, 35);
+            btnCancel.TabIndex = 8;
+            btnCancel.Text = "Ýptal";
+            btnCancel.UseVisualStyleBackColor = true;
+            btnCancel.Click += btnCancel_Click;
+            // 
+            // chkUseWindowsAuth
+            // 
+            chkUseWindowsAuth.AutoSize = true;
+            chkUseWindowsAuth.Location = new Point(140, 48);
+            chkUseWindowsAuth.Name = "chkUseWindowsAuth";
+            chkUseWindowsAuth.Size = new Size(217, 19);
+            chkUseWindowsAuth.TabIndex = 16;
+            chkUseWindowsAuth.Text = "Windows Kimlik Doðrulamasý Kullan";
+            chkUseWindowsAuth.UseVisualStyleBackColor = true;
+            chkUseWindowsAuth.Visible = false;
+            chkUseWindowsAuth.CheckedChanged += ChkUseWindowsAuth_CheckedChanged;
             // 
             // ConnectionSettingsForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(484, 300);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.btnTestConnection);
-            this.Controls.Add(this.txtPort);
-            this.Controls.Add(this.lblPort);
-            this.Controls.Add(this.txtPassword);
-            this.Controls.Add(this.lblPassword);
-            this.Controls.Add(this.txtUser);
-            this.Controls.Add(this.lblUser);
-            this.Controls.Add(this.txtDatabase);
-            this.Controls.Add(this.lblDatabase);
-            this.Controls.Add(this.txtServer);
-            this.Controls.Add(this.lblServer);
-            this.Controls.Add(this.btnBrowseSqlite);
-            this.Controls.Add(this.txtSqliteFilePath);
-            this.Controls.Add(this.lblSqliteFilePath);
-            this.Controls.Add(this.cmbDatabaseType);
-            this.Controls.Add(this.lblDatabaseType);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "ConnectionSettingsForm";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "Veritabaný Baðlantý Ayarlarý";
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(565, 346);
+            Controls.Add(chkUseWindowsAuth);
+            Controls.Add(btnCancel);
+            Controls.Add(btnSave);
+            Controls.Add(btnTestConnection);
+            Controls.Add(txtPort);
+            Controls.Add(lblPort);
+            Controls.Add(txtPassword);
+            Controls.Add(lblPassword);
+            Controls.Add(txtUser);
+            Controls.Add(lblUser);
+            Controls.Add(txtDatabase);
+            Controls.Add(lblDatabase);
+            Controls.Add(txtServer);
+            Controls.Add(lblServer);
+            Controls.Add(btnBrowseSqlite);
+            Controls.Add(txtSqliteFilePath);
+            Controls.Add(lblSqliteFilePath);
+            Controls.Add(cmbDatabaseType);
+            Controls.Add(lblDatabaseType);
+            Font = new Font("Segoe UI Symbol", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Margin = new Padding(4, 3, 4, 3);
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "ConnectionSettingsForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Veritabaný Baðlantý Ayarlarý";
+            ResumeLayout(false);
+            PerformLayout();
         }
 
-        #endregion
+        #endregion      
 
         private Label lblDatabaseType;
         private ComboBox cmbDatabaseType;
@@ -243,5 +283,6 @@ namespace HesapTakip
         private Button btnTestConnection;
         private Button btnSave;
         private Button btnCancel;
+        private CheckBox chkUseWindowsAuth;
     }
 }
