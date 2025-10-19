@@ -1,6 +1,7 @@
 ﻿using OfficeOpenXml;
 using System.Data;
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 
 
@@ -137,43 +138,69 @@ namespace HesapTakip
             using (var saveFileDialog = new SaveFileDialog
             {
                 Filter = "Excel Files|*.xlsx",
-                FileName = $"{cmbTableSelector.SelectedItem}_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+                FileName = $"{cmbTableSelector.SelectedItem}_Export_{DateTime.Now:yyyyMMdd_HHmmss}_Part1.xlsx"
             })
             {
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     try
                     {
-
                         if (dgvData.Rows.Count == 0)
                         {
                             MessageBox.Show("Seçili tabloda veri bulunmuyor.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
+
                         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                        using (var package = new ExcelPackage(new FileInfo(saveFileDialog.FileName)))
+
+                        int maxRowsPerFile = 600; // Başlık dahil toplam 600 satır
+                        int maxDataRowsPerFile = maxRowsPerFile - 1; // Başlık hariç 599 veri satırı
+                        int totalDataRows = dgvData.Rows.Count;
+                        int fileCount = (int)Math.Ceiling((double)totalDataRows / maxDataRowsPerFile);
+
+                        string baseFilePath = Path.Combine(
+                            Path.GetDirectoryName(saveFileDialog.FileName),
+                            Path.GetFileNameWithoutExtension(saveFileDialog.FileName).Replace("_Part1", "")
+                        );
+
+                        for (int fileIndex = 0; fileIndex < fileCount; fileIndex++)
                         {
-                            var worksheet = package.Workbook.Worksheets.Add(cmbTableSelector.SelectedItem.ToString());
+                            string filePath = $"{baseFilePath}_Part{fileIndex + 1}.xlsx";
 
-
-                            for (int col = 0; col < dgvData.Columns.Count; col++)
+                            using (var package = new ExcelPackage(new FileInfo(filePath)))
                             {
-                                worksheet.Cells[1, col + 1].Value = dgvData.Columns[col].HeaderText;
-                            }
+                                var worksheet = package.Workbook.Worksheets.Add(cmbTableSelector.SelectedItem.ToString());
 
-
-                            for (int row = 0; row < dgvData.Rows.Count; row++)
-                            {
+                                // Başlık satırını ekle (1 satır)
                                 for (int col = 0; col < dgvData.Columns.Count; col++)
                                 {
-                                    worksheet.Cells[row + 2, col + 1].Value = dgvData.Rows[row].Cells[col].Value;
+                                    worksheet.Cells[1, col + 1].Value = dgvData.Columns[col].HeaderText;
                                 }
-                            }
 
-                            worksheet.Cells.AutoFitColumns();
-                            package.Save();
+                                // Veri satırlarını ekle (599 satırlık parçalar halinde)
+                                int startRow = fileIndex * maxDataRowsPerFile;
+                                int endRow = Math.Min((fileIndex + 1) * maxDataRowsPerFile, totalDataRows);
+                                int excelRow = 2; // Excel'de 2. satırdan başla (1. satır başlık)
+
+                                for (int row = startRow; row < endRow; row++)
+                                {
+                                    for (int col = 0; col < dgvData.Columns.Count; col++)
+                                    {
+                                        worksheet.Cells[excelRow, col + 1].Value = dgvData.Rows[row].Cells[col].Value;
+                                    }
+                                    excelRow++;
+                                }
+
+                                worksheet.Cells.AutoFitColumns();
+                                package.Save();
+                            }
                         }
-                        MessageBox.Show("Excel dosyası başarıyla oluşturuldu.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        string message = fileCount > 1
+                            ? $"{fileCount} adet Excel dosyası başarıyla oluşturuldu. (Her dosyada başlık dahil {maxRowsPerFile} satır)"
+                            : "Excel dosyası başarıyla oluşturuldu.";
+
+                        MessageBox.Show(message, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
@@ -182,6 +209,105 @@ namespace HesapTakip
                 }
             }
         }
+
+        private void BtnExportCSV_Click(object sender, EventArgs e)
+        {
+            using (var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV Files|*.csv",
+                FileName = $"{cmbTableSelector.SelectedItem}_Export_{DateTime.Now:yyyyMMdd_HHmmss}_Part1.csv"
+            })
+            {
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        if (dgvData.Rows.Count == 0)
+                        {
+                            MessageBox.Show("Seçili tabloda veri bulunmuyor.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        int maxRowsPerFile = 600; // Başlık dahil toplam 600 satır
+                        int maxDataRowsPerFile = maxRowsPerFile - 1; // Başlık hariç 599 veri satırı
+                        int totalDataRows = dgvData.Rows.Count;
+                        int fileCount = (int)Math.Ceiling((double)totalDataRows / maxDataRowsPerFile);
+
+                        string baseFilePath = Path.Combine(
+                            Path.GetDirectoryName(saveFileDialog.FileName),
+                            Path.GetFileNameWithoutExtension(saveFileDialog.FileName).Replace("_Part1", "")
+                        );
+
+                        for (int fileIndex = 0; fileIndex < fileCount; fileIndex++)
+                        {
+                            string filePath = $"{baseFilePath}_Part{fileIndex + 1}.csv";
+
+                            // UTF-8 with BOM for Turkish characters
+                            using (var writer = new StreamWriter(filePath, false, Encoding.UTF8))
+                            {
+                                // Write UTF-8 BOM for correct character encoding
+                                writer.Write('\uFEFF');
+
+                                // Başlık satırını yaz
+                                var headers = new List<string>();
+                                for (int col = 0; col < dgvData.Columns.Count; col++)
+                                {
+                                    headers.Add(EscapeCsvField(dgvData.Columns[col].HeaderText, ';'));
+                                }
+                                writer.WriteLine(string.Join(";", headers));
+
+                                // Veri satırlarını yaz (599 satırlık parçalar halinde)
+                                int startRow = fileIndex * maxDataRowsPerFile;
+                                int endRow = Math.Min((fileIndex + 1) * maxDataRowsPerFile, totalDataRows);
+
+                                for (int row = startRow; row < endRow; row++)
+                                {
+                                    var fields = new List<string>();
+                                    for (int col = 0; col < dgvData.Columns.Count; col++)
+                                    {
+                                        string value = dgvData.Rows[row].Cells[col].Value?.ToString() ?? "";
+                                        fields.Add(EscapeCsvField(value, ';'));
+                                    }
+                                    writer.WriteLine(string.Join(";", fields));
+                                }
+                            }
+                        }
+
+                        string message = fileCount > 1
+                            ? $"{fileCount} adet CSV dosyası başarıyla oluşturuldu. (Her dosyada başlık dahil {maxRowsPerFile} satır)"
+                            : "CSV dosyası başarıyla oluşturuldu.";
+
+                        MessageBox.Show(message, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"CSV dosyası oluşturulurken hata oluştu: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private string EscapeCsvField(string field, char separator = ';')
+        {
+            if (string.IsNullOrEmpty(field))
+                return "";
+
+            // Sayısal değerlerde ondalık ayracını koru (virgül)
+            // Tarih formatını koru
+
+            // Eğer alanda noktalı virgül, çift tırnak veya satır sonu karakteri varsa, tırnak içine al
+            if (field.Contains(separator) || field.Contains("\"") || field.Contains("\r") || field.Contains("\n"))
+            {
+                // İçindeki çift tırnakları çiftleyerek escape et
+                field = field.Replace("\"", "\"\"");
+                return $"\"{field}\"";
+            }
+
+            return field;
+        }
+
+  
+       
         private void CmbTableSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
 
@@ -284,43 +410,74 @@ namespace HesapTakip
                     var percent = taxSubtotal.Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
                     var taxableAmount = taxSubtotal.Descendants(cbc + "TaxableAmount").FirstOrDefault()?.Value ?? "0";
                     var taxAmount = taxSubtotal.Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
+                    double percentVal = double.TryParse(percent, NumberStyles.Any, CultureInfo.InvariantCulture, out var p) ? p : 0.0;
                     double taxableVal = double.TryParse(taxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0.0;
                     double taxVal = double.TryParse(taxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
 
-                    switch (percent)
+                    /* switch (percent)
+                     {
+                         case "0":
+                         case "0.0":
+                             taxExemptAmount0 = taxableVal;
+                             break;
+                         case "1":
+                         case "1.0":
+                             taxableAmount1 = taxableVal;
+                             taxAmount1 = taxVal;
+                             break;
+                         case "8":
+                         case "8.0":
+                             taxableAmount8 = taxableVal;
+                             taxAmount8 = taxVal;
+                             break;
+                         case "10":
+                         case "10.0":
+                             taxableAmount10 = taxableVal;
+                             taxAmount10 = taxVal;
+                             break;
+                         case "18":
+                         case "18.0":
+                             taxableAmount18 = taxableVal;
+                             taxAmount18 = taxVal;
+                             break;
+                         case "20":
+                         case "20.0":
+                             taxableAmount20 = taxableVal;
+                             taxAmount20 = taxVal;
+                             break;
+                     }
+                 }
+                 */
+                    if (percentVal == 0.0)
                     {
-                        case "0":
-                        case "0.0":
-                            taxExemptAmount0 = taxableVal;
-                            break;
-                        case "1":
-                        case "1.0":
-                            taxableAmount1 = taxableVal;
-                            taxAmount1 = taxVal;
-                            break;
-                        case "8":
-                        case "8.0":
-                            taxableAmount8 = taxableVal;
-                            taxAmount8 = taxVal;
-                            break;
-                        case "10":
-                        case "10.0":
-                            taxableAmount10 = taxableVal;
-                            taxAmount10 = taxVal;
-                            break;
-                        case "18":
-                        case "18.0":
-                            taxableAmount18 = taxableVal;
-                            taxAmount18 = taxVal;
-                            break;
-                        case "20":
-                        case "20.0":
-                            taxableAmount20 = taxableVal;
-                            taxAmount20 = taxVal;
-                            break;
+                        taxExemptAmount0 = taxableVal;
+                    }
+                    else if (percentVal == 1.0)
+                    {
+                        taxableAmount1 = taxableVal;
+                        taxAmount1 = taxVal;
+                    }
+                    else if (percentVal == 8.0)
+                    {
+                        taxableAmount8 = taxableVal;
+                        taxAmount8 = taxVal;
+                    }
+                    else if (percentVal == 10.0)
+                    {
+                        taxableAmount10 = taxableVal;
+                        taxAmount10 = taxVal;
+                    }
+                    else if (percentVal == 18.0)
+                    {
+                        taxableAmount18 = taxableVal;
+                        taxAmount18 = taxVal;
+                    }
+                    else if (percentVal == 20.0)
+                    {
+                        taxableAmount20 = taxableVal;
+                        taxAmount20 = taxVal;
                     }
                 }
-
                 string activityCode = "";
                 if (cbx_customerlist.SelectedItem != null)
                 {
@@ -832,6 +989,7 @@ namespace HesapTakip
             btn_clr = new Button();
             label1 = new Label();
             dgvData = new DataGridView();
+            BtnExportCSV = new Button();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -841,7 +999,7 @@ namespace HesapTakip
             // 
             btnUpload.Location = new Point(3, 58);
             btnUpload.Name = "btnUpload";
-            btnUpload.Size = new Size(171, 37);
+            btnUpload.Size = new Size(171, 29);
             btnUpload.TabIndex = 0;
             btnUpload.Text = "XML Dosyaları Yükle";
             btnUpload.UseVisualStyleBackColor = true;
@@ -874,7 +1032,7 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            groupBox2.Controls.Add(txtbox_act);
+            groupBox2.Controls.Add(BtnExportCSV);
             groupBox2.Controls.Add(label2);
             groupBox2.Controls.Add(cbx_customerlist);
             groupBox2.Controls.Add(btnExportExcel);
@@ -882,10 +1040,11 @@ namespace HesapTakip
             groupBox2.Controls.Add(cmbTableSelector);
             groupBox2.Controls.Add(btnUpload);
             groupBox2.Controls.Add(label1);
+            groupBox2.Controls.Add(txtbox_act);
             groupBox2.Dock = DockStyle.Top;
             groupBox2.Location = new Point(3, 19);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1326, 117);
+            groupBox2.Size = new Size(1326, 127);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
             // 
@@ -920,9 +1079,9 @@ namespace HesapTakip
             // 
             // btnExportExcel
             // 
-            btnExportExcel.Location = new Point(207, 29);
+            btnExportExcel.Location = new Point(199, 14);
             btnExportExcel.Name = "btnExportExcel";
-            btnExportExcel.Size = new Size(103, 29);
+            btnExportExcel.Size = new Size(103, 27);
             btnExportExcel.TabIndex = 4;
             btnExportExcel.Text = "Excel";
             btnExportExcel.UseVisualStyleBackColor = true;
@@ -930,9 +1089,9 @@ namespace HesapTakip
             // 
             // btn_clr
             // 
-            btn_clr.Location = new Point(207, 64);
+            btn_clr.Location = new Point(199, 78);
             btn_clr.Name = "btn_clr";
-            btn_clr.Size = new Size(103, 29);
+            btn_clr.Size = new Size(103, 27);
             btn_clr.TabIndex = 5;
             btn_clr.Text = "Tabloyu Boşalt";
             btn_clr.UseVisualStyleBackColor = true;
@@ -957,11 +1116,21 @@ namespace HesapTakip
             dgvData.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvData.BackgroundColor = SystemColors.Control;
             dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvData.Location = new Point(3, 147);
+            dgvData.Location = new Point(0, 150);
             dgvData.Name = "dgvData";
             dgvData.ReadOnly = true;
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
+            // 
+            // BtnExportCSV
+            // 
+            BtnExportCSV.Location = new Point(199, 47);
+            BtnExportCSV.Name = "BtnExportCSV";
+            BtnExportCSV.Size = new Size(103, 27);
+            BtnExportCSV.TabIndex = 9;
+            BtnExportCSV.Text = "CSV";
+            BtnExportCSV.UseVisualStyleBackColor = true;
+            BtnExportCSV.Click += BtnExportCSV_Click;
             // 
             // EFaturaxmlForm
             // 
@@ -985,5 +1154,6 @@ namespace HesapTakip
         private Label label2;
         private ComboBox cbx_customerlist;
         private TextBox txtbox_act;
+        private Button BtnExportCSV;
     }
 }
