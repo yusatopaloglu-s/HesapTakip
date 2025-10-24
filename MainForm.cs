@@ -379,8 +379,9 @@ namespace HesapTakip
             if (success)
             {
                 LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);
+                CalculateAndDisplayTotal(customerID);                
                 ClearTransactionInputs();
+                
                 // MessageBox.Show("İşlem başarıyla eklendi!");
             }
             else
@@ -414,6 +415,7 @@ namespace HesapTakip
                 {
                     LoadTransactions(customerID);
                     CalculateAndDisplayTotal(customerID);
+                    
 
                 }
                 else
@@ -1153,6 +1155,8 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadTransactions(GetCurrentCustomerId());
+                        CalculateAndDisplayTotal(GetCurrentCustomerId());   
+                        
 
                     }
                     else
