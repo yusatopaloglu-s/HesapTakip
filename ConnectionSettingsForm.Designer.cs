@@ -51,7 +51,7 @@ namespace HesapTakip
             lblDatabaseType.Name = "lblDatabaseType";
             lblDatabaseType.Size = new Size(84, 15);
             lblDatabaseType.TabIndex = 15;
-            lblDatabaseType.Text = "Veritabaný Tipi:";
+            lblDatabaseType.Text = "VeritabanÄ± Tipi:";
             // 
             // cmbDatabaseType
             // 
@@ -90,7 +90,7 @@ namespace HesapTakip
             btnBrowseSqlite.Name = "btnBrowseSqlite";
             btnBrowseSqlite.Size = new Size(88, 27);
             btnBrowseSqlite.TabIndex = 2;
-            btnBrowseSqlite.Text = "Gözat";
+            btnBrowseSqlite.Text = "GÃ¶zat";
             btnBrowseSqlite.UseVisualStyleBackColor = true;
             btnBrowseSqlite.Click += btnBrowseSqlite_Click;
             // 
@@ -120,7 +120,7 @@ namespace HesapTakip
             lblDatabase.Name = "lblDatabase";
             lblDatabase.Size = new Size(83, 15);
             lblDatabase.TabIndex = 12;
-            lblDatabase.Text = "Veritabaný Adý:";
+            lblDatabase.Text = "VeritabanÄ± AdÄ±:";
             // 
             // txtDatabase
             // 
@@ -138,7 +138,7 @@ namespace HesapTakip
             lblUser.Name = "lblUser";
             lblUser.Size = new Size(76, 15);
             lblUser.TabIndex = 11;
-            lblUser.Text = "Kullanýcý Adý:";
+            lblUser.Text = "KullanÄ±cÄ± AdÄ±:";
             // 
             // txtUser
             // 
@@ -156,7 +156,7 @@ namespace HesapTakip
             lblPassword.Name = "lblPassword";
             lblPassword.Size = new Size(33, 15);
             lblPassword.TabIndex = 10;
-            lblPassword.Text = "Þifre:";
+            lblPassword.Text = "Åžifre:";
             // 
             // txtPassword
             // 
@@ -192,7 +192,7 @@ namespace HesapTakip
             btnTestConnection.Name = "btnTestConnection";
             btnTestConnection.Size = new Size(117, 35);
             btnTestConnection.TabIndex = 6;
-            btnTestConnection.Text = "Baðlantýyý Test Et";
+            btnTestConnection.Text = "BaÃ°lantÃ½yÃ½ Test Et";
             btnTestConnection.UseVisualStyleBackColor = true;
             btnTestConnection.Click += btnTestConnection_Click;
             // 
@@ -214,7 +214,7 @@ namespace HesapTakip
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(117, 35);
             btnCancel.TabIndex = 8;
-            btnCancel.Text = "Ýptal";
+            btnCancel.Text = "Iptal";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += btnCancel_Click;
             // 
@@ -225,7 +225,7 @@ namespace HesapTakip
             chkUseWindowsAuth.Name = "chkUseWindowsAuth";
             chkUseWindowsAuth.Size = new Size(217, 19);
             chkUseWindowsAuth.TabIndex = 16;
-            chkUseWindowsAuth.Text = "Windows Kimlik Doðrulamasý Kullan";
+            chkUseWindowsAuth.Text = "Windows Kimlik DoÄŸrulamasÄ± Kullan";
             chkUseWindowsAuth.UseVisualStyleBackColor = true;
             chkUseWindowsAuth.Visible = false;
             chkUseWindowsAuth.CheckedChanged += ChkUseWindowsAuth_CheckedChanged;
@@ -236,7 +236,7 @@ namespace HesapTakip
             btn_crdb_sqlite.Name = "btn_crdb_sqlite";
             btn_crdb_sqlite.Size = new Size(117, 35);
             btn_crdb_sqlite.TabIndex = 17;
-            btn_crdb_sqlite.Text = "Veri Tabaný Oluþtur";
+            btn_crdb_sqlite.Text = "Veri TabanÄ± OluÅŸtur";
             btn_crdb_sqlite.UseVisualStyleBackColor = true;
             btn_crdb_sqlite.Visible = false;
             btn_crdb_sqlite.Click += btn_crdb_sqlite_Click;
@@ -247,7 +247,7 @@ namespace HesapTakip
             btn_crdb_mssql.Name = "btn_crdb_mssql";
             btn_crdb_mssql.Size = new Size(117, 35);
             btn_crdb_mssql.TabIndex = 18;
-            btn_crdb_mssql.Text = "MSSQL için Oluþtur";
+            btn_crdb_mssql.Text = "MSSQL iÃ§in OluÅŸtur";
             btn_crdb_mssql.UseVisualStyleBackColor = true;
             btn_crdb_mssql.Visible = false;
             btn_crdb_mssql.Click += btn_crdb_mssql_Click;
@@ -258,7 +258,7 @@ namespace HesapTakip
             btn_crdb_mysql.Name = "btn_crdb_mysql";
             btn_crdb_mysql.Size = new Size(117, 35);
             btn_crdb_mysql.TabIndex = 19;
-            btn_crdb_mysql.Text = "MySQL için Oluþtur";
+            btn_crdb_mysql.Text = "MySQL iÃ§in OluÅŸtur";
             btn_crdb_mysql.UseVisualStyleBackColor = true;
             btn_crdb_mysql.Visible = false;
             btn_crdb_mysql.Click += btn_crdb_mysql_Click;
@@ -297,7 +297,7 @@ namespace HesapTakip
             MinimizeBox = false;
             Name = "ConnectionSettingsForm";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Veritabaný Baðlantý Ayarlarý";
+            Text = "VeritabanÄ± BaÄŸlantÄ± AyarlarÄ±";
             ResumeLayout(false);
             PerformLayout();
         }
