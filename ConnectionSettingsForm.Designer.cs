@@ -232,7 +232,7 @@ namespace HesapTakip
             // 
             // btn_crdb_sqlite
             // 
-            btn_crdb_sqlite.Location = new Point(168, 288);
+            btn_crdb_sqlite.Location = new Point(292, 250);
             btn_crdb_sqlite.Name = "btn_crdb_sqlite";
             btn_crdb_sqlite.Size = new Size(117, 35);
             btn_crdb_sqlite.TabIndex = 17;
@@ -243,7 +243,7 @@ namespace HesapTakip
             // 
             // btn_crdb_mssql
             // 
-            btn_crdb_mssql.Location = new Point(420, 250);
+            btn_crdb_mssql.Location = new Point(292, 250);
             btn_crdb_mssql.Name = "btn_crdb_mssql";
             btn_crdb_mssql.Size = new Size(117, 35);
             btn_crdb_mssql.TabIndex = 18;
