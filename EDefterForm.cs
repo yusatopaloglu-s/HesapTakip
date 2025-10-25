@@ -52,26 +52,42 @@ namespace HesapTakip
 
                 var dt = _db.GetCustomers();
 
-                // Sadece E-Defter müşterilerini filtrele 
-                var edefterRows = dt.AsEnumerable()
-                    .Where(row => row["EDefter"] != DBNull.Value && Convert.ToBoolean(row["EDefter"]))
-                    .CopyToDataTable();
+                // Filtre sonucu boşsa CopyToDataTable çağrmasın
+                var filtered = dt.AsEnumerable()
+                    .Where(row => row["EDefter"] != DBNull.Value && Convert.ToBoolean(row["EDefter"]));
+
+                DataTable edefterRows;
+                if (filtered.Any())
+                {
+                    edefterRows = filtered.CopyToDataTable();
+                }
+                else
+                {
+                    // Aynı şemada boş tablo oluştur
+                    edefterRows = dt.Clone();
+                }
 
                 dgvFirmaList.DataSource = edefterRows;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Veri yükleme hatası: " + ex.Message);
+                // Tutarsız UI durumunu önlemek için erken çık
+                return;
             }
 
-            // Null kontrolü ekle
+            // Tüm sütunlara güvenli erişim
             if (dgvFirmaList.Columns.Contains("CustomerID"))
                 dgvFirmaList.Columns["CustomerID"].Visible = false;
 
             if (dgvFirmaList.Columns.Contains("EDefter"))
                 dgvFirmaList.Columns["EDefter"].Visible = false;
-            dgvFirmaList.Columns["Taxid"].Visible = false;
-            dgvFirmaList.Columns["ActivityCode"].Visible = false;
+
+            if (dgvFirmaList.Columns.Contains("Taxid"))
+                dgvFirmaList.Columns["Taxid"].Visible = false;
+
+            if (dgvFirmaList.Columns.Contains("ActivityCode"))
+                dgvFirmaList.Columns["ActivityCode"].Visible = false;
         }
 
         private void LoadTransactions(int customerID)

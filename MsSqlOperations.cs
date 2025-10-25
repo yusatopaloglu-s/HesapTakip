@@ -1,7 +1,11 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace HesapTakip
 {
@@ -30,11 +34,12 @@ namespace HesapTakip
             }
         }
 
-        private void EnsureDatabaseExists()
+        // Returns true if the method had to create the database (i.e. it did not previously exist)
+        private bool EnsureDatabaseExists()
         {
             var builder = new SqlConnectionStringBuilder(_connectionString);
             string databaseName = builder.InitialCatalog;
-            if (string.IsNullOrWhiteSpace(databaseName)) return;
+            if (string.IsNullOrWhiteSpace(databaseName)) return false;
 
             // If target DB is already accessible, nothing to do
             try
@@ -42,7 +47,7 @@ namespace HesapTakip
                 using (var testConn = new SqlConnection(_connectionString))
                 {
                     testConn.Open();
-                    return;
+                    return false; // already existed / accessible
                 }
             }
             catch (SqlException ex)
@@ -78,6 +83,7 @@ END";
                 }
 
                 Logger.Log($"MsSql EnsureDatabaseExists: ensured database '{databaseName}' exists.");
+                return true; // created now (or ensured)
             }
             catch (SqlException ex)
             {
@@ -94,94 +100,124 @@ END";
         public void InitializeDatabase()
         {
             // Ensure DB exists (create if missing) before schema setup
-            EnsureDatabaseExists();
+            bool createdNow = EnsureDatabaseExists();
 
-            using (var conn = new SqlConnection(_connectionString))
+            try
             {
-                conn.Open();
-
-                // Customers tablosu - MSSQL uyumlu
-                EnsureTableAndColumns("Customers", new Dictionary<string, string>
+                using (var conn = new SqlConnection(_connectionString))
                 {
-                    { "CustomerID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                    { "Name", "NVARCHAR(255) NOT NULL" },
-                    { "EDefter", "INT DEFAULT 0" },
-                    { "Taxid","NVARCHAR(11) DEFAULT NULL" },
-                    { "ActivityCode","NVARCHAR(6) DEFAULT NULL" }
-                }, conn);
+                    conn.Open();
 
-                // Transactions tablosu - MSSQL uyumlu
-                EnsureTableAndColumns("Transactions", new Dictionary<string, string>
-                {
-                    { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                    { "CustomerID", "INT" },
-                    { "Date", "DATETIME" },
-                    { "Description", "NVARCHAR(255) NULL" },
-                    { "Amount", "DECIMAL(18,2)" },
-                    { "Type", "NVARCHAR(50)" },
-                    { "IsDeleted", "BIT DEFAULT 0" }
-                }, conn);
-
-                // EDefterTakip tablosu - MSSQL uyumlu
-                EnsureTableAndColumns("EDefterTakip", new Dictionary<string, string>
-                {
-                    { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                    { "CustomerID", "INT" },
-                    { "Date", "DATETIME" },
-                    { "Kontor", "DECIMAL(18,2)" },
-                    { "Type", "NVARCHAR(255) NOT NULL" }
-                }, conn);
-
-                // Suggestions tablosu - MSSQL uyumlu
-                EnsureTableAndColumns("Suggestions", new Dictionary<string, string>
-                {
-                    { "SuggestionID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                    { "Description", "NVARCHAR(255) NOT NULL UNIQUE" },
-                    { "CreatedDate", "DATETIME DEFAULT GETDATE()" }
-                }, conn);
-
-                // ExpenseCategories tablosu
-                EnsureTableAndColumns("ExpenseCategories", new Dictionary<string, string>
-                {
-                    { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
-                    { "Label", "NVARCHAR(255) NOT NULL" },
-                    { "Info", "NVARCHAR(255) NOT NULL" }
-                }, conn);
-
-                // ExpenseCategories tablosunu JSON dosyasından doldur
-                if (!TableHasData("ExpenseCategories", conn))
-                {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
+                    // Customers tablosu - MSSQL uyumlu
+                    EnsureTableAndColumns("Customers", new Dictionary<string, string>
                     {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+                        { "CustomerID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "Name", "NVARCHAR(255) NOT NULL" },
+                        { "EDefter", "INT DEFAULT 0" },
+                        { "Taxid","NVARCHAR(11) DEFAULT NULL" },
+                        { "ActivityCode","NVARCHAR(6) DEFAULT NULL" }
+                    }, conn);
 
-                        using (var cmd = new SqlCommand())
+                    // Transactions tablosu - MSSQL uyumlu
+                    EnsureTableAndColumns("Transactions", new Dictionary<string, string>
+                    {
+                        { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "CustomerID", "INT" },
+                        { "Date", "DATETIME" },
+                        { "Description", "NVARCHAR(255) NULL" },
+                        { "Amount", "DECIMAL(18,2)" },
+                        { "Type", "NVARCHAR(50)" },
+                        { "IsDeleted", "BIT DEFAULT 0" }
+                    }, conn);
+
+                    // EDefterTakip tablosu - MSSQL uyumlu
+                    EnsureTableAndColumns("EDefterTakip", new Dictionary<string, string>
+                    {
+                        { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "CustomerID", "INT" },
+                        { "Date", "DATETIME" },
+                        { "Kontor", "DECIMAL(18,2)" },
+                        { "Type", "NVARCHAR(255) NOT NULL" }
+                    }, conn);
+
+                    // Suggestions tablosu - MSSQL uyumlu
+                    EnsureTableAndColumns("Suggestions", new Dictionary<string, string>
+                    {
+                        { "SuggestionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "Description", "NVARCHAR(255) NOT NULL UNIQUE" },
+                        { "CreatedDate", "DATETIME DEFAULT GETDATE()" }
+                    }, conn);
+
+                    // ExpenseCategories tablosu
+                    EnsureTableAndColumns("ExpenseCategories", new Dictionary<string, string>
+                    {
+                        { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
+                        { "Label", "NVARCHAR(255) NOT NULL" },
+                        { "Info", "NVARCHAR(255) NOT NULL" }
+                    }, conn);
+
+                    // ExpenseCategories tablosunu JSON dosyasından doldur
+                    if (!TableHasData("ExpenseCategories", conn))
+                    {
+                        string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                        if (File.Exists(jsonFilePath))
                         {
-                            cmd.Connection = conn;
-                            foreach (var category in categories)
+                            string jsonContent = File.ReadAllText(jsonFilePath);
+                            var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                            using (var cmd = new SqlCommand())
                             {
-                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
+                                cmd.Connection = conn;
+                                foreach (var category in categories)
+                                {
+                                    cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                    cmd.Parameters.Clear();
+                                    cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                    cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                    cmd.ExecuteNonQuery();
+                                }
                             }
                         }
+                        else
+                        {
+                            throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        }
                     }
-                    else
+
+                    // ExpenseMatching tablosu
+                    EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
                     {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "ItemName", "NVARCHAR(255) NOT NULL" },
+                        { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                    }, conn);
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 4060)
+            {
+                // 4060 = Cannot open database requested by the login. The login failed.
+                Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number})");
+
+                // If we just created the database but the login cannot open it (common when Windows auth and user mapping not set),
+                // attempt to initialize schema using master connection and fully-qualified object names as a fallback.
+                if (createdNow)
+                {
+                    try
+                    {
+                        var builder = new SqlConnectionStringBuilder(_connectionString);
+                        string databaseName = builder.InitialCatalog;
+                        Logger.Log($"MsSql InitializeDatabase: attempting master-connection fallback initialization for DB '{databaseName}'");
+                        InitializeDatabaseUsingMaster(databaseName);
+                        return;
+                    }
+                    catch (Exception inner)
+                    {
+                        Logger.Log($"MsSql InitializeDatabase (fallback) failed: {inner.Message}");
+                        throw; // rethrow so caller sees failure
                     }
                 }
-                // ExpenseMatching tablosu
-                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-        {
-            { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
-            { "ItemName", "NVARCHAR(255) NOT NULL" },
-            { "SubRecordType", "NVARCHAR(255) NOT NULL" }
-        }, conn);
+
+                throw; // not created now and cannot open -> rethrow
             }
         }
 
@@ -381,6 +417,7 @@ END";
             }
         }
 
+        // Suggestions işlemleri
         public List<string> GetSuggestions()
         {
             var suggestions = new List<string>();
@@ -409,8 +446,7 @@ END";
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
-                using (var cmd = new SqlCommand(
-                    "INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
+                using (var cmd = new SqlCommand("INSERT INTO Suggestions (Description) VALUES (@desc)", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@desc", description.Trim());
@@ -434,7 +470,7 @@ END";
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     conn.Open();
-                    Debug.WriteLine("MSSQL connection opened successfully");
+                    Debug.WriteLine("MSSQL connection opened successfully in RemoveSuggestion");
 
                     using (var cmd = new SqlCommand("DELETE FROM Suggestions WHERE Description = @desc", conn))
                     {
@@ -443,17 +479,9 @@ END";
 
                         Debug.WriteLine($"MSSQL RemoveSuggestion - Rows affected: {rowsAffected}");
 
-                        // Eğer hiçbir satır silinmediyse false dön
                         return rowsAffected > 0;
                     }
                 }
-            }
-            catch (SqlException sqlEx)
-            {
-                Debug.WriteLine($"MSSQL RemoveSuggestion SQL Hatası: {sqlEx.Message}");
-                Debug.WriteLine($"SQL Error Number: {sqlEx.Number}");
-                Debug.WriteLine($"Stack Trace: {sqlEx.StackTrace}");
-                return false;
             }
             catch (Exception ex)
             {
@@ -463,88 +491,7 @@ END";
             }
         }
 
-        public decimal CalculateTotalBalance(int customerId)
-        {
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                using (var cmd = new SqlCommand(
-                    @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
-                      FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0", conn))
-                {
-                    conn.Open();
-                    cmd.Parameters.AddWithValue("@customerID", customerId);
-                    var result = cmd.ExecuteScalar();
-                    return result != DBNull.Value && result != null ? Convert.ToDecimal(result) : 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"MSSQL CalculateTotalBalance hatası: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns)
-        {
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                conn.Open();
-                EnsureTableAndColumns(tableName, columns, conn);
-            }
-        }
-
-        private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns, SqlConnection conn)
-        {
-            using (var cmd = new SqlCommand())
-            {
-                cmd.Connection = conn;
-
-                // Tablo var mı kontrolü - MSSQL syntax
-                cmd.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}'";
-                var exists = (int)cmd.ExecuteScalar() > 0;
-
-                if (!exists)
-                {
-                    var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
-                    cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef})";
-                    cmd.ExecuteNonQuery();
-                }
-                else
-                {
-                    // Kolon kontrolü - MSSQL syntax
-                    cmd.CommandText = $@"
-                        SELECT COLUMN_NAME 
-                        FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = '{tableName}'";
-
-                    var reader = cmd.ExecuteReader();
-                    var existingColumns = new HashSet<string>();
-                    while (reader.Read())
-                    {
-                        existingColumns.Add(reader["COLUMN_NAME"].ToString());
-                    }
-                    reader.Close();
-
-                    foreach (var kv in columns)
-                    {
-                        if (!existingColumns.Contains(kv.Key))
-                        {
-                            // MSSQL'de ALTER TABLE ADD COLUMN
-                            cmd.CommandText = $"ALTER TABLE {tableName} ADD {kv.Key} {kv.Value}";
-                            try
-                            {
-                                cmd.ExecuteNonQuery();
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"MSSQL kolon ekleme hatası: {ex.Message}");
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // --- E-Defter methods (restored) ---
         public DataTable GetEDefterTransactions(int customerId)
         {
             var dt = new DataTable();
@@ -672,9 +619,243 @@ END";
             }
         }
 
+        public decimal CalculateTotalBalance(int customerId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    @"SELECT SUM(Amount * CASE WHEN Type = 'Gelir' THEN 1 ELSE -1 END) 
+                      FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@customerID", customerId);
+                    var result = cmd.ExecuteScalar();
+                    return result != DBNull.Value && result != null ? Convert.ToDecimal(result) : 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL CalculateTotalBalance hatası: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns)
+        {
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                EnsureTableAndColumns(tableName, columns, conn);
+            }
+        }
+
+        private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns, SqlConnection conn)
+        {
+            using (var cmd = new SqlCommand())
+            {
+                cmd.Connection = conn;
+
+                // Tablo var mı kontrolü - MSSQL syntax
+                cmd.CommandText = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}'";
+                var exists = (int)cmd.ExecuteScalar() > 0;
+
+                if (!exists)
+                {
+                    var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
+                    cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef})";
+                    cmd.ExecuteNonQuery();
+                }
+                else
+                {
+                    // Kolon kontrolü - MSSQL syntax
+                    cmd.CommandText = $@"
+                        SELECT COLUMN_NAME 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = '{tableName}'";
+
+                    var reader = cmd.ExecuteReader();
+                    var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    while (reader.Read())
+                    {
+                        existingColumns.Add(reader["COLUMN_NAME"].ToString());
+                    }
+                    reader.Close();
+
+                    foreach (var kv in columns)
+                    {
+                        if (!existingColumns.Contains(kv.Key))
+                        {
+                            // MSSQL'de ALTER TABLE ADD COLUMN
+                            cmd.CommandText = $"ALTER TABLE {tableName} ADD {kv.Key} {kv.Value}";
+                            try
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"MSSQL kolon ekleme hatası: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback initialization using master connection and fully-qualified object names
+        private void InitializeDatabaseUsingMaster(string databaseName)
+        {
+            var masterBuilder = new SqlConnectionStringBuilder(_connectionString)
+            {
+                InitialCatalog = "master"
+            };
+
+            using (var conn = new SqlConnection(masterBuilder.ConnectionString))
+            {
+                conn.Open();
+
+                // Customers
+                EnsureTableAndColumnsMaster("Customers", new Dictionary<string, string>
+                {
+                    { "CustomerID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                    { "Name", "NVARCHAR(255) NOT NULL" },
+                    { "EDefter", "INT DEFAULT 0" },
+                    { "Taxid","NVARCHAR(11) DEFAULT NULL" },
+                    { "ActivityCode","NVARCHAR(6) DEFAULT NULL" }
+                }, conn, databaseName);
+
+                // Transactions
+                EnsureTableAndColumnsMaster("Transactions", new Dictionary<string, string>
+                {
+                    { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                    { "CustomerID", "INT" },
+                    { "Date", "DATETIME" },
+                    { "Description", "NVARCHAR(255) NULL" },
+                    { "Amount", "DECIMAL(18,2)" },
+                    { "Type", "NVARCHAR(50)" },
+                    { "IsDeleted", "BIT DEFAULT 0" }
+                }, conn, databaseName);
+
+                // EDefterTakip
+                EnsureTableAndColumnsMaster("EDefterTakip", new Dictionary<string, string>
+                {
+                    { "TransactionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                    { "CustomerID", "INT" },
+                    { "Date", "DATETIME" },
+                    { "Kontor", "DECIMAL(18,2)" },
+                    { "Type", "NVARCHAR(255) NOT NULL" }
+                }, conn, databaseName);
+
+                // Suggestions
+                EnsureTableAndColumnsMaster("Suggestions", new Dictionary<string, string>
+                {
+                    { "SuggestionID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                    { "Description", "NVARCHAR(255) NOT NULL UNIQUE" },
+                    { "CreatedDate", "DATETIME DEFAULT GETDATE()" }
+                }, conn, databaseName);
+
+                // ExpenseCategories
+                EnsureTableAndColumnsMaster("ExpenseCategories", new Dictionary<string, string>
+                {
+                    { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
+                    { "Label", "NVARCHAR(255) NOT NULL" },
+                    { "Info", "NVARCHAR(255) NOT NULL" }
+                }, conn, databaseName);
+
+                // Fill ExpenseCategories from JSON if empty
+                if (!TableHasDataMaster("ExpenseCategories", conn, databaseName))
+                {
+                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                    if (File.Exists(jsonFilePath))
+                    {
+                        string jsonContent = File.ReadAllText(jsonFilePath);
+                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                        using (var cmd = new SqlCommand())
+                        {
+                            cmd.Connection = conn;
+                            foreach (var category in categories)
+                            {
+                                cmd.CommandText = $"INSERT INTO [{databaseName}].dbo.ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                cmd.Parameters.Clear();
+                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                    }
+                }
+
+                // ExpenseMatching
+                EnsureTableAndColumnsMaster("ExpenseMatching", new Dictionary<string, string>
+                {
+                    { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                    { "ItemName", "NVARCHAR(255) NOT NULL" },
+                    { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                }, conn, databaseName);
+            }
+        }
+
+        private void EnsureTableAndColumnsMaster(string tableName, Dictionary<string, string> columns, SqlConnection masterConn, string databaseName)
+        {
+            using (var cmd = masterConn.CreateCommand())
+            {
+                // Tablo var mı kontrolü
+                cmd.CommandText = $"SELECT COUNT(*) FROM [{databaseName}].INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo'";
+                var exists = Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+
+                if (!exists)
+                {
+                    var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
+                    cmd.CommandText = $"CREATE TABLE [{databaseName}].dbo.[{tableName}] ({columnsDef})";
+                    cmd.ExecuteNonQuery();
+                }
+                else
+                {
+                    cmd.CommandText = $"SELECT COLUMN_NAME FROM [{databaseName}].INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = 'dbo'";
+                    var reader = cmd.ExecuteReader();
+                    var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    while (reader.Read())
+                    {
+                        existingColumns.Add(reader["COLUMN_NAME"].ToString());
+                    }
+                    reader.Close();
+
+                    foreach (var kv in columns)
+                    {
+                        if (!existingColumns.Contains(kv.Key))
+                        {
+                            cmd.CommandText = $"ALTER TABLE [{databaseName}].dbo.[{tableName}] ADD {kv.Key} {kv.Value}";
+                            try
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"MSSQL master kolon ekleme hatası: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         private bool TableHasData(string tableName, SqlConnection conn)
         {
             using (var cmd = new SqlCommand($"SELECT COUNT(*) FROM {tableName}", conn))
+            {
+                var count = Convert.ToInt32(cmd.ExecuteScalar());
+                return count > 0;
+            }
+        }
+
+        private bool TableHasDataMaster(string tableName, SqlConnection masterConn, string databaseName)
+        {
+            using (var cmd = new SqlCommand($"SELECT COUNT(*) FROM [{databaseName}].dbo.[{tableName}]", masterConn))
             {
                 var count = Convert.ToInt32(cmd.ExecuteScalar());
                 return count > 0;
