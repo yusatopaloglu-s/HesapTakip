@@ -1,4 +1,4 @@
-        using System.Windows.Forms;
+using System.Windows.Forms;
 
 namespace HesapTakip
 {
@@ -38,6 +38,9 @@ namespace HesapTakip
             btnSave = new Button();
             btnCancel = new Button();
             chkUseWindowsAuth = new CheckBox();
+            btn_crdb_sqlite = new Button();
+            btn_crdb_mssql = new Button();
+            btn_crdb_mysql = new Button();
             SuspendLayout();
             // 
             // lblDatabaseType
@@ -46,7 +49,7 @@ namespace HesapTakip
             lblDatabaseType.Location = new Point(23, 23);
             lblDatabaseType.Margin = new Padding(4, 0, 4, 0);
             lblDatabaseType.Name = "lblDatabaseType";
-            lblDatabaseType.Size = new Size(86, 15);
+            lblDatabaseType.Size = new Size(84, 15);
             lblDatabaseType.TabIndex = 15;
             lblDatabaseType.Text = "Veritabaný Tipi:";
             // 
@@ -68,7 +71,7 @@ namespace HesapTakip
             lblSqliteFilePath.Location = new Point(23, 77);
             lblSqliteFilePath.Margin = new Padding(4, 0, 4, 0);
             lblSqliteFilePath.Name = "lblSqliteFilePath";
-            lblSqliteFilePath.Size = new Size(106, 15);
+            lblSqliteFilePath.Size = new Size(105, 15);
             lblSqliteFilePath.TabIndex = 14;
             lblSqliteFilePath.Text = "SQLite Dosya Yolu:";
             // 
@@ -115,7 +118,7 @@ namespace HesapTakip
             lblDatabase.Location = new Point(23, 111);
             lblDatabase.Margin = new Padding(4, 0, 4, 0);
             lblDatabase.Name = "lblDatabase";
-            lblDatabase.Size = new Size(84, 15);
+            lblDatabase.Size = new Size(83, 15);
             lblDatabase.TabIndex = 12;
             lblDatabase.Text = "Veritabaný Adý:";
             // 
@@ -151,7 +154,7 @@ namespace HesapTakip
             lblPassword.Location = new Point(23, 181);
             lblPassword.Margin = new Padding(4, 0, 4, 0);
             lblPassword.Name = "lblPassword";
-            lblPassword.Size = new Size(35, 15);
+            lblPassword.Size = new Size(33, 15);
             lblPassword.TabIndex = 10;
             lblPassword.Text = "Þifre:";
             // 
@@ -227,11 +230,47 @@ namespace HesapTakip
             chkUseWindowsAuth.Visible = false;
             chkUseWindowsAuth.CheckedChanged += ChkUseWindowsAuth_CheckedChanged;
             // 
+            // btn_crdb_sqlite
+            // 
+            btn_crdb_sqlite.Location = new Point(168, 288);
+            btn_crdb_sqlite.Name = "btn_crdb_sqlite";
+            btn_crdb_sqlite.Size = new Size(117, 35);
+            btn_crdb_sqlite.TabIndex = 17;
+            btn_crdb_sqlite.Text = "Veri Tabaný Oluþtur";
+            btn_crdb_sqlite.UseVisualStyleBackColor = true;
+            btn_crdb_sqlite.Visible = false;
+            btn_crdb_sqlite.Click += btn_crdb_sqlite_Click;
+            // 
+            // btn_crdb_mssql
+            // 
+            btn_crdb_mssql.Location = new Point(420, 250);
+            btn_crdb_mssql.Name = "btn_crdb_mssql";
+            btn_crdb_mssql.Size = new Size(117, 35);
+            btn_crdb_mssql.TabIndex = 18;
+            btn_crdb_mssql.Text = "MSSQL için Oluþtur";
+            btn_crdb_mssql.UseVisualStyleBackColor = true;
+            btn_crdb_mssql.Visible = false;
+            btn_crdb_mssql.Click += btn_crdb_mssql_Click;
+            // 
+            // btn_crdb_mysql
+            // 
+            btn_crdb_mysql.Location = new Point(292, 250);
+            btn_crdb_mysql.Name = "btn_crdb_mysql";
+            btn_crdb_mysql.Size = new Size(117, 35);
+            btn_crdb_mysql.TabIndex = 19;
+            btn_crdb_mysql.Text = "MySQL için Oluþtur";
+            btn_crdb_mysql.UseVisualStyleBackColor = true;
+            btn_crdb_mysql.Visible = false;
+            btn_crdb_mysql.Click += btn_crdb_mysql_Click;
+            // 
             // ConnectionSettingsForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(565, 346);
+            Controls.Add(btn_crdb_mysql);
+            Controls.Add(btn_crdb_mssql);
+            Controls.Add(btn_crdb_sqlite);
             Controls.Add(chkUseWindowsAuth);
             Controls.Add(btnCancel);
             Controls.Add(btnSave);
@@ -251,7 +290,7 @@ namespace HesapTakip
             Controls.Add(lblSqliteFilePath);
             Controls.Add(cmbDatabaseType);
             Controls.Add(lblDatabaseType);
-            Font = new Font("Segoe UI Symbol", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 162);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Margin = new Padding(4, 3, 4, 3);
             MaximizeBox = false;
@@ -284,5 +323,8 @@ namespace HesapTakip
         private Button btnSave;
         private Button btnCancel;
         private CheckBox chkUseWindowsAuth;
+        private Button btn_crdb_sqlite;
+        private Button btn_crdb_mssql;
+        private Button btn_crdb_mysql;
     }
 }

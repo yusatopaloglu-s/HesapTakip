@@ -30,8 +30,72 @@ namespace HesapTakip
             }
         }
 
+        private void EnsureDatabaseExists()
+        {
+            var builder = new SqlConnectionStringBuilder(_connectionString);
+            string databaseName = builder.InitialCatalog;
+            if (string.IsNullOrWhiteSpace(databaseName)) return;
+
+            // If target DB is already accessible, nothing to do
+            try
+            {
+                using (var testConn = new SqlConnection(_connectionString))
+                {
+                    testConn.Open();
+                    return;
+                }
+            }
+            catch (SqlException ex)
+            {
+                Logger.Log($"MsSql EnsureDatabaseExists: target DB open failed: {ex.Message} (Number {ex.Number})");
+                // fall through to attempt create
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"MsSql EnsureDatabaseExists: target DB open failed: {ex.Message}");
+            }
+
+            // Build connection to master
+            var masterBuilder = new SqlConnectionStringBuilder(_connectionString)
+            {
+                InitialCatalog = "master"
+            };
+
+            try
+            {
+                using (var conn = new SqlConnection(masterBuilder.ConnectionString))
+                {
+                    conn.Open();
+                    // Create database if not exists
+                    string sql = $@"IF DB_ID(N'{databaseName}') IS NULL
+BEGIN
+    CREATE DATABASE [{databaseName}];
+END";
+                    using (var cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                Logger.Log($"MsSql EnsureDatabaseExists: ensured database '{databaseName}' exists.");
+            }
+            catch (SqlException ex)
+            {
+                // 15247 = The server principal does not have CREATE DATABASE permission
+                if (ex.Number == 15247)
+                {
+                    throw new InvalidOperationException("Veritabanı oluşturulamadı: çalıştıran Windows hesabının SQL Server üzerinde 'CREATE DATABASE' yetkisi yok. Lütfen ya SQL Server'da yetki verin, ya SQL Authentication kullanın veya veritabanını elle oluşturun. Hata mesajı: " + ex.Message, ex);
+                }
+
+                throw; // rethrow other SQL exceptions
+            }
+        }
+
         public void InitializeDatabase()
         {
+            // Ensure DB exists (create if missing) before schema setup
+            EnsureDatabaseExists();
+
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.Open();

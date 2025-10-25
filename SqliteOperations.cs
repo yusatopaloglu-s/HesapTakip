@@ -1,6 +1,5 @@
 ﻿using System.Data;
 using System.Data.SQLite;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace HesapTakip
@@ -11,7 +10,7 @@ namespace HesapTakip
 
         public SqliteOperations(string connectionString)
         {
-            Debug.WriteLine($"SqliteOperations constructor called with: {connectionString}");
+            Logger.Log($"SqliteOperations constructor called with: {connectionString}");
             _connectionString = connectionString;
             EnsureDatabaseFile();
         }
@@ -34,14 +33,14 @@ namespace HesapTakip
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
-                    Debug.WriteLine($"Dizin oluşturuldu: {directory}");
+                    Logger.Log($"Dizin oluşturuldu: {directory}");
                 }
 
                 // Dosya yoksa oluştur
                 if (!File.Exists(dataSource))
                 {
                     SQLiteConnection.CreateFile(dataSource);
-                    Debug.WriteLine($"SQLite database oluşturuldu: {dataSource}");
+                    Logger.Log($"SQLite database oluşturuldu: {dataSource}");
 
                     // Tabloları oluştur
                     InitializeDatabase();
@@ -49,7 +48,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SQLite database dosyası oluşturulamadı: {ex.Message}");
+                Logger.Log($"SQLite database dosyası oluşturulamadı: {ex.Message}");
                 throw;
             }
         }
@@ -64,7 +63,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Connection string parse hatası: {ex.Message}");
+                Logger.Log($"Connection string parse hatası: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -73,41 +72,41 @@ namespace HesapTakip
         {
             try
             {
-                Debug.WriteLine("SQLite TestConnection başlıyor...");
-                Debug.WriteLine($"SQLite Connection String: {_connectionString}");
+                Logger.Log("SQLite TestConnection başlıyor...");
+                Logger.Log($"SQLite Connection String: {_connectionString}");
 
                 using (var conn = new SQLiteConnection(_connectionString))
                 {
                     conn.Open();
-                    Debug.WriteLine("SQLite bağlantısı açıldı");
+                    Logger.Log("SQLite bağlantısı açıldı");
 
                     // Basit bir test sorgusu
                     using (var cmd = new SQLiteCommand("SELECT 1", conn))
                     {
                         var result = cmd.ExecuteScalar();
-                        Debug.WriteLine($"SQLite test sorgusu sonucu: {result}");
+                        Logger.Log($"SQLite test sorgusu sonucu: {result}");
                     }
 
                     // Tabloları kontrol et
                     using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table'", conn))
                     using (var reader = cmd.ExecuteReader())
                     {
-                        Debug.WriteLine("Mevcut tablolar:");
+                        Logger.Log("Mevcut tablolar:");
                         while (reader.Read())
                         {
-                            Debug.WriteLine($" - {reader[0]}");
+                            Logger.Log($" - {reader[0]}");
                         }
                     }
 
-                    Debug.WriteLine("SQLite bağlantı testi başarılı.");
+                    Logger.Log("SQLite bağlantı testi başarılı.");
                     return true;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SQLite bağlantı testi hatası: {ex.Message}");
-                Debug.WriteLine($"Hata türü: {ex.GetType()}");
-                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Logger.Log($"SQLite bağlantı testi hatası: {ex.Message}");
+                Logger.Log($"Hata türü: {ex.GetType()}");
+                Logger.Log($"Stack trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -237,7 +236,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite AddCustomer hatası: {ex.Message}");
+                Logger.Log($"SQLite AddCustomer hatası: {ex.Message}");
                 return false;
             }
         }
@@ -262,7 +261,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite UpdateCustomer hatası: {ex.Message}");
+                Logger.Log($"SQLite UpdateCustomer hatası: {ex.Message}");
                 return false;
             }
         }
@@ -306,7 +305,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite DeleteCustomer hatası: {ex.Message}");
+                Logger.Log($"SQLite DeleteCustomer hatası: {ex.Message}");
                 return false;
             }
         }
@@ -346,7 +345,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite AddTransaction hatası: {ex.Message}");
+                Logger.Log($"SQLite AddTransaction hatası: {ex.Message}");
                 return false;
             }
         }
@@ -372,7 +371,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite UpdateTransaction hatası: {ex.Message}");
+                Logger.Log($"SQLite UpdateTransaction hatası: {ex.Message}");
                 return false;
             }
         }
@@ -393,7 +392,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite DeleteTransaction hatası: {ex.Message}");
+                Logger.Log($"SQLite DeleteTransaction hatası: {ex.Message}");
                 return false;
             }
         }
@@ -416,7 +415,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite GetSuggestions hatası: {ex.Message}");
+                Logger.Log($"SQLite GetSuggestions hatası: {ex.Message}");
             }
             return suggestions;
         }
@@ -437,7 +436,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite AddSuggestion hatası: {ex.Message}");
+                Logger.Log($"SQLite AddSuggestion hatası: {ex.Message}");
                 return false;
             }
         }
@@ -458,7 +457,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite RemoveSuggestion hatası: {ex.Message}");
+                Logger.Log($"SQLite RemoveSuggestion hatası: {ex.Message}");
                 return false;
             }
         }
@@ -480,7 +479,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite CalculateTotalBalance hatası: {ex.Message}");
+                Logger.Log($"SQLite CalculateTotalBalance hatası: {ex.Message}");
                 return 0;
             }
         }
@@ -513,7 +512,7 @@ namespace HesapTakip
                         cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef})";
                         cmd.Parameters.Clear();
                         cmd.ExecuteNonQuery();
-                        Debug.WriteLine($"{tableName} tablosu oluşturuldu.");
+                        Logger.Log($"{tableName} tablosu oluşturuldu.");
                     }
                     else
                     {
@@ -537,11 +536,11 @@ namespace HesapTakip
                                     try
                                     {
                                         cmd.ExecuteNonQuery();
-                                        Debug.WriteLine($"{tableName} tablosuna {kv.Key} sütunu eklendi.");
+                                        Logger.Log($"{tableName} tablosuna {kv.Key} sütunu eklendi.");
                                     }
                                     catch (Exception ex)
                                     {
-                                        Debug.WriteLine($"{tableName}.{kv.Key} sütunu eklenirken hata: {ex.Message}");
+                                        Logger.Log($"{tableName}.{kv.Key} sütunu eklenirken hata: {ex.Message}");
                                     }
                                     finally
                                     {
@@ -554,7 +553,7 @@ namespace HesapTakip
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"EnsureTableAndColumns hatası ({tableName}): {ex.Message}");
+                    Logger.Log($"EnsureTableAndColumns hatası ({tableName}): {ex.Message}");
                     throw;
                 }
             }
@@ -576,7 +575,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite DeleteEDefterTransaction hatası: {ex.Message}");
+                Logger.Log($"SQLite DeleteEDefterTransaction hatası: {ex.Message}");
                 return false;
             }
         }
@@ -598,7 +597,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite CalculateEDefterTotal hatası: {ex.Message}");
+                Logger.Log($"SQLite CalculateEDefterTotal hatası: {ex.Message}");
                 return 0;
             }
         }
@@ -635,7 +634,7 @@ namespace HesapTakip
                         catch (Exception ex)
                         {
                             transaction.Rollback();
-                            System.Diagnostics.Debug.WriteLine($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
+                            Logger.Log($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
                             throw;
                         }
                     }
@@ -643,7 +642,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
+                Logger.Log($"SQLite BulkUpdateEDefterTransactions hatası: {ex.Message}");
                 return false;
             }
         }
@@ -682,7 +681,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SQLite AddEDefterTransaction hatası: {ex.Message}");
+                Logger.Log($"SQLite AddEDefterTransaction hatası: {ex.Message}");
                 return false;
             }
         }

@@ -29,8 +29,61 @@ namespace HesapTakip
             }
         }
 
+        private void EnsureDatabaseExists()
+        {
+            var builder = new MySqlConnectionStringBuilder(_connectionString);
+            string databaseName = builder.Database;
+            if (string.IsNullOrWhiteSpace(databaseName)) return;
+
+            // Try open target DB
+            try
+            {
+                using (var testConn = new MySqlConnection(_connectionString))
+                {
+                    testConn.Open();
+                    return;
+                }
+            }
+            catch (MySqlException ex)
+            {
+                Logger.Log($"MySql EnsureDatabaseExists: target DB open failed: {ex.Message} (Number {ex.Number})");
+                // continue to attempt create
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"MySql EnsureDatabaseExists: target DB open failed: {ex.Message}");
+            }
+
+            // Connect to server without database
+            var serverBuilder = new MySqlConnectionStringBuilder(_connectionString)
+            {
+                Database = ""
+            };
+
+            try
+            {
+                using (var conn = new MySqlConnection(serverBuilder.ConnectionString))
+                {
+                    conn.Open();
+
+                    using (var cmd = new MySqlCommand($"CREATE DATABASE IF NOT EXISTS `{databaseName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci;", conn))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                Logger.Log($"MySql EnsureDatabaseExists: ensured database '{databaseName}' exists.");
+            }
+            catch (MySqlException ex)
+            {
+                throw new InvalidOperationException("Veritabanı oluşturulamadı: MySQL kullanıcı/sunucu yetkileri yetersiz veya kimlik doğrulama hatası. Lütfen MySQL sunucusunda uygun yetkilere sahip bir kullanıcı kullanın veya veritabanını elle oluşturun. Hata mesajı: " + ex.Message, ex);
+            }
+        }
+
         public void InitializeDatabase()
         {
+            EnsureDatabaseExists();
+
             using (var conn = new MySqlConnection(_connectionString))
             {
                 conn.Open();

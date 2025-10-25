@@ -1,6 +1,5 @@
 using QuestPDF.Infrastructure;
 using System.Data.SQLite;
-using System.Diagnostics;
 
 namespace HesapTakip
 {
@@ -11,48 +10,41 @@ namespace HesapTakip
         {
             try
             {
-                Debug.WriteLine("Uygulama baþlýyor...");
+                Logger.Log("Uygulama baþlýyor...");
 
                 QuestPDF.Settings.License = LicenseType.Community;
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.SetHighDpiMode(HighDpiMode.SystemAware);
 
-                Debug.WriteLine("Temel ayarlar yapýldý...");
+                Logger.Log("Temel ayarlar yapýldý...");
 
                 // ESKÝ AYARLARI YENÝ KONUMA TAÞI
                 AppConfigHelper.MigrateOldSettings();
-                Debug.WriteLine("Migration tamamlandý...");
+                Logger.Log("Migration tamamlandý...");
 
-                // Database baðlantý kontrolü
+                // Database baðlantý kontrolü -- hýzlý path: sadece konfigurasyon var mý kontrol et
                 if (!HasValidDatabaseConfiguration())
                 {
-                    Debug.WriteLine("Geçerli baðlantý yok, ConnectionSettingsForm açýlýyor...");
+                    Logger.Log("Geçerli baðlantý yok, ConnectionSettingsForm açýlýyor...");
                     if (!ShowConnectionSettingsForm())
                     {
                         MessageBox.Show("Baðlantý ayarlarý girilmedi. Uygulama kapatýlýyor.");
                         return;
                     }
                 }
-                else if (!TestDatabaseConnection())
+                else
                 {
-                    Debug.WriteLine("Baðlantý testi baþarýsýz, ConnectionSettingsForm açýlýyor...");
-                    MessageBox.Show("Veritabaný baðlantýsý baþarýsýz. Lütfen ayarlarý kontrol edin.",
-                        "Baðlantý Hatasý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    if (!ShowConnectionSettingsForm())
-                    {
-                        MessageBox.Show("Baðlantý ayarlarý girilmedi. Uygulama kapatýlýyor.");
-                        return;
-                    }
+                    Logger.Log("Connection configuration bulundu; startup connection testi atlandý (daha hýzlý açýlýþ). MainForm içinde baðlantý kontrolü yapýlacak.");
                 }
 
-                Debug.WriteLine("Baðlantý baþarýlý, MainForm açýlýyor...");
+                Logger.Log("MainForm açýlýyor...");
                 Application.Run(new MainForm());
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"KRÝTÝK HATA: {ex.Message}");
-                Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                Logger.Log($"KRÝTÝK HATA: {ex.Message}");
+                Logger.Log($"Stack Trace: {ex.StackTrace}");
 
                 MessageBox.Show($"Uygulama baþlatýlamadý: {ex.Message}",
                     "Baþlatma Hatasý", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -66,52 +58,38 @@ namespace HesapTakip
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
-                    Debug.WriteLine("Kullanýcý ayarlarý kaydetti...");
+                    Logger.Log("Kullanýcý ayarlarý kaydetti...");
 
-                    // SQLite için dosya yolunu da gönder
-                    // --- DÜZELTME BAÞLANGIÇ ---
-                    bool useWindowsAuth = false;
-                    if (settingsForm.DatabaseType == "MSSQL")
-                        useWindowsAuth = AppConfigHelper.IsWindowsAuthEnabled;
+                    // Form zaten ayarlarý kaydetti (ConnectionSettingsForm.btnSave çaðýrýyor).
+                    // Buradan kaydetme yapmýyoruz, sadece konfigürasyonu test ediyoruz.
 
-                    AppConfigHelper.SaveConnectionString(
-                        settingsForm.Server,
-                        settingsForm.Database,
-                        settingsForm.User,
-                        settingsForm.Password,
-                        settingsForm.Port,
-                        settingsForm.DatabaseType,
-                        settingsForm.SqliteFilePath,
-                        useWindowsAuth // MSSQL için Windows Auth bilgisini ilet
-                    );
-                    // --- DÜZELTME SONU ---
+                    Logger.Log($"Ayarlar kaydedildi - Type: '{settingsForm.DatabaseType}'");
 
-
-                    Debug.WriteLine($"Ayarlar kaydedildi - Type: '{settingsForm.DatabaseType}'");
-
-                    // DEBUG: Hemen test et
+                    // Hemen kaydedilen ayarlarý kontrol et - hafif test
                     string currentType = AppConfigHelper.DatabaseType;
                     string currentConn = AppConfigHelper.DatabasePath;
-                    Debug.WriteLine($"Hemen sonra - DatabaseType: '{currentType}'");
-                    Debug.WriteLine($"Hemen sonra - DatabasePath: '{currentConn}'");
+                    Logger.Log($"Hemen sonra - DatabaseType: '{currentType}'");
+                    Logger.Log($"Hemen sonra - DatabasePath: '{currentConn}'");
 
-                    // Kaydedilen ayarlarý test et
+                    // Kaydedilen ayarlarý test et (hafif - yalnýzca gerekli olduðunda)
                     if (TestDatabaseConnection())
                     {
-                        Debug.WriteLine("Baðlantý testi baþarýlý!");
+                        Logger.Log("Baðlantý testi baþarýlý!");
                         return true;
                     }
                     else
                     {
-                        Debug.WriteLine("Baðlantý testi baþarýsýz!");
+                        Logger.Log("Baðlantý testi baþarýsýz!");
                         MessageBox.Show("Baðlantý testi baþarýsýz. Lütfen ayarlarý tekrar kontrol edin.",
                             "Baðlantý Hatasý", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return ShowConnectionSettingsForm(); // Tekrar deneme
+
+                        // Tekrar deneme
+                        return ShowConnectionSettingsForm();
                     }
                 }
                 else
                 {
-                    Debug.WriteLine("Kullanýcý iptal etti...");
+                    Logger.Log("Kullanýcý iptal etti...");
                     return false;
                 }
             }
@@ -123,12 +101,12 @@ namespace HesapTakip
             string connectionString = AppConfigHelper.DatabasePath;
             string databaseType = AppConfigHelper.DatabaseType;
 
-            Debug.WriteLine($"Configuration kontrolü - Type: {databaseType}, Connection: {!string.IsNullOrEmpty(connectionString)}");
+            Logger.Log($"Configuration kontrolü - Type: {databaseType}, Connection: {!string.IsNullOrEmpty(connectionString)}");
 
             // Hem connection string hem de database type olmalý
             if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(databaseType))
             {
-                Debug.WriteLine("Connection string veya database type boþ!");
+                Logger.Log("Connection string veya database type boþ!");
                 return false;
             }
 
@@ -136,11 +114,11 @@ namespace HesapTakip
             if (databaseType == "SQLite")
             {
                 string dataSource = AppConfigHelper.GetDataSourceFromConnectionString();
-                Debug.WriteLine($"SQLite Data Source: {dataSource}");
+                Logger.Log($"SQLite Data Source: {dataSource}");
 
                 if (string.IsNullOrEmpty(dataSource))
                 {
-                    Debug.WriteLine("SQLite Data Source boþ!");
+                    Logger.Log("SQLite Data Source boþ!");
                     return false;
                 }
 
@@ -150,13 +128,13 @@ namespace HesapTakip
                     if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                     {
                         Directory.CreateDirectory(directory);
-                        Debug.WriteLine($"SQLite dizin oluþturuldu: {directory}");
+                        Logger.Log($"SQLite dizin oluþturuldu: {directory}");
                     }
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"SQLite dizin kontrol hatasý: {ex.Message}");
+                    Logger.Log($"SQLite dizin kontrol hatasý: {ex.Message}");
                     return false;
                 }
             }
@@ -165,7 +143,7 @@ namespace HesapTakip
             bool hasValidComponents = connectionString.Contains("Server=") &&
                                    connectionString.Contains("Database=");
 
-            Debug.WriteLine($"MySQL/MSSQL bileþen kontrolü: {hasValidComponents}");
+            Logger.Log($"MySQL/MSSQL bileþen kontrolü: {hasValidComponents}");
             return hasValidComponents;
         }
 
@@ -177,51 +155,42 @@ namespace HesapTakip
                 string connectionString = AppConfigHelper.DatabasePath;
                 string databaseType = AppConfigHelper.DatabaseType;
 
-                Debug.WriteLine($"=== TestDatabaseConnection ===");
-                Debug.WriteLine($"Database Type: '{databaseType}'");
-                Debug.WriteLine($"Connection String: '{connectionString}'");
+                Logger.Log($"=== TestDatabaseConnection ===");
+                Logger.Log($"Database Type: '{databaseType}'");
+                Logger.Log($"Connection String: '{connectionString}'");
 
                 if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(databaseType))
                 {
-                    Debug.WriteLine("Connection string veya database type boþ!");
+                    Logger.Log("Connection string veya database type boþ!");
                     return false;
                 }
 
-                // TÜRKÇE KARAKTER SORUNU ÇÖZÜMÜ - Culture invariant
                 string dbType = databaseType.Trim().ToUpperInvariant();
-                Debug.WriteLine($"Trimmed Database Type (Invariant): '{dbType}'");
+                Logger.Log($"Trimmed Database Type (Invariant): '{dbType}'");
 
-                // Karakterleri tek tek debug et
-                Debug.WriteLine("DatabaseType karakter analizi:");
-                foreach (char c in dbType)
-                {
-                    Debug.WriteLine($" - Char: '{c}' Code: {(int)c}");
-                }
-
-                // Culture-invariant karþýlaþtýrma
                 if (dbType.Equals("SQLITE", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.WriteLine("Testing SQLite connection...");
+                    Logger.Log("Testing SQLite connection...");
                     return TestSQLiteConnection(connectionString);
                 }
                 else if (dbType.Equals("MYSQL", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.WriteLine("Testing MySQL connection...");
+                    Logger.Log("Testing MySQL connection...");
                     return TestMySQLConnection(connectionString);
                 }
                 else if (dbType.Equals("MSSQL", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.WriteLine("Testing MSSQL connection...");
+                    Logger.Log("Testing MSSQL connection...");
                     return TestMSSQLConnection(connectionString);
                 }
                 else
                 {
-                    Debug.WriteLine($"Bilinmeyen database tipi: '{databaseType}' -> '{dbType}'");
+                    Logger.Log($"Bilinmeyen database tipi: '{databaseType}' -> '{dbType}'");
 
                     // Manuel kontrol
                     if (databaseType.IndexOf("sqlite", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        Debug.WriteLine("Manuel olarak SQLite tespit edildi!");
+                        Logger.Log("Manuel olarak SQLite tespit edildi!");
                         return TestSQLiteConnection(connectionString);
                     }
 
@@ -230,9 +199,9 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"=== TestDatabaseConnection ERROR ===");
-                Debug.WriteLine($"Error: {ex.Message}");
-                Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                Logger.Log($"=== TestDatabaseConnection ERROR ===");
+                Logger.Log($"Error: {ex.Message}");
+                Logger.Log($"Stack Trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -242,14 +211,14 @@ namespace HesapTakip
         {
             try
             {
-                Debug.WriteLine("SQLite baðlantý testi baþlýyor...");
+                Logger.Log("SQLite baðlantý testi baþlýyor...");
 
                 string dataSource = AppConfigHelper.GetDataSourceFromConnectionString();
-                Debug.WriteLine($"SQLite Data Source: {dataSource}");
+                Logger.Log($"SQLite Data Source: {dataSource}");
 
                 if (string.IsNullOrEmpty(dataSource))
                 {
-                    Debug.WriteLine("SQLite Data Source boþ!");
+                    Logger.Log("SQLite Data Source boþ!");
                     return false;
                 }
 
@@ -258,110 +227,88 @@ namespace HesapTakip
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
-                    Debug.WriteLine($"SQLite dizin oluþturuldu: {directory}");
+                    Logger.Log($"SQLite dizin oluþturuldu: {directory}");
                 }
 
-                // Baðlantý testi
+                // Hafif baðlantý testi (sadece aç/kapa)
                 using (var conn = new SQLiteConnection(connectionString))
                 {
                     conn.Open();
-                    Debug.WriteLine("SQLite baðlantýsý açýldý");
+                    Logger.Log("SQLite baðlantýsý açýldý (test)");
 
-                    // Basit bir sorgu çalýþtýr
                     using (var cmd = new SQLiteCommand("SELECT 1", conn))
                     {
                         var result = cmd.ExecuteScalar();
-                        Debug.WriteLine($"SQLite test sorgusu sonucu: {result}");
+                        Logger.Log($"SQLite test sorgusu sonucu: {result}");
                     }
-
-                    // Tablolarý kontrol et
-                    Debug.WriteLine("Mevcut tablolar kontrol ediliyor...");
-                    using (var cmd = new SQLiteCommand("SELECT name FROM sqlite_master WHERE type='table'", conn))
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            Debug.WriteLine($" - Tablo: {reader[0]}");
-                        }
-                    }
-
-                    // Database'i initialize et
-                    Debug.WriteLine("SQLite database initialize ediliyor...");
-                    var db = new SqliteOperations(connectionString);
-                    db.InitializeDatabase();
-                    Debug.WriteLine("SQLite database initialize edildi");
 
                     return true;
                 }
             }
             catch (SQLiteException sqlEx)
             {
-                Debug.WriteLine($"SQLite baðlantý testi SQL hatasý: {sqlEx.Message}");
-                Debug.WriteLine($"SQLite Error Code: {sqlEx.ErrorCode}");
+                Logger.Log($"SQLite baðlantý testi SQL hatasý: {sqlEx.Message}");
+                Logger.Log($"SQLite Error Code: {sqlEx.ErrorCode}");
                 return false;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SQLite baðlantý testi genel hatasý: {ex.Message}");
-                Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                Logger.Log($"SQLite baðlantý testi genel hatasý: {ex.Message}");
+                Logger.Log($"Stack Trace: {ex.StackTrace}");
                 return false;
             }
         }
 
-        // MySQL baðlantý testi -
+        // MySQL baðlantý testi - (sadece TestConnection çaðrýsý, initialize yok)
         private static bool TestMySQLConnection(string connectionString)
         {
             try
             {
-                Debug.WriteLine("MySQL baðlantý testi baþlýyor...");
+                Logger.Log("MySQL baðlantý testi baþlýyor...");
                 var db = new MySqlOperations(connectionString);
                 bool result = db.TestConnection();
 
                 if (result)
                 {
-                    Debug.WriteLine("MySQL baðlantý testi baþarýlý");
-                    db.InitializeDatabase();
-                    Debug.WriteLine("MySQL database initialize edildi");
+                    Logger.Log("MySQL baðlantý testi baþarýlý");
                 }
                 else
                 {
-                    Debug.WriteLine("MySQL baðlantý testi baþarýsýz");
+                    Logger.Log("MySQL baðlantý testi baþarýsýz");
                 }
 
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"MySQL baðlantý testi hatasý: {ex.Message}");
+                Logger.Log($"MySQL baðlantý testi hatasý: {ex.Message}");
                 return false;
             }
         }
 
-        // MSSQL baðlantý testi - 
+        // MSSQL baðlantý testi - (sadece TestConnection çaðrýsý, initialize yok)
         private static bool TestMSSQLConnection(string connectionString)
         {
             try
             {
-                Debug.WriteLine("MSSQL baðlantý testi baþlýyor...");
+                Logger.Log("MSSQL baðlantý testi baþlýyor...");
                 var db = new MsSqlOperations(connectionString);
                 bool result = db.TestConnection();
 
                 if (result)
                 {
-                    Debug.WriteLine("MSSQL baðlantý testi baþarýlý");
-                    db.InitializeDatabase();
-                    Debug.WriteLine("MSSQL database initialize edildi");
+                    Logger.Log("MSSQL baðlantý testi baþarýlý");
                 }
                 else
                 {
-                    Debug.WriteLine("MSSQL baðlantý testi baþarýsýz");
+                    Logger.Log("MSSQL baðlantý testi baþarýsýz");
                 }
 
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"MSSQL baðlantý testi hatasý: {ex.Message}");
+                Logger.Log($"MSSQL baðlantý testi hatasý: {ex.Message}");
                 return false;
             }
         }

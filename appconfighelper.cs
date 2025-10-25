@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Xml;
 
 namespace HesapTakip
@@ -37,7 +36,7 @@ namespace HesapTakip
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Config okuma hatası: {ex.Message}");
+                    Logger.Log($"Config okuma hatası: {ex.Message}");
                 }
 
                 return string.Empty;
@@ -70,7 +69,7 @@ namespace HesapTakip
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Config kaydetme hatası: {ex.Message}");
+                    Logger.Log($"Config kaydetme hatası: {ex.Message}");
                 }
             }
         }
@@ -90,16 +89,16 @@ namespace HesapTakip
 
                         // GARANTİLİ GET: Her zaman doğru format
                         string guaranteedType = GuaranteeDatabaseType(dbType);
-                        Debug.WriteLine($"AppConfigHelper DatabaseType GET: '{dbType}' -> '{guaranteedType}'");
+                        Logger.Log($"AppConfigHelper DatabaseType GET: '{dbType}' -> '{guaranteedType}'");
                         return guaranteedType;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"DatabaseType okuma hatası: {ex.Message}");
+                    Logger.Log($"DatabaseType okuma hatası: {ex.Message}");
                 }
 
-                Debug.WriteLine("AppConfigHelper DatabaseType: Defaulting to SQLite");
+                Logger.Log("AppConfigHelper DatabaseType: Defaulting to SQLite");
                 return "SQLite";
             }
             set
@@ -110,7 +109,7 @@ namespace HesapTakip
 
                     // GARANTİLİ SET: Her zaman doğru format
                     string guaranteedType = GuaranteeDatabaseType(cleanValue);
-                    Debug.WriteLine($"AppConfigHelper setting DatabaseType: '{cleanValue}' -> '{guaranteedType}'");
+                    Logger.Log($"AppConfigHelper setting DatabaseType: '{cleanValue}' -> '{guaranteedType}'");
 
                     XmlDocument doc = new XmlDocument();
 
@@ -134,11 +133,11 @@ namespace HesapTakip
                     node.InnerText = guaranteedType;
                     doc.Save(ConfigFilePath);
 
-                    Debug.WriteLine($"DatabaseType successfully set to: '{guaranteedType}'");
+                    Logger.Log($"DatabaseType successfully set to: '{guaranteedType}'");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"DatabaseType kaydetme hatası: {ex.Message}");
+                    Logger.Log($"DatabaseType kaydetme hatası: {ex.Message}");
                 }
             }
         }
@@ -181,13 +180,13 @@ namespace HesapTakip
                         // DatabaseType'i varsayılan olarak MySQL ayarla
                         DatabaseType = "MySQL";
 
-                        Debug.WriteLine("Eski ayarlar yeni konuma taşındı.");
+                        Logger.Log("Eski ayarlar yeni konuma taşındı.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"User config migration hatası: {ex.Message}");
+                Logger.Log($"User config migration hatası: {ex.Message}");
             }
         }
 
@@ -222,13 +221,13 @@ namespace HesapTakip
                 {
                     connectionString = $"Server={server},{port};Database={database};User Id={user};Password={password};";
                 }
-                Debug.WriteLine($"MSSQL Connection String: {connectionString}");
+                Logger.Log($"MSSQL Connection String: {connectionString}");
             }
 
             // Boş parametreleri temizle (isteğe bağlı güvenlik önlemi)
             if (string.IsNullOrEmpty(user) && string.IsNullOrEmpty(password) && !useWindowsAuth)
             {
-                Debug.WriteLine("Uyarı: Kullanıcı adı ve şifre boş, ancak Windows Auth kapalı. Bağlantı başarısız olabilir.");
+                Logger.Log("Uyarı: Kullanıcı adı ve şifre boş, ancak Windows Auth kapalı. Bağlantı başarısız olabilir.");
             }
 
             DatabasePath = connectionString;
@@ -237,10 +236,10 @@ namespace HesapTakip
             if (databaseType == "MSSQL")
             {
                 IsWindowsAuthEnabled = useWindowsAuth;
-                Debug.WriteLine($"MSSQL Windows Auth Enabled: {useWindowsAuth}");
+                Logger.Log($"MSSQL Windows Auth Enabled: {useWindowsAuth}");
             }
 
-            Debug.WriteLine($"Final SaveConnectionString: {connectionString}");
+            Logger.Log($"Final SaveConnectionString: {connectionString}");
         }
 
 
@@ -250,11 +249,11 @@ namespace HesapTakip
             {
                 if (string.IsNullOrEmpty(DatabasePath))
                 {
-                    Debug.WriteLine("GetDataSourceFromConnectionString: DatabasePath boş!");
+                    Logger.Log("GetDataSourceFromConnectionString: DatabasePath boş!");
                     return string.Empty;
                 }
 
-                Debug.WriteLine($"GetDataSourceFromConnectionString parsing: {DatabasePath}");
+                Logger.Log($"GetDataSourceFromConnectionString parsing: {DatabasePath}");
 
                 var pairs = DatabasePath.Split(';');
                 foreach (var pair in pairs)
@@ -264,17 +263,17 @@ namespace HesapTakip
                         keyValue[0].Trim().Equals("Data Source", StringComparison.OrdinalIgnoreCase))
                     {
                         string dataSource = keyValue[1].Trim();
-                        Debug.WriteLine($"GetDataSourceFromConnectionString found: {dataSource}");
+                        Logger.Log($"GetDataSourceFromConnectionString found: {dataSource}");
                         return dataSource;
                     }
                 }
 
-                Debug.WriteLine("GetDataSourceFromConnectionString: Data Source bulunamadı!");
+                Logger.Log("GetDataSourceFromConnectionString: Data Source bulunamadı!");
                 return string.Empty;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"GetDataSourceFromConnectionString hatası: {ex.Message}");
+                Logger.Log($"GetDataSourceFromConnectionString hatası: {ex.Message}");
                 return string.Empty;
             }
         }
@@ -342,7 +341,7 @@ namespace HesapTakip
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"IsWindowsAuthEnabled okuma hatası: {ex.Message}");
+                    Logger.Log($"IsWindowsAuthEnabled okuma hatası: {ex.Message}");
                 }
                 return false; // Varsayılan false
             }
@@ -371,11 +370,11 @@ namespace HesapTakip
 
                     node.InnerText = value.ToString();
                     doc.Save(ConfigFilePath);
-                    Debug.WriteLine($"IsWindowsAuthEnabled successfully set to: {value}");
+                    Logger.Log($"IsWindowsAuthEnabled successfully set to: {value}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"IsWindowsAuthEnabled kaydetme hatası: {ex.Message}");
+                    Logger.Log($"IsWindowsAuthEnabled kaydetme hatası: {ex.Message}");
                 }
             }
         }
@@ -419,7 +418,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Migration hatası: {ex.Message}");
+                Logger.Log($"Migration hatası: {ex.Message}");
             }
         }
     }

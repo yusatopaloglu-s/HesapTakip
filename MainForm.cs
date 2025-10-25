@@ -14,6 +14,8 @@ namespace HesapTakip
     using QuestPDF.Infrastructure;
     using System.Diagnostics;
     using System.Windows.Forms;
+    using System.Threading.Tasks;
+    using System.Linq;
 
     public partial class MainForm : Form
     {
@@ -23,17 +25,151 @@ namespace HesapTakip
         private static bool _versionChecked = false;
         private async void MainForm_Load(object sender, EventArgs e)
         {
+            // Başlangıçta progress gizli; arka planda DB init başlatılacak
             progressBar1.Visible = false;
+
+            // Versiyon bilgisini hızlıca göster
+            toolStripStatusLabelVersion.Text = $"v{GetCurrentVersion()}";
+
             // Açılışta sessizce versiyon kontrolü yap
             _ = CheckForUpdatesSilentAsync();
+
+            // Başlangıç uygulama init (DB başlangıcı arka planda)
+            await InitializeApplicationAsync();
         }
         public MainForm()
         {
             InitializeComponent();
-            InitializeApplication();
+            // Do not initialize database synchronously in constructor. Initialization will be performed in Load event (background).
         }
+
+        private async Task InitializeApplicationAsync()
+        {
+            try
+            {
+                // UI: disable main controls until DB ready
+                gbTransactions.Enabled = false;
+                dgvCustomers.DataSource = null;
+
+                // show status
+                progressBar1.Visible = true;
+                try { progressBar1.Style = ProgressBarStyle.Marquee; } catch { }
+                statusLabel.Visible = true;
+                statusLabel.Text = "Bağlantı kontrol ediliyor...";
+
+                // quick check for config
+                string connectionString = AppConfigHelper.DatabasePath;
+                string databaseType = AppConfigHelper.DatabaseType;
+
+                if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(databaseType))
+                {
+                    // No saved configuration - ask user to provide settings
+                    bool settingsOk = OpenConnectionSettings();
+                    if (!settingsOk)
+                    {
+                        Application.Exit();
+                        return;
+                    }
+
+                    connectionString = AppConfigHelper.DatabasePath;
+                    databaseType = AppConfigHelper.DatabaseType;
+                }
+
+                // Try initialization in background; on failure offer settings dialog
+                while (true)
+                {
+                    var initResult = await Task.Run(() =>
+                    {
+                        try
+                        {
+                            // Create DB instance and ensure schema
+                            _db = DatabaseFactory.Create(databaseType, connectionString);
+
+                            // Initialize database schema (safe off UI thread)
+                            _db.InitializeDatabase();
+
+                            // Quick connection test
+                            bool ok = _db.TestConnection();
+                            return (Success: ok, Error: (string)null);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"Background DB init error: {ex.Message}");
+                            string fullError = ex.Message;
+                            if (ex.InnerException != null) fullError += " -> " + ex.InnerException.Message;
+                            return (Success: false, Error: fullError);
+                        }
+                    });
+
+                    if (initResult.Success)
+                    {
+                        // Success - update UI on UI thread
+                        try
+                        {
+                            LoadCustomers();
+                            InitializeAutoComplete();
+                            LoadSuggestions();
+                            dtpDate.Value = DateTime.Today;
+                            dgvTransactions.CellFormatting += dgvTransactions_CellFormatting;
+
+                            statusLabel.Text = string.Empty;
+                            statusLabel.Visible = false;
+                            progressBar1.Visible = false;
+                            try { progressBar1.Style = ProgressBarStyle.Continuous; } catch { }
+
+                            gbTransactions.Enabled = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"UI update after DB init error: {ex.Message}");
+                        }
+
+                        break;
+                    }
+
+                    // Failed - show detailed error (helpful for Windows Auth permission issues) and ask user to edit settings
+                    string errorMessage = initResult.Error ?? "Veritabanı bağlantısı başarısız.";
+
+                    string userMessage = $"Veritabanı başlatma hatası:\n{errorMessage}\n\n" +
+                                         "Eğer MSSQL ve Windows Authentication kullanıyorsanız, uygulamayı çalıştıran Windows hesabının SQL Server üzerinde 'CREATE DATABASE' yetkisine sahip olduğundan emin olun.\n" +
+                                         "Alternatif olarak SQL Server Authentication (sa veya yetkili bir kullanıcı) kullanarak veritabanını oluşturun veya veritabanını manuel olarak oluşturun.\n\n" +
+                                         "Ayarları düzenlemek ister misiniz?";
+
+                    var res = MessageBox.Show(userMessage, "Bağlantı Hatası", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (res == DialogResult.Yes)
+                    {
+                        bool settingsSaved = OpenConnectionSettings();
+                        if (!settingsSaved)
+                        {
+                            Application.Exit();
+                            return;
+                        }
+
+                        // refresh config and retry
+                        connectionString = AppConfigHelper.DatabasePath;
+                        databaseType = AppConfigHelper.DatabaseType;
+
+                        // loop continues to retry
+                        continue;
+                    }
+                    else
+                    {
+                        Application.Exit();
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"InitializeApplicationAsync ERROR: {ex.Message}");
+                MessageBox.Show($"Başlatma sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Application.Exit();
+            }
+        }
+
         private void InitializeApplication()
         {
+            //Legacy synchronous initialization (kept for manual calls). Prefer background InitializeApplicationAsync on startup.
             //Factory pattern ile database başlat
             if (!InitializeDatabase())
             {
@@ -1166,7 +1302,6 @@ namespace HesapTakip
                 }
             }
         }
-
         public partial class EditTransactionForm : Form
         {
             public DateTime TransactionDate;
@@ -1224,7 +1359,6 @@ namespace HesapTakip
                 this.Controls.AddRange(new Control[] { lblDate, dtpDate, lblDesc, txtDescription, lblAmount, nudAmount, lblType, cbType, btnSave });
             }
         }
-
         private DataTable ImportExcelData(string filePath)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -1287,7 +1421,7 @@ namespace HesapTakip
                 int successCount = 0;
                 foreach (DataRow row in data.Rows)
                 {
-                    // DataTable kolon isimlerini kontrol et
+                    // DataRow kolon isimlerini kontrol et
                     DateTime date = row["Tarih"] != DBNull.Value ? Convert.ToDateTime(row["Tarih"]) : DateTime.Now;
                     string description = row["Açıklama"]?.ToString() ?? "";
 
@@ -1618,54 +1752,7 @@ namespace HesapTakip
         private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string batchContent = $@"@echo off
-chcp 65001 >nul
-echo HesapTakip Guncelleme Araci
-echo ===========================
-echo.
-
-echo Uygulama kapatiliyor...
-timeout /t 2 /nobreak >nul
-
-taskkill /f /im ""HesapTakip.exe"" >nul 2>&1
-taskkill /f /im ""HesapTakip"" >nul 2>&1
-
-echo Ayarlar korunuyor...
-
-if exist ""{appPath}\HesapTakip.config"" (
-    copy ""{appPath}\HesapTakip.config"" ""{appPath}\HesapTakip.config.backup"" >nul
-    echo Config yedeklendi
-)
-
-echo Guncelleme dosyalari kopyalaniyor...
-xcopy ""{updateFilesPath}\*"" ""{appPath}"" /Y /E /I /Q
-
-if exist ""{appPath}\HesapTakip.config.backup"" (
-    copy ""{appPath}\HesapTakip.config.backup"" ""{appPath}\HesapTakip.config"" >nul
-    del ""{appPath}\HesapTakip.config.backup"" >nul
-    echo Config geri yuklendi
-)
-
-if %errorlevel% equ 0 (
-    echo.
-    echo Guncelleme basariyla tamamlandi!
-    echo Uygulama yeniden baslatiliyor...
-    echo.
-    
-    timeout /t 2 /nobreak >nul
-    cd /d ""{appPath}""
-    start """" ""HesapTakip.exe""
-) else (
-    echo.
-    echo Hata: Guncelleme sirasinda problem olustu!
-    pause
-)
-
-echo Temizlik yapiliyor...
-if exist ""{updateFilesPath}"" rmdir /s /q ""{updateFilesPath}""
-
-exit
-";
+            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
 
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
 

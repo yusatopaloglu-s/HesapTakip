@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
@@ -19,7 +18,7 @@ namespace HesapTakip
             {
                 string dbType = cmbDatabaseType.SelectedItem?.ToString()?.Trim() ?? "SQLite";
                 string guaranteedType = GuaranteeDatabaseType(dbType);
-                Debug.WriteLine($"ConnectionSettingsForm DatabaseType GET: '{dbType}' -> '{guaranteedType}'");
+                Logger.Log($"ConnectionSettingsForm DatabaseType GET: '{dbType}' -> '{guaranteedType}'");
                 return guaranteedType;
             }
             private set { }
@@ -50,6 +49,7 @@ namespace HesapTakip
             {
                 ctrl.Font = new Font("Segoe UI", 9F);
             }
+           
             LoadCurrentSettings();
             UpdateFormByDatabaseType();
         }
@@ -96,7 +96,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Ayarlar yüklenirken hata: {ex.Message}");
+                Logger.Log($"Ayarlar yüklenirken hata: {ex.Message}");
             }
         }
 
@@ -125,6 +125,9 @@ namespace HesapTakip
             lblPort.Visible = !isSQLite;
             txtPort.Visible = !isSQLite;
             btnTestConnection.Visible = !isSQLite;
+            btn_crdb_sqlite.Visible = isSQLite; // Sadece SQLite seçiliyse göster
+            btn_crdb_mysql.Visible = isMySQL; // Sadece MySQL seçiliyse göster
+            btn_crdb_mssql.Visible = isMSSQL; // Sadece MSSQL seçiliyse göster
             // Windows Kimlik Doðrulamasý Checkbox'ý sadece MSSQL için göster
             chkUseWindowsAuth.Visible = isMSSQL;
             if (isMSSQL)
@@ -152,6 +155,8 @@ namespace HesapTakip
                     "HesapTakip", "hesaptakip.sqlite");
                 txtSqliteFilePath.Text = defaultPath;
             }
+
+            
         }
 
         private void cmbDatabaseType_SelectedIndexChanged(object sender, EventArgs e)
@@ -323,26 +328,26 @@ namespace HesapTakip
         private string BuildConnectionString()
         {
             string databaseType = cmbDatabaseType.SelectedItem.ToString();
-            Debug.WriteLine($"BuildConnectionString for: {databaseType}");
-            Debug.WriteLine($"chkUseWindowsAuth.Checked: {chkUseWindowsAuth.Checked}");
+            Logger.Log($"BuildConnectionString for: {databaseType}");
+            Logger.Log($"chkUseWindowsAuth.Checked: {chkUseWindowsAuth.Checked}");
 
             if (databaseType == "SQLite")
             {
                 string connectionString = $"Data Source={txtSqliteFilePath.Text};";
-                Debug.WriteLine($"SQLite Connection String: {connectionString}");
+                Logger.Log($"SQLite Connection String: {connectionString}");
                 return connectionString;
             }
             else if (databaseType == "MySQL")
             {
                 string connectionString = $"Server={txtServer.Text};Database={txtDatabase.Text};User={txtUser.Text};Password={txtPassword.Text};Port={txtPort.Text};Charset=utf8mb4;";
-                Debug.WriteLine($"MySQL Connection String: {connectionString}");
+                Logger.Log($"MySQL Connection String: {connectionString}");
                 return connectionString;
             }
             else // MSSQL
             {
                 string connectionString;
                 bool windowsAuth = chkUseWindowsAuth.Checked && databaseType == "MSSQL";
-                Debug.WriteLine($"MSSQL Windows Auth durumu: {windowsAuth}");
+                Logger.Log($"MSSQL Windows Auth durumu: {windowsAuth}");
 
                 if (windowsAuth)
                 {
@@ -352,7 +357,7 @@ namespace HesapTakip
                 {
                     connectionString = $"Server={txtServer.Text},{txtPort.Text};Database={txtDatabase.Text};User Id={txtUser.Text};Password={txtPassword.Text};";
                 }
-                Debug.WriteLine($"MSSQL Connection String: {connectionString}");
+                Logger.Log($"MSSQL Connection String: {connectionString}");
                 return connectionString;
             }
         }
@@ -382,7 +387,7 @@ namespace HesapTakip
                         User = "";
                         Password = "";
                     }
-                    Debug.WriteLine($"MSSQL Windows Auth: {chkUseWindowsAuth.Checked}");
+                    Logger.Log($"MSSQL Windows Auth: {chkUseWindowsAuth.Checked}");
                 }
 
                 // SQLite için dosya dizinini oluþtur
@@ -406,11 +411,16 @@ namespace HesapTakip
 
                 // BAÐLANTI DÝZESÝNÝ OLUÞTUR VE TEST ET
                 string connectionString = BuildConnectionString();
-                Debug.WriteLine($"Kaydetmeden önce connection string: {connectionString}");
+                Logger.Log($"Kaydetmeden önce connection string: {connectionString}");
 
-                // Test baðlantýsýný yap
+                // Test baðlantýsýný yap (SQLite için test ekledim)
                 bool testResult = false;
-                if (DatabaseType == "MySQL")
+                if (DatabaseType == "SQLite")
+                {
+                    var db = new SqliteOperations(connectionString);
+                    testResult = db.TestConnection();
+                }
+                else if (DatabaseType == "MySQL")
                 {
                     var db = new MySqlOperations(connectionString);
                     testResult = db.TestConnection();
@@ -428,9 +438,9 @@ namespace HesapTakip
                     return;
                 }
 
-                // SADECE BÝR KEZ KAYDET VE EK ÇAÐRIYI ÖNLE
+                // AYARLARI KAYDET
                 AppConfigHelper.SaveConnectionString(Server, Database, User, Password, Port, DatabaseType, SqliteFilePath, chkUseWindowsAuth.Checked && DatabaseType == "MSSQL");
-                Debug.WriteLine("Kullanýcý ayarlarý kaydedildi...");
+                Logger.Log("Kullanýcý ayarlarý kaydedildi...");
 
                 // DialogResult'ý OK yap ve formu kapat
                 this.DialogResult = DialogResult.OK;
@@ -448,13 +458,128 @@ namespace HesapTakip
             this.Close();
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+               
+        private void btn_crdb_sqlite_Click(object sender, EventArgs e)
         {
-            base.OnFormClosing(e);
-            Debug.WriteLine("FormClosing event triggered");
-            Debug.WriteLine("FormClosing event triggered. Checking for additional SaveConnectionString calls...");
-            // Eðer baþka bir SaveConnectionString çaðrýsý varsa, bunu engelle
-            // Þu anda manuel bir engelleme eklemiyoruz, ancak kaynaðý bulmamýz lazým
+            string filePath = txtSqliteFilePath.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                MessageBox.Show("Lütfen bir dosya yolu girin!", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                string fullPath = Path.GetFullPath(filePath);
+                string directory = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    Directory.CreateDirectory(directory);
+
+                if (!File.Exists(fullPath))
+                {
+                    System.Data.SQLite.SQLiteConnection.CreateFile(fullPath);
+                    Logger.Log($"SQLite file created: {fullPath}");
+                }
+                else
+                {
+                    Logger.Log($"SQLite file already exists: {fullPath}");
+                }
+
+                // Normalize textbox to full path so saving uses the same path
+                txtSqliteFilePath.Text = fullPath;
+
+                // Build a safe connection string and try to open it to surface errors early
+                string connStr = $"Data Source={fullPath};Version=3;FailIfMissing=False;Pooling=True;";
+                Logger.Log($"Attempting to open SQLite connection: {connStr}");
+
+                using (var conn = new System.Data.SQLite.SQLiteConnection(connStr))
+                {
+                    conn.Open();
+                    Logger.Log("Opened SQLite connection after create.");
+                    using (var cmd = new System.Data.SQLite.SQLiteCommand("SELECT sqlite_version()", conn))
+                    {
+                        var version = cmd.ExecuteScalar();
+                        Logger.Log($"SQLite version: {version}");
+                    }
+                }
+
+                // Initialize schema (creates tables if missing)
+                var db = new SqliteOperations(connStr);
+                db.InitializeDatabase();
+
+                MessageBox.Show("SQLite veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (System.Data.SQLite.SQLiteException sqlEx)
+            {
+                Logger.Log($"SQLite hata: {sqlEx.Message} Code: {sqlEx.ErrorCode}");
+                MessageBox.Show($"SQLite hatasý: {sqlEx.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Veritabaný oluþturulamadý: {ex.Message}");
+                MessageBox.Show($"Veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Yeni: MySQL veritabaný oluþturma butonu handler
+        private void btn_crdb_mysql_Click(object sender, EventArgs e)
+        {
+            // Validate inputs first
+            if (!ValidateInputs())
+                return;
+
+            string connectionString = BuildConnectionString();
+
+            try
+            {
+                Cursor = Cursors.WaitCursor;
+                btn_crdb_mysql.Enabled = false;
+
+                var db = new MySqlOperations(connectionString);
+                db.InitializeDatabase();
+
+                MessageBox.Show("MySQL veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"MySQL veritabaný oluþturulamadý: {ex.Message}");
+                MessageBox.Show($"MySQL veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+                btn_crdb_mysql.Enabled = true;
+            }
+        }
+
+        // Yeni: MSSQL veritabaný oluþturma butonu handler
+        private void btn_crdb_mssql_Click(object sender, EventArgs e)
+        {
+            if (!ValidateInputs())
+                return;
+
+            string connectionString = BuildConnectionString();
+
+            try
+            {
+                Cursor = Cursors.WaitCursor;
+                btn_crdb_mssql.Enabled = false;
+
+                var db = new MsSqlOperations(connectionString);
+                db.InitializeDatabase();
+
+                MessageBox.Show("MSSQL veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"MSSQL veritabaný oluþturulamadý: {ex.Message}");
+                MessageBox.Show($"MSSQL veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+                btn_crdb_mssql.Enabled = true;
+            }
         }
     }
 }
