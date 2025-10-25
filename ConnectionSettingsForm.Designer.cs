@@ -192,7 +192,7 @@ namespace HesapTakip
             btnTestConnection.Name = "btnTestConnection";
             btnTestConnection.Size = new Size(117, 35);
             btnTestConnection.TabIndex = 6;
-            btnTestConnection.Text = "Baðlantýyý Test Et";
+            btnTestConnection.Text = "Bağlantıyı Test Et";
             btnTestConnection.UseVisualStyleBackColor = true;
             btnTestConnection.Click += btnTestConnection_Click;
             // 
