@@ -58,7 +58,7 @@ namespace HesapTakip
         {
             try
             {
-                // Mevcut ayarlarý yükle
+                // Mevcut ayarlarÄ± yÃ¼kle
                 string currentType = AppConfigHelper.DatabaseType;
 
                 if (!string.IsNullOrEmpty(currentType))
@@ -67,7 +67,7 @@ namespace HesapTakip
                 }
                 else
                 {
-                    cmbDatabaseType.SelectedIndex = 0; // Varsayýlan SQLite
+                    cmbDatabaseType.SelectedIndex = 0; // VarsayÄ±lan SQLite
                 }
 
                 if (currentType == "SQLite")
@@ -84,8 +84,8 @@ namespace HesapTakip
                     txtDatabase.Text = AppConfigHelper.GetDatabaseFromConnectionString();
                     txtUser.Text = AppConfigHelper.GetUserFromConnectionString();
                     txtPort.Text = AppConfigHelper.GetPortFromConnectionString();
-                    // Password security nedeniyle þifre yüklenmez
-                    // Windows auth kontrolü
+                    // Password security nedeniyle Åžifre yÃ¼klenmez
+                    // Windows auth kontrolÃ¼
                     chkUseWindowsAuth.Checked = AppConfigHelper.IsWindowsAuthEnabled;
                     if (chkUseWindowsAuth.Checked)
                     {
@@ -96,7 +96,7 @@ namespace HesapTakip
             }
             catch (Exception ex)
             {
-                Logger.Log($"Ayarlar yüklenirken hata: {ex.Message}");
+                Logger.Log($"Ayarlar yÃ¼klenirken hata: {ex.Message}");
             }
         }
 
@@ -108,12 +108,12 @@ namespace HesapTakip
             bool isMySQL = selectedType == "MySQL";
             bool isMSSQL = selectedType == "MSSQL";
 
-            // SQLite kontrollerini göster/gizle
+            // SQLite kontrollerini gÃ¶ster/gizle
             lblSqliteFilePath.Visible = isSQLite;
             txtSqliteFilePath.Visible = isSQLite;
             btnBrowseSqlite.Visible = isSQLite;
 
-            // MySQL/MSSQL kontrollerini göster/gizle
+            // MySQL/MSSQL kontrollerini gÃ¶ster/gizle
             lblServer.Visible = !isSQLite;
             txtServer.Visible = !isSQLite;
             lblDatabase.Visible = !isSQLite;
@@ -125,17 +125,17 @@ namespace HesapTakip
             lblPort.Visible = !isSQLite;
             txtPort.Visible = !isSQLite;
             btnTestConnection.Visible = !isSQLite;
-            btn_crdb_sqlite.Visible = isSQLite; // Sadece SQLite seçiliyse göster
-            btn_crdb_mysql.Visible = isMySQL; // Sadece MySQL seçiliyse göster
-            btn_crdb_mssql.Visible = isMSSQL; // Sadece MSSQL seçiliyse göster
-            // Windows Kimlik Doðrulamasý Checkbox'ý sadece MSSQL için göster
+            btn_crdb_sqlite.Visible = isSQLite; // Sadece SQLite seÃ§iliyse gÃ¶ster
+            btn_crdb_mysql.Visible = isMySQL; // Sadece MySQL seÃ§iliyse gÃ¶ster
+            btn_crdb_mssql.Visible = isMSSQL; // Sadece MSSQL seÃ§iliyse gÃ¶ster
+            // Windows Kimlik DoÄŸrulamasÄ± Checkbox'Ä± sadece MSSQL iÃ§in gÃ¶ster
             chkUseWindowsAuth.Visible = isMSSQL;
             if (isMSSQL)
             {
-                ChkUseWindowsAuth_CheckedChanged(null, null); // Alanlarý güncelle
+                ChkUseWindowsAuth_CheckedChanged(null, null); // AlanlarÄ± gÃ¼ncelle
             }
 
-            // Port varsayýlan deðerleri - SADECE BOÞSA veya TÝP DEÐÝÞTÝYSE
+            // Port varsayÄ±lan deÄŸerleri -
             if (isMySQL)
             {
                 if (string.IsNullOrEmpty(txtPort.Text) || txtPort.Text == "1433")
@@ -147,7 +147,7 @@ namespace HesapTakip
                     txtPort.Text = "1433";
             }
 
-            // SQLite için varsayýlan dosya yolu
+            // SQLite iÃ§in varsayÄ±lan dosya yolu
             if (isSQLite && string.IsNullOrEmpty(txtSqliteFilePath.Text))
             {
                 string defaultPath = Path.Combine(
@@ -169,7 +169,7 @@ namespace HesapTakip
             using (SaveFileDialog sfd = new SaveFileDialog())
             {
                 sfd.Filter = "SQLite Database|*.sqlite|All Files|*.*";
-                sfd.Title = "SQLite Database Dosyasýný Seçin";
+                sfd.Title = "SQLite Database DosyasÄ±nÄ± SeÃ§in";
                 sfd.DefaultExt = "sqlite";
                 sfd.AddExtension = true;
 
@@ -218,18 +218,18 @@ namespace HesapTakip
 
                 if (testResult)
                 {
-                    MessageBox.Show("Baðlantý testi baþarýlý!", "Baþarýlý",
+                    MessageBox.Show("BaÄŸlantÄ± testi baÅŸarÄ±lÄ±!", "BaÅŸarÄ±lÄ±",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show("Baðlantý testi baþarýsýz!", "Hata",
+                    MessageBox.Show("BaÄŸlantÄ± testi baÅŸarÄ±sÄ±z!", "Hata",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Baðlantý testi sýrasýnda hata: {ex.Message}", "Hata",
+                MessageBox.Show($"BaÄŸlantÄ± testi sÄ±rasÄ±nda hata: {ex.Message}", "Hata",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -241,7 +241,7 @@ namespace HesapTakip
         private void ChkUseWindowsAuth_CheckedChanged(object sender, EventArgs e)
         {
             bool useWindowsAuth = chkUseWindowsAuth.Checked;
-            // Kullanýcý adý ve þifre alanlarýný etkinleþtir/devre dýþý býrak
+            // KullanÄ±cÄ± adÄ± ve ÅŸifre alanlarÄ±nÄ± etkinleÅŸtir/devre dÄ±ÅŸÄ± bÄ±rak
             lblUser.Visible = !useWindowsAuth;
             txtUser.Visible = !useWindowsAuth;
             lblPassword.Visible = !useWindowsAuth;
@@ -254,7 +254,7 @@ namespace HesapTakip
 
             if (string.IsNullOrEmpty(databaseType))
             {
-                MessageBox.Show("Lütfen veritabaný tipi seçin!", "Uyarý",
+                MessageBox.Show("LÃ¼tfen veritabanÄ± tipi seÃ§in!", "UyarÄ±",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
@@ -263,7 +263,7 @@ namespace HesapTakip
             {
                 if (string.IsNullOrEmpty(txtSqliteFilePath.Text))
                 {
-                    MessageBox.Show("Lütfen SQLite dosya yolunu seçin!", "Uyarý",
+                    MessageBox.Show("LÃ¼tfen SQLite dosya yolunu seÃ§in!", "UyarÄ±",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
@@ -273,13 +273,13 @@ namespace HesapTakip
                     string directory = Path.GetDirectoryName(txtSqliteFilePath.Text);
                     if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                     {
-                        // Dizin oluþturulabilir mi kontrol et
+                        // Dizin oluÅŸturulabilir mi kontrol et
                         Directory.CreateDirectory(directory);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Geçersiz dosya yolu: {ex.Message}", "Hata",
+                    MessageBox.Show($"GeÃ§ersiz dosya yolu: {ex.Message}", "Hata",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
@@ -288,35 +288,35 @@ namespace HesapTakip
             {
                 if (string.IsNullOrEmpty(txtServer.Text))
                 {
-                    MessageBox.Show("Lütfen sunucu adresini girin!", "Uyarý",
+                    MessageBox.Show("LÃ¼tfen sunucu adresini girin!", "UyarÄ±",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
 
                 if (string.IsNullOrEmpty(txtDatabase.Text))
                 {
-                    MessageBox.Show("Lütfen veritabaný adýný girin!", "Uyarý",
+                    MessageBox.Show("LÃ¼tfen veritabanÄ± adÄ±nÄ± girin!", "UyarÄ±",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
 
                 if (string.IsNullOrEmpty(txtPort.Text))
                 {
-                    MessageBox.Show("Lütfen port numarasýný girin!", "Uyarý",
+                    MessageBox.Show("LÃ¼tfen port numarasÄ±nÄ± girin!", "UyarÄ±",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return false;
                 }
 
                 if (databaseType == "MSSQL" && chkUseWindowsAuth.Checked)
                 {
-                    // Windows auth için kullanýcý adý ve þifre zorunlu deðil
+                    // Windows auth iÃ§in kullanÄ±cÄ± adÄ± ve ÅŸifre zorunlu deÄŸil
                     return true;
                 }
                 else
                 {
                     if (string.IsNullOrEmpty(txtUser.Text))
                     {
-                        MessageBox.Show("Lütfen kullanýcý adýný girin!", "Uyarý",
+                        MessageBox.Show("LÃ¼tfen kullanÄ±cÄ± adÄ±nÄ± girin!", "UyarÄ±",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return false;
                     }
@@ -369,7 +369,7 @@ namespace HesapTakip
 
             try
             {
-                // Deðerleri property'lere ata
+                // DeÄŸerleri property'lere ata
                 DatabaseType = cmbDatabaseType.SelectedItem.ToString();
                 Server = txtServer.Text;
                 Database = txtDatabase.Text;
@@ -378,7 +378,7 @@ namespace HesapTakip
                 Port = txtPort.Text;
                 SqliteFilePath = txtSqliteFilePath.Text;
 
-                // MSSQL için Windows auth ayarýný kaydet
+                // MSSQL iÃ§in Windows auth ayarÄ±nÄ± kaydet
                 if (DatabaseType == "MSSQL")
                 {
                     AppConfigHelper.IsWindowsAuthEnabled = chkUseWindowsAuth.Checked;
@@ -390,7 +390,7 @@ namespace HesapTakip
                     Logger.Log($"MSSQL Windows Auth: {chkUseWindowsAuth.Checked}");
                 }
 
-                // SQLite için dosya dizinini oluþtur
+                // SQLite iÃ§in dosya dizinini oluÅŸtur
                 if (DatabaseType == "SQLite")
                 {
                     try
@@ -403,17 +403,17 @@ namespace HesapTakip
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"SQLite dosya dizini oluþturulamadý: {ex.Message}", "Hata",
+                        MessageBox.Show($"SQLite dosya dizini oluÅŸturulamadÄ±: {ex.Message}", "Hata",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                 }
 
-                // BAÐLANTI DÝZESÝNÝ OLUÞTUR VE TEST ET
+                // BAÄŸLANTI DÄ±ZESÄ±NÄ± OLUÅŸTUR VE TEST ET
                 string connectionString = BuildConnectionString();
-                Logger.Log($"Kaydetmeden önce connection string: {connectionString}");
+                Logger.Log($"Kaydetmeden Ã¶nce connection string: {connectionString}");
 
-                // Test baðlantýsýný yap (SQLite için test ekledim)
+                // Test baÄŸlantÄ±sÄ±nÄ± yap (SQLite iÃ§in test ekledim)
                 bool testResult = false;
                 if (DatabaseType == "SQLite")
                 {
@@ -433,16 +433,16 @@ namespace HesapTakip
 
                 if (!testResult)
                 {
-                    MessageBox.Show($"Baðlantý testi baþarýsýz! Connection String: {connectionString}", "Hata",
+                    MessageBox.Show($"BaÄŸlantÄ± testi baÅŸarÄ±sÄ±z! Connection String: {connectionString}", "Hata",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 // AYARLARI KAYDET
                 AppConfigHelper.SaveConnectionString(Server, Database, User, Password, Port, DatabaseType, SqliteFilePath, chkUseWindowsAuth.Checked && DatabaseType == "MSSQL");
-                Logger.Log("Kullanýcý ayarlarý kaydedildi...");
+                Logger.Log("KullanÄ±cÄ± ayarlarÄ± kaydedildi...");
 
-                // DialogResult'ý OK yap ve formu kapat
+                // DialogResult'Ä± OK yap ve formu kapat
                 this.DialogResult = DialogResult.OK;
                 this.Close();
             }
@@ -464,7 +464,7 @@ namespace HesapTakip
             string filePath = txtSqliteFilePath.Text?.Trim();
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                MessageBox.Show("Lütfen bir dosya yolu girin!", "Uyarý", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("LÃ¼tfen bir dosya yolu girin!", "UyarÄ±", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -507,21 +507,21 @@ namespace HesapTakip
                 var db = new SqliteOperations(connStr);
                 db.InitializeDatabase();
 
-                MessageBox.Show("SQLite veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("SQLite veritabanÄ± oluÅŸturuldu ve initialize edildi.", "BaÅŸarÄ±lÄ±", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (System.Data.SQLite.SQLiteException sqlEx)
             {
                 Logger.Log($"SQLite hata: {sqlEx.Message} Code: {sqlEx.ErrorCode}");
-                MessageBox.Show($"SQLite hatasý: {sqlEx.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"SQLite hatasÄ±: {sqlEx.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                Logger.Log($"Veritabaný oluþturulamadý: {ex.Message}");
-                MessageBox.Show($"Veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"VeritabanÄ± oluÅŸturulamadÄ±: {ex.Message}");
+                MessageBox.Show($"VeritabanÄ± oluÅŸturulamadÄ±: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        // Yeni: MySQL veritabaný oluþturma butonu handler
+        // Yeni: MySQL veritabanÄ± oluÅŸturma butonu handler
         private void btn_crdb_mysql_Click(object sender, EventArgs e)
         {
             // Validate inputs first
@@ -538,12 +538,12 @@ namespace HesapTakip
                 var db = new MySqlOperations(connectionString);
                 db.InitializeDatabase();
 
-                MessageBox.Show("MySQL veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("MySQL veritabanÄ± oluÅŸturuldu ve initialize edildi.", "BaÅŸarÄ±lÄ±", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                Logger.Log($"MySQL veritabaný oluþturulamadý: {ex.Message}");
-                MessageBox.Show($"MySQL veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"MySQL veritabanÄ± oluÅŸturulamadÄ±: {ex.Message}");
+                MessageBox.Show($"MySQL veritabanÄ± oluÅŸturulamadÄ±: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -552,7 +552,7 @@ namespace HesapTakip
             }
         }
 
-        // Yeni: MSSQL veritabaný oluþturma butonu handler
+        // Yeni: MSSQL veritabanÄ± oluÅŸturma butonu handler
         private void btn_crdb_mssql_Click(object sender, EventArgs e)
         {
             if (!ValidateInputs())
@@ -568,12 +568,12 @@ namespace HesapTakip
                 var db = new MsSqlOperations(connectionString);
                 db.InitializeDatabase();
 
-                MessageBox.Show("MSSQL veritabaný oluþturuldu ve initialize edildi.", "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("MSSQL veritabanÄ± oluÅŸturuldu ve initialize edildi.", "BaÅŸarÄ±lÄ±", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                Logger.Log($"MSSQL veritabaný oluþturulamadý: {ex.Message}");
-                MessageBox.Show($"MSSQL veritabaný oluþturulamadý: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"MSSQL veritabanÄ± oluÅŸturulamadÄ±: {ex.Message}");
+                MessageBox.Show($"MSSQL veritabanÄ± oluÅŸturulamadÄ±: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
