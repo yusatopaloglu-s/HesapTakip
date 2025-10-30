@@ -8,3 +8,4 @@ E-fatura xml-ubl kaynak dosyalarını Excel tablosuna çevirme modülü. <br>
 <img src="https://i.imgur.com/ptMd70r.png"><br>
 <img src="https://i.imgur.com/hzeOXfa.png"><br>
 <img src="https://i.imgur.com/qGdZBG2.png"><br>
+<img src="https://i.imgur.com/1UUnfx9.png"><br>
