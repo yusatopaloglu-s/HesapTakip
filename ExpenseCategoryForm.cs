@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Linq;
 
 namespace HesapTakip
 {
@@ -36,7 +37,8 @@ namespace HesapTakip
             {
                 _expenseCategories = _db.GetCategories() ?? new DataTable(); // Null ise boş tablo oluştur
                 dgv_expensecatlist.DataSource = _expenseCategories.Copy();
-                dgv_expensecatlist.Columns["CategoryID"].Visible = false;
+                if (dgv_expensecatlist.Columns.Contains("CategoryID"))
+                    dgv_expensecatlist.Columns["CategoryID"].Visible = false;
                 if (dgv_expensecatlist.Columns.Contains("Label"))
                 {
                     dgv_expensecatlist.Columns["Label"].HeaderText = "Kayıt Alt Türü";
@@ -153,14 +155,19 @@ namespace HesapTakip
                 }
                 else
                 {
-                    // Filtreleme yap
+                    // Filtreleme yap (null kontrollü)
                     var filteredRows = _expenseCategories.AsEnumerable()
-                        .Where(row => row.Field<string>("Label").ToLower().Contains(searchText) ||
-                                      row.Field<string>("Info").ToLower().Contains(searchText))
-                        .CopyToDataTable();
-                    dgv_expensecatlist.DataSource = filteredRows;
+                        .Where(row =>
+                            (row.Field<string>("Label") ?? string.Empty).ToLower().Contains(searchText) ||
+                            (row.Field<string>("Info") ?? string.Empty).ToLower().Contains(searchText));
+
+                    // Eğer sonuç yoksa boş ama aynı şemaya sahip tablo ata (CopyToDataTable exception'ını önlemek için)
+                    DataTable resultTable = filteredRows.Any() ? filteredRows.CopyToDataTable() : _expenseCategories.Clone();
+                    dgv_expensecatlist.DataSource = resultTable;
                 }
-                dgv_expensecatlist.Columns["CategoryID"].Visible = false; // Filtreleme sonrası ID’yi gizle
+
+                if (dgv_expensecatlist.Columns.Contains("CategoryID"))
+                    dgv_expensecatlist.Columns["CategoryID"].Visible = false; // Filtreleme sonrası ID’yi gizle
             }
         }
     }
