@@ -73,6 +73,7 @@
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
+            veriTabanınıYedekleToolStripMenuItem = new ToolStripMenuItem();
             modülToolStripMenuItem = new ToolStripMenuItem();
             eDefterKontorTakipToolStripMenuItem = new ToolStripMenuItem();
             eFaturaXMLExcelToolStripMenuItem = new ToolStripMenuItem();
@@ -583,7 +584,7 @@
             // 
             // veriTabanıYeriniSıfırlaToolStripMenuItem
             // 
-            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { veriTabanıYeriSıfırlaToolStripMenuItem, güncellemeKontrolEtToolStripMenuItem });
+            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { veriTabanıYeriSıfırlaToolStripMenuItem, güncellemeKontrolEtToolStripMenuItem, veriTabanınıYedekleToolStripMenuItem });
             veriTabanıYeriniSıfırlaToolStripMenuItem.Name = "veriTabanıYeriniSıfırlaToolStripMenuItem";
             veriTabanıYeriniSıfırlaToolStripMenuItem.Size = new Size(50, 20);
             veriTabanıYeriniSıfırlaToolStripMenuItem.Text = "Menü";
@@ -601,6 +602,13 @@
             güncellemeKontrolEtToolStripMenuItem.Size = new Size(192, 22);
             güncellemeKontrolEtToolStripMenuItem.Text = "Güncelleme Kontrol Et";
             güncellemeKontrolEtToolStripMenuItem.Click += CheckUpdateButton_Click;
+            // 
+            // veriTabanınıYedekleToolStripMenuItem
+            // 
+            veriTabanınıYedekleToolStripMenuItem.Name = "veriTabanınıYedekleToolStripMenuItem";
+            veriTabanınıYedekleToolStripMenuItem.Size = new Size(192, 22);
+            veriTabanınıYedekleToolStripMenuItem.Text = "Veri Tabanını Yedekle";
+            veriTabanınıYedekleToolStripMenuItem.Click += veritabaniniYedekleToolStripMenuItem_Click;
             // 
             // modülToolStripMenuItem
             // 
@@ -711,5 +719,6 @@
         private ToolStripMenuItem eFaturaXMLExcelToolStripMenuItem;
         private Button button2;
         private Button button1;
+        private ToolStripMenuItem veriTabanınıYedekleToolStripMenuItem;
     }
 }

@@ -9,13 +9,16 @@ using System.Globalization;
 namespace HesapTakip
 
 {
+    using MySql.Data.MySqlClient;
     using OfficeOpenXml;
     using OfficeOpenXml.Style;
     using QuestPDF.Infrastructure;
+    using System.Data.SQLite;
     using System.Diagnostics;
-    using System.Windows.Forms;
-    using System.Threading.Tasks;
     using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using System.Windows.Forms;
 
     public partial class MainForm : Form
     {
@@ -1820,7 +1823,429 @@ namespace HesapTakip
                 statusLabel.Visible = false;
             }
         }
+        private async void veritabaniniYedekleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            await BackupDatabaseAsync();
+        }
 
+        private async Task BackupDatabaseAsync()
+        {
+            try
+            {
+                string dbType = AppConfigHelper.DatabaseType;
+                if (string.IsNullOrEmpty(dbType))
+                {
+                    MessageBox.Show("Önce veritabanı tipi yapılandırılmalıdır.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                switch (dbType)
+                {
+                    case "SQLite":
+                        BackupSqlite();
+                        break;
+                    case "MySQL":
+                        await BackupMySqlAsync();
+                        break;
+                    case "MSSQL":
+                        await BackupMsSqlAsync();
+                        break;
+                    default:
+                        MessageBox.Show("Bilinmeyen veritabanı tipi: " + dbType, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Yedekleme sırasında hata oluştu: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"BackupDatabaseAsync hata: {ex}");
+            }
+        }
+
+        // SQLite: yerel dosyayı kopyala
+        private void BackupSqlite()
+        {
+            try
+            {
+                string connStr = AppConfigHelper.DatabasePath;
+                var builder = new SQLiteConnectionStringBuilder(connStr);
+                string dataSource = builder.DataSource;
+
+                if (string.IsNullOrEmpty(dataSource) || !File.Exists(dataSource))
+                {
+                    MessageBox.Show("SQLite dosyası bulunamadı.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                using (SaveFileDialog sfd = new SaveFileDialog())
+                {
+                    sfd.Filter = "SQLite dosyası|*.sqlite;*.db;*.sqlite3|Tüm dosyalar|*.*";
+                    sfd.FileName = Path.GetFileNameWithoutExtension(dataSource) + $"_backup_{DateTime.Now:yyyyMMddHHmm}.sqlite";
+                    if (sfd.ShowDialog() != DialogResult.OK) return;
+
+                    // Dosya kilitli olabilir; kullanan uygulama yoksa doğrudan kopyala
+                    File.Copy(dataSource, sfd.FileName, overwrite: true);
+
+                    MessageBox.Show("SQLite veritabanı yedeklendi:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"BackupSqlite hata: {ex}");
+                MessageBox.Show($"SQLite yedekleme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // MySQL: client-side SQL dump (CREATE + INSERT) — server'de mysqldump olmayabilir diye client-side tercih edildi
+        private async Task BackupMySqlAsync()
+        {
+            string connStr = AppConfigHelper.DatabasePath;
+            if (string.IsNullOrEmpty(connStr))
+            {
+                MessageBox.Show("MySQL bağlantı bilgileri bulunamadı.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                var builder = new MySqlConnectionStringBuilder(connStr);
+                string dbName = builder.Database ?? "mysql";
+                sfd.Filter = "SQL Dump|*.sql|All files|*.*";
+                sfd.FileName = $"{dbName}_backup_{DateTime.Now:yyyyMMddHHmm}.sql";
+
+                if (sfd.ShowDialog() != DialogResult.OK) return;
+
+                try
+                {
+                    using (var conn = new MySqlConnection(connStr))
+                    {
+                        await conn.OpenAsync();
+
+                        using (var writer = new StreamWriter(sfd.FileName, false, new UTF8Encoding(false)))
+                        {
+                            writer.WriteLine($"-- MySQL dump for database `{dbName}`");
+                            writer.WriteLine($"-- Generated: {DateTime.Now:O}");
+                            writer.WriteLine();
+
+                            // Get tables
+                            var tables = new List<string>();
+                            using (var cmd = new MySqlCommand("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE';", conn))
+                            using (var rdr = await cmd.ExecuteReaderAsync())
+                            {
+                                while (await rdr.ReadAsync())
+                                {
+                                    tables.Add(rdr.GetString(0));
+                                }
+                            }
+
+                            foreach (var table in tables)
+                            {
+                                // CREATE TABLE
+                                using (var cmdCreate = new MySqlCommand($"SHOW CREATE TABLE `{table}`;", conn))
+                                using (var rdr = await cmdCreate.ExecuteReaderAsync())
+                                {
+                                    if (await rdr.ReadAsync())
+                                    {
+                                        string createSql = rdr.GetString(1);
+                                        writer.WriteLine($"-- ----------------------------");
+                                        writer.WriteLine($"-- Table structure for `{table}`");
+                                        writer.WriteLine($"-- ----------------------------");
+                                        writer.WriteLine($"DROP TABLE IF EXISTS `{table}`;");
+                                        writer.WriteLine(createSql + ";");
+                                        writer.WriteLine();
+                                    }
+                                }
+
+                                // Data
+                                using (var cmdData = new MySqlCommand($"SELECT * FROM `{table}`;", conn))
+                                using (var rdr = await cmdData.ExecuteReaderAsync())
+                                {
+                                    var cols = new List<string>();
+                                    for (int i = 0; i < rdr.FieldCount; i++)
+                                        cols.Add(rdr.GetName(i));
+
+                                    bool firstRow = true;
+                                    var insertPrefix = $"INSERT INTO `{table}` ({string.Join(", ", cols.Select(c => $"`{c}`"))}) VALUES ";
+
+                                    while (await rdr.ReadAsync())
+                                    {
+                                        var values = new List<string>(rdr.FieldCount);
+                                        for (int i = 0; i < rdr.FieldCount; i++)
+                                        {
+                                            var val = rdr.GetValue(i);
+                                            values.Add(EscapeMySqlValue(val));
+                                        }
+
+                                        // Write single-row INSERT for simplicity (sağlam ve yeniden yüklenebilir)
+                                        writer.WriteLine(insertPrefix + "(" + string.Join(", ", values) + ");");
+                                    }
+                                }
+
+                                writer.WriteLine();
+                                await writer.FlushAsync();
+                            }
+                        }
+                    }
+
+                    MessageBox.Show("MySQL yedeği oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"BackupMySqlAsync hata: {ex}");
+                    MessageBox.Show($"MySQL yedekleme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static string EscapeMySqlValue(object val)
+        {
+            if (val == null || val == DBNull.Value) return "NULL";
+
+            if (val is string s)
+            {
+                // Escape backslash and single-quote
+                s = s.Replace("\\", "\\\\").Replace("'", "\\'");
+                return $"'{s}'";
+            }
+
+            if (val is DateTime dt)
+            {
+                return $"'{dt.ToString("yyyy-MM-dd HH:mm:ss")}'";
+            }
+
+            if (val is bool b)
+            {
+                return b ? "1" : "0";
+            }
+
+            if (val is byte[] bytes)
+            {
+                // hex literal
+                return "0x" + BitConverter.ToString(bytes).Replace("-", "");
+            }
+
+            // Numeric - invariant
+            if (val is IFormattable f)
+                return f.ToString(null, CultureInfo.InvariantCulture);
+
+            // Fallback
+            string escaped = val.ToString().Replace("'", "\\'");
+            return $"'{escaped}'";
+        }
+
+        // MSSQL: önce server-side BACKUP DATABASE denenir; başarısız olursa client-side SQL dump ile geri dönüşüm (CREATE + INSERT) yapılır.
+        private async Task BackupMsSqlAsync()
+        {
+            string connStr = AppConfigHelper.DatabasePath;
+            if (string.IsNullOrEmpty(connStr))
+            {
+                MessageBox.Show("MSSQL bağlantı bilgileri bulunamadı.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Varsayılan dosya adı
+            var builder = new System.Data.SqlClient.SqlConnectionStringBuilder(connStr);
+            string dbName = builder.InitialCatalog ?? "master";
+
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Filter = "MSSQL Backup|*.bak|SQL Script|*.sql|All files|*.*";
+                sfd.FileName = $"{dbName}_backup_{DateTime.Now:yyyyMMddHHmm}.bak";
+
+                if (sfd.ShowDialog() != DialogResult.OK) return;
+
+                // Öncelikle sunucuya BACKUP DATABASE ile deneme yap
+                try
+                {
+                    // BACKUP uses server-side file path; kullanıcı yerel seçerse sunucu erişimi olmayabilir.
+                    // Burada dene ve başarısız olursa client-side SQL dump'a düş.
+                    var masterBuilder = new System.Data.SqlClient.SqlConnectionStringBuilder(connStr)
+                    {
+                        InitialCatalog = "master"
+                    };
+
+                    string serverTargetPath = sfd.FileName.Replace("'", "''"); // escape for SQL literal
+                    string backupSql = $"BACKUP DATABASE [{dbName}] TO DISK = N'{serverTargetPath}' WITH INIT, FORMAT, NAME = N'{dbName}-Full Backup';";
+
+                    using (var conn = new System.Data.SqlClient.SqlConnection(masterBuilder.ConnectionString))
+                    {
+                        await conn.OpenAsync().ConfigureAwait(false);
+                        using (var cmd = new System.Data.SqlClient.SqlCommand(backupSql, conn))
+                        {
+                            cmd.CommandTimeout = 60 * 10; // 10 dakika
+                            await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        }
+                    }
+
+                    MessageBox.Show("MSSQL sunucu tarafında yedekleme başarılı.\nNot: .bak dosyası sunucu dosya sistemine yazıldı.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                catch (Exception serverEx)
+                {
+                    Logger.Log($"MSSQL server-side BACKUP başarısız: {serverEx}");
+                    // fallback to client-side dump
+                }
+
+                // Fallback: client-side SQL dump (CREATE TABLE + INSERTs)
+                try
+                {
+                    using (var conn = new System.Data.SqlClient.SqlConnection(connStr))
+                    {
+                        await conn.OpenAsync();
+
+                        using (var writer = new StreamWriter(sfd.FileName, false, new UTF8Encoding(false)))
+                        {
+                            writer.WriteLine($"-- MSSQL dump for database [{dbName}]");
+                            writer.WriteLine($"-- Generated: {DateTime.Now:O}");
+                            writer.WriteLine();
+
+                            // list tables in dbo schema (common case)
+                            var tables = new List<(string Schema, string Name)>();
+                            using (var cmd = new System.Data.SqlClient.SqlCommand(
+                                "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME", conn))
+                            using (var rdr = await cmd.ExecuteReaderAsync())
+                            {
+                                while (await rdr.ReadAsync())
+                                {
+                                    tables.Add((rdr.GetString(0), rdr.GetString(1)));
+                                }
+                            }
+
+                            foreach (var (schema, table) in tables)
+                            {
+                                string fullName = $"[{schema}].[{table}]";
+
+                                // Build simple CREATE TABLE script from INFORMATION_SCHEMA.COLUMNS
+                                var colDefs = new List<string>();
+                                using (var cmd = new System.Data.SqlClient.SqlCommand(
+                                    @"SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, IS_NULLABLE, COLUMN_DEFAULT
+                                      FROM INFORMATION_SCHEMA.COLUMNS
+                                      WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
+                                      ORDER BY ORDINAL_POSITION", conn))
+                                {
+                                    cmd.Parameters.AddWithValue("@schema", schema);
+                                    cmd.Parameters.AddWithValue("@table", table);
+
+                                    using (var rdr = await cmd.ExecuteReaderAsync())
+                                    {
+                                        while (await rdr.ReadAsync())
+                                        {
+                                            string colName = rdr.GetString(0);
+                                            string dataType = rdr.GetString(1);
+                                            object charMaxObj = rdr.IsDBNull(2) ? null : rdr.GetValue(2);
+                                            object precisionObj = rdr.IsDBNull(3) ? null : rdr.GetValue(3);
+                                            object scaleObj = rdr.IsDBNull(4) ? null : rdr.GetValue(4);
+                                            string isNullable = rdr.GetString(5);
+                                            // Note: sütun varsayılanları ve identity bilgisi eklenmedi (karmaşık olabilir)
+                                            string typeSpec = dataType.ToUpperInvariant();
+
+                                            if (typeSpec == "NVARCHAR" || typeSpec == "VARCHAR" || typeSpec == "CHAR" || typeSpec == "NCHAR")
+                                            {
+                                                if (charMaxObj != null && Convert.ToInt32(charMaxObj) > 0)
+                                                    typeSpec += $"({(Convert.ToInt32(charMaxObj) == -1 ? "MAX" : Convert.ToInt32(charMaxObj).ToString())})";
+                                                else
+                                                    typeSpec += "(MAX)";
+                                            }
+                                            else if (typeSpec == "DECIMAL" || typeSpec == "NUMERIC")
+                                            {
+                                                if (precisionObj != null && scaleObj != null)
+                                                    typeSpec += $"({precisionObj},{scaleObj})";
+                                            }
+                                            else if (typeSpec == "VARBINARY")
+                                            {
+                                                if (charMaxObj != null && Convert.ToInt32(charMaxObj) > 0)
+                                                    typeSpec += $"({Convert.ToInt32(charMaxObj)})";
+                                                else
+                                                    typeSpec += "(MAX)";
+                                            }
+                                            // Basit yaklaşım; karmaşık tipler için geliştirilebilir
+
+                                            string nullSpec = isNullable == "YES" ? "NULL" : "NOT NULL";
+                                            colDefs.Add($"[{colName}] {typeSpec} {nullSpec}");
+                                        }
+                                    }
+                                }
+
+                                writer.WriteLine($"-- ----------------------------");
+                                writer.WriteLine($"-- Table structure for {fullName}");
+                                writer.WriteLine($"-- ----------------------------");
+                                writer.WriteLine($"IF OBJECT_ID(N'{schema}.{table}', 'U') IS NOT NULL DROP TABLE {fullName};");
+                                writer.WriteLine($"CREATE TABLE {fullName} (");
+                                writer.WriteLine(string.Join("," + Environment.NewLine, colDefs));
+                                writer.WriteLine(");");
+                                writer.WriteLine();
+
+                                // Data
+                                using (var cmd = new System.Data.SqlClient.SqlCommand($"SELECT * FROM {fullName};", conn))
+                                using (var rdr = await cmd.ExecuteReaderAsync())
+                                {
+                                    var cols = new List<string>();
+                                    for (int i = 0; i < rdr.FieldCount; i++)
+                                        cols.Add(rdr.GetName(i));
+
+                                    string insertPrefix = $"INSERT INTO {fullName} ({string.Join(", ", cols.Select(c => $"[{c}]"))}) VALUES ";
+
+                                    while (await rdr.ReadAsync())
+                                    {
+                                        var values = new List<string>(rdr.FieldCount);
+                                        for (int i = 0; i < rdr.FieldCount; i++)
+                                        {
+                                            var val = rdr.GetValue(i);
+                                            values.Add(EscapeSqlServerValue(val));
+                                        }
+
+                                        writer.WriteLine(insertPrefix + "(" + string.Join(", ", values) + ");");
+                                    }
+                                }
+
+                                writer.WriteLine();
+                                await writer.FlushAsync();
+                            }
+                        }
+                    }
+
+                    MessageBox.Show("MSSQL client-side SQL dump oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"BackupMsSqlAsync (fallback) hata: {ex}");
+                    MessageBox.Show($"MSSQL yedekleme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private static string EscapeSqlServerValue(object val)
+        {
+            if (val == null || val == DBNull.Value) return "NULL";
+
+            if (val is string s)
+            {
+                s = s.Replace("'", "''");
+                return $"N'{s}'";
+            }
+
+            if (val is DateTime dt)
+            {
+                return $"'{dt.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}'";
+            }
+
+            if (val is bool b)
+            {
+                return b ? "1" : "0";
+            }
+
+            if (val is byte[] bytes)
+            {
+                return "0x" + BitConverter.ToString(bytes).Replace("-", "");
+            }
+
+            if (val is IFormattable f)
+                return f.ToString(null, CultureInfo.InvariantCulture);
+
+            var escaped = val.ToString().Replace("'", "''");
+            return $"'{escaped}'";
+        }
+    
         private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
 
