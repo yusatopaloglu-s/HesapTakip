@@ -4,6 +4,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 
 namespace HesapTakip
@@ -990,6 +993,131 @@ namespace HesapTakip
                 }
             }
         }
+
+        private async void BtnSplitAndSave_Click(object sender, EventArgs e)
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "Excel dosyaları|*.xlsx;*.xls|CSV dosyaları|*.csv",
+                Multiselect = false
+            };
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+
+            string sourcePath = ofd.FileName;
+            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = ext == ".csv" ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
+                FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1"
+            };
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+
+            string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
+            string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
+
+            progressBarSplit.Value = 0;
+            progressBarSplit.Visible = true;
+            lblSplitStatus.Text = "Başlatılıyor...";
+            lblSplitStatus.Visible = true;
+            btnSplitAndSave.Enabled = false;
+
+            var progress = new Progress<int>(p =>
+            {
+                progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
+                lblSplitStatus.Text = $"İlerleme: {p}%";
+            });
+
+            try
+            {
+                await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, progress));
+                MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Bölme sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                progressBarSplit.Visible = false;
+                lblSplitStatus.Visible = false;
+                btnSplitAndSave.Enabled = true;
+            }
+        }
+
+        private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, IProgress<int> progress)
+        {
+            const int maxRowsWithHeader = 600; // başlık dahil
+            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+
+            if (ext == ".csv")
+            {
+                // CSV: satır bazlı parça
+                var allLines = File.ReadAllLines(sourcePath, Encoding.UTF8);
+                if (allLines.Length == 0) return;
+
+                string header = allLines[0];
+                int totalData = Math.Max(0, allLines.Length - 1);
+                int perFile = maxRowsWithHeader - 1;
+                int fileCount = Math.Max(1, (int)Math.Ceiling((double)totalData / perFile));
+
+                for (int i = 0; i < fileCount; i++)
+                {
+                    int start = 1 + i * perFile;
+                    int end = Math.Min(allLines.Length - 1, start + perFile - 1);
+                    var outPath = Path.Combine(targetDir, $"{baseName}_Part{i + 1}.csv");
+                    using var sw = new StreamWriter(outPath, false, new UTF8Encoding(true));
+                    sw.WriteLine(header);
+                    for (int r = start; r <= end; r++) sw.WriteLine(allLines[r]);
+
+                    progress.Report((int)((i + 1) / (double)fileCount * 100));
+                }
+            }
+            else
+            {
+                // Excel: EPPlus ile parça
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using var p = new ExcelPackage(new FileInfo(sourcePath));
+                var ws = p.Workbook.Worksheets.FirstOrDefault();
+                if (ws == null || ws.Dimension == null) return;
+
+                int totalRows = ws.Dimension.End.Row;
+                int totalCols = ws.Dimension.End.Column;
+                int headerRows = 1;
+                int dataRows = Math.Max(0, totalRows - headerRows);
+                int perFile = maxRowsWithHeader - headerRows;
+                int fileCount = Math.Max(1, (int)Math.Ceiling((double)dataRows / perFile));
+
+                for (int fi = 0; fi < fileCount; fi++)
+                {
+                    var outPath = Path.Combine(targetDir, $"{baseName}_Part{fi + 1}.xlsx");
+                    using var outPkg = new ExcelPackage(new FileInfo(outPath));
+                    var outWs = outPkg.Workbook.Worksheets.Add(ws.Name ?? "Sheet1");
+
+                    // Başlık kopyala
+                    for (int c = 1; c <= totalCols; c++)
+                        outWs.Cells[1, c].Value = ws.Cells[1, c].Value;
+
+                    int startRow = fi * perFile + headerRows + 1;
+                    int endRow = Math.Min(totalRows, startRow + perFile - 1);
+                    int outRow = headerRows + 1;
+
+                    for (int r = startRow; r <= endRow; r++)
+                    {
+                        for (int c = 1; c <= totalCols; c++)
+                            outWs.Cells[outRow, c].Value = ws.Cells[r, c].Value;
+                        outRow++;
+                    }
+
+                    outWs.Cells.AutoFitColumns();
+                    outPkg.Save();
+
+                    progress.Report((int)((fi + 1) / (double)fileCount * 100));
+                }
+            }
+        }
+
+
         private Button btnUpload;
         private ComboBox cmbTableSelector;
         private GroupBox groupBox1;
@@ -1003,6 +1131,7 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            btnSplitAndSave = new Button();
             btn_alttur = new Button();
             BtnExportCSV = new Button();
             label2 = new Label();
@@ -1012,6 +1141,8 @@ namespace HesapTakip
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
+            progressBarSplit = new ProgressBar();
+            lblSplitStatus = new Label();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -1054,6 +1185,9 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            groupBox2.Controls.Add(lblSplitStatus);
+            groupBox2.Controls.Add(progressBarSplit);
+            groupBox2.Controls.Add(btnSplitAndSave);
             groupBox2.Controls.Add(btn_alttur);
             groupBox2.Controls.Add(BtnExportCSV);
             groupBox2.Controls.Add(label2);
@@ -1070,6 +1204,16 @@ namespace HesapTakip
             groupBox2.Size = new Size(1326, 118);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
+            // 
+            // btnSplitAndSave
+            // 
+            btnSplitAndSave.Location = new Point(670, 14);
+            btnSplitAndSave.Name = "btnSplitAndSave";
+            btnSplitAndSave.Size = new Size(100, 39);
+            btnSplitAndSave.TabIndex = 11;
+            btnSplitAndSave.Text = "Excel Parçala";
+            btnSplitAndSave.UseVisualStyleBackColor = true;
+            btnSplitAndSave.Click += BtnSplitAndSave_Click;
             // 
             // btn_alttur
             // 
@@ -1165,6 +1309,24 @@ namespace HesapTakip
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
             // 
+            // progressBarSplit
+            // 
+            progressBarSplit.Location = new Point(776, 30);
+            progressBarSplit.Name = "progressBarSplit";
+            progressBarSplit.Size = new Size(100, 23);
+            progressBarSplit.TabIndex = 12;
+            progressBarSplit.Visible = false;
+            // 
+            // lblSplitStatus
+            // 
+            lblSplitStatus.AutoSize = true;
+            lblSplitStatus.Location = new Point(776, 14);
+            lblSplitStatus.Name = "lblSplitStatus";
+            lblSplitStatus.Size = new Size(0, 15);
+            lblSplitStatus.TabIndex = 13;
+            lblSplitStatus.Visible = false;
+            lblSplitStatus.Text = "";
+            // 
             // EFaturaxmlForm
             // 
             ClientSize = new Size(1332, 431);
@@ -1189,5 +1351,8 @@ namespace HesapTakip
         private TextBox txtbox_act;
         private Button BtnExportCSV;
         private Button btn_alttur;
+        private Button btnSplitAndSave;
+        private Label lblSplitStatus;
+        private ProgressBar progressBarSplit;
     }
 }
