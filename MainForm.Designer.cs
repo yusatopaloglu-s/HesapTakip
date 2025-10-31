@@ -71,9 +71,9 @@
             lstSuggestions = new ListBox();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
-            veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
             veriTabanınıYedekleToolStripMenuItem = new ToolStripMenuItem();
+            veriTabanıYeriSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             modülToolStripMenuItem = new ToolStripMenuItem();
             eDefterKontorTakipToolStripMenuItem = new ToolStripMenuItem();
             eFaturaXMLExcelToolStripMenuItem = new ToolStripMenuItem();
@@ -392,6 +392,7 @@
             typeLabel.TabIndex = 5;
             typeLabel.Text = "Tür";
             typeLabel.TextAlign = ContentAlignment.MiddleCenter;
+            typeLabel.Visible = false;
             // 
             // rbIncome
             // 
@@ -412,6 +413,7 @@
             rbIncome.Text = "Tahsilat / Gelir";
             rbIncome.TextAlign = ContentAlignment.MiddleCenter;
             rbIncome.UseVisualStyleBackColor = false;
+            rbIncome.Visible = false;
             rbIncome.CheckedChanged += rbIncome_CheckedChanged;
             // 
             // rbExpense
@@ -427,6 +429,7 @@
             rbExpense.Text = "Fatura / Gider";
             rbExpense.TextAlign = ContentAlignment.MiddleCenter;
             rbExpense.UseVisualStyleBackColor = false;
+            rbExpense.Visible = false;
             rbExpense.CheckedChanged += rbExpense_CheckedChanged;
             // 
             // totalPanel
@@ -456,6 +459,7 @@
             btnAddTransaction.TabIndex = 4;
             btnAddTransaction.Text = "Hareket Ekle";
             btnAddTransaction.UseVisualStyleBackColor = true;
+            btnAddTransaction.Visible = false;
             btnAddTransaction.Click += btnAddTransaction_Click;
             // 
             // tableLayoutPanel1
@@ -584,17 +588,10 @@
             // 
             // veriTabanıYeriniSıfırlaToolStripMenuItem
             // 
-            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { veriTabanıYeriSıfırlaToolStripMenuItem, güncellemeKontrolEtToolStripMenuItem, veriTabanınıYedekleToolStripMenuItem });
+            veriTabanıYeriniSıfırlaToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { güncellemeKontrolEtToolStripMenuItem, veriTabanınıYedekleToolStripMenuItem, veriTabanıYeriSıfırlaToolStripMenuItem });
             veriTabanıYeriniSıfırlaToolStripMenuItem.Name = "veriTabanıYeriniSıfırlaToolStripMenuItem";
             veriTabanıYeriniSıfırlaToolStripMenuItem.Size = new Size(50, 20);
             veriTabanıYeriniSıfırlaToolStripMenuItem.Text = "Menü";
-            // 
-            // veriTabanıYeriSıfırlaToolStripMenuItem
-            // 
-            veriTabanıYeriSıfırlaToolStripMenuItem.Name = "veriTabanıYeriSıfırlaToolStripMenuItem";
-            veriTabanıYeriSıfırlaToolStripMenuItem.Size = new Size(192, 22);
-            veriTabanıYeriSıfırlaToolStripMenuItem.Text = "Veri Tabanı Yeri Sıfırla";
-            veriTabanıYeriSıfırlaToolStripMenuItem.Click += btnResetSettings_Click;
             // 
             // güncellemeKontrolEtToolStripMenuItem
             // 
@@ -609,6 +606,13 @@
             veriTabanınıYedekleToolStripMenuItem.Size = new Size(192, 22);
             veriTabanınıYedekleToolStripMenuItem.Text = "Veri Tabanını Yedekle";
             veriTabanınıYedekleToolStripMenuItem.Click += veritabaniniYedekleToolStripMenuItem_Click;
+            // 
+            // veriTabanıYeriSıfırlaToolStripMenuItem
+            // 
+            veriTabanıYeriSıfırlaToolStripMenuItem.Name = "veriTabanıYeriSıfırlaToolStripMenuItem";
+            veriTabanıYeriSıfırlaToolStripMenuItem.Size = new Size(192, 22);
+            veriTabanıYeriSıfırlaToolStripMenuItem.Text = "Veri Tabanı Yeri Sıfırla";
+            veriTabanıYeriSıfırlaToolStripMenuItem.Click += btnResetSettings_Click;
             // 
             // modülToolStripMenuItem
             // 

@@ -44,6 +44,8 @@ namespace HesapTakip
         {
             InitializeComponent();
             // Do not initialize database synchronously in constructor. Initialization will be performed in Load event (background).
+            txtAmount.KeyDown += TxtAmount_KeyDown;
+            txtAmount.KeyPress += TxtAmount_KeyPress;
         }
 
         private async Task InitializeApplicationAsync()
@@ -331,7 +333,7 @@ namespace HesapTakip
                 dgvTransactions.Columns["Description"].HeaderText = "Açıklama";
             if (dgvTransactions.Columns["Amount"] != null)
                 dgvTransactions.Columns["Amount"].HeaderText = "Tutar";
-                dgvTransactions.Columns["Amount"].Width = 90;
+            dgvTransactions.Columns["Amount"].Width = 90;
 
             foreach (DataGridViewRow row in dgvTransactions.Rows)
             {
@@ -518,14 +520,100 @@ namespace HesapTakip
             if (success)
             {
                 LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);                
+                CalculateAndDisplayTotal(customerID);
                 ClearTransactionInputs();
-                
+
                 // MessageBox.Show("İşlem başarıyla eklendi!");
             }
             else
             {
                 MessageBox.Show("İşlem eklenirken hata oluştu!");
+            }
+        }
+
+
+        // Numpad / normal + ve - tuşlarını yakalayacak event handler
+        private void TxtAmount_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (!txtAmount.Focused) return;
+
+            // Numpad + / - veya normal klavye + / -
+            if (e.KeyCode == Keys.Add || e.KeyCode == Keys.Oemplus)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                // Reentrancy önlemek için eklemeyi mesaj kuyruğuna ertele
+                this.BeginInvoke((Action)(() => TryAddTransaction(true)));
+            }
+            else if (e.KeyCode == Keys.Subtract || e.KeyCode == Keys.OemMinus)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                this.BeginInvoke((Action)(() => TryAddTransaction(false)));
+            }
+        }
+
+        private void TxtAmount_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Ek koruma: + veya - karakteri gelirse engelle
+            if (e.KeyChar == '+' || e.KeyChar == '-')
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void AddTransactionByNumpad(bool isIncome)
+        {
+            // Artık PerformClick yerine doğrudan yardımcı metodu çağırıyoruz
+            TryAddTransaction(isIncome);
+        }
+
+        private bool TryAddTransaction(bool isIncome, bool showMessageOnError = true)
+        {
+            // Tutarı yerel kültüre göre güvenli parse et
+            if (!decimal.TryParse(txtAmount.Text?.Trim(), NumberStyles.Number, CultureInfo.CurrentCulture, out decimal amount))
+            {
+                if (showMessageOnError) MessageBox.Show("Geçersiz tutar formatı!");
+                return false;
+            }
+
+            if (dgvCustomers.CurrentRow == null)
+            {
+                if (showMessageOnError) MessageBox.Show("Lütfen bir müşteri seçin!");
+                return false;
+            }
+
+            int customerID;
+            try
+            {
+                customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+            }
+            catch
+            {
+                if (showMessageOnError) MessageBox.Show("Geçersiz müşteri seçimi!");
+                return false;
+            }
+
+            try
+            {
+                bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text?.Trim() ?? "", amount, isIncome ? "Gelir" : "Gider");
+                if (success)
+                {
+                    LoadTransactions(customerID);
+                    CalculateAndDisplayTotal(customerID);
+                    ClearTransactionInputs();
+                    return true;
+                }
+                else
+                {
+                    if (showMessageOnError) MessageBox.Show("İşlem eklenirken hata oluştu!");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (showMessageOnError) MessageBox.Show($"İşlem eklenirken hata oluştu: {ex.Message}");
+                return false;
             }
         }
         private void btnDeleteTransaction_Click(object sender, EventArgs e)
@@ -554,7 +642,7 @@ namespace HesapTakip
                 {
                     LoadTransactions(customerID);
                     CalculateAndDisplayTotal(customerID);
-                    
+
 
                 }
                 else
@@ -1294,8 +1382,8 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadTransactions(GetCurrentCustomerId());
-                        CalculateAndDisplayTotal(GetCurrentCustomerId());   
-                        
+                        CalculateAndDisplayTotal(GetCurrentCustomerId());
+
 
                     }
                     else
@@ -2245,7 +2333,7 @@ namespace HesapTakip
             var escaped = val.ToString().Replace("'", "''");
             return $"'{escaped}'";
         }
-    
+
         private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
 
