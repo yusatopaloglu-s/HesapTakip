@@ -37,6 +37,7 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
+            label5 = new Label();
             button2 = new Button();
             button1 = new Button();
             link_yusa = new LinkLabel();
@@ -190,6 +191,7 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
             gbTransactions.Controls.Add(button1);
             gbTransactions.Controls.Add(link_yusa);
@@ -216,6 +218,15 @@
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Location = new Point(284, 108);
+            label5.Name = "label5";
+            label5.Size = new Size(200, 15);
+            label5.TabIndex = 22;
+            label5.Text = "Klavyeden \"+\" veya \"-\" ekleme yapar";
             // 
             // button2
             // 
@@ -724,5 +735,6 @@
         private Button button2;
         private Button button1;
         private ToolStripMenuItem veriTabanınıYedekleToolStripMenuItem;
+        private Label label5;
     }
 }
