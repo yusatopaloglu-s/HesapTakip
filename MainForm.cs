@@ -2345,5 +2345,17 @@ namespace HesapTakip
                 UseShellExecute = true
             });
         }
+
+        private void toolTip1_Popup(object sender, PopupEventArgs e)
+        {
+
+        }
+
+        private void excelParçalaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var ef = Application.OpenForms.OfType<EFaturaxmlForm>().FirstOrDefault() ?? new EFaturaxmlForm(_db);
+            if (!ef.Visible) ef.Show();
+            ef.StartSplitInteractive();
+        }
     }
 }

@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             splitContainer1 = new SplitContainer();
             customerPanel = new Panel();
@@ -37,7 +38,6 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
-            label5 = new Label();
             button2 = new Button();
             button1 = new Button();
             link_yusa = new LinkLabel();
@@ -78,6 +78,8 @@
             modülToolStripMenuItem = new ToolStripMenuItem();
             eDefterKontorTakipToolStripMenuItem = new ToolStripMenuItem();
             eFaturaXMLExcelToolStripMenuItem = new ToolStripMenuItem();
+            excelParçalaToolStripMenuItem = new ToolStripMenuItem();
+            toolTip1 = new ToolTip(components);
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -191,7 +193,6 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
             gbTransactions.Controls.Add(button1);
             gbTransactions.Controls.Add(link_yusa);
@@ -218,15 +219,6 @@
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Location = new Point(284, 108);
-            label5.Name = "label5";
-            label5.Size = new Size(200, 15);
-            label5.TabIndex = 22;
-            label5.Text = "Klavyeden \"+\" veya \"-\" ekleme yapar";
             // 
             // button2
             // 
@@ -363,6 +355,7 @@
             btnDeleteTransaction.Size = new Size(120, 23);
             btnDeleteTransaction.TabIndex = 6;
             btnDeleteTransaction.Text = "Hareket Sil";
+            toolTip1.SetToolTip(btnDeleteTransaction, "Kaydı siler fakat veritabanında korur\r\n");
             btnDeleteTransaction.UseVisualStyleBackColor = true;
             btnDeleteTransaction.Click += btnDeleteTransaction_Click;
             // 
@@ -530,6 +523,7 @@
             txtDescription.PlaceholderText = "FaturaNo veya Tahsilat Türü Ekle-Çıkar";
             txtDescription.Size = new Size(221, 23);
             txtDescription.TabIndex = 2;
+            toolTip1.SetToolTip(txtDescription, "Otomatik Doldurma\r\nEkle ile listeye kayıt yapabilir\r\nÇıkar ile listeden çıkartabilirsiniz.");
             // 
             // dtpDate
             // 
@@ -553,6 +547,7 @@
             txtAmount.Name = "txtAmount";
             txtAmount.Size = new Size(221, 23);
             txtAmount.TabIndex = 3;
+            toolTip1.SetToolTip(txtAmount, "Klavyeden \"+\" Borç/Gelir\r\nveya \"-\" Alacak / Gider\r\nKaydı yapar");
             // 
             // label1
             // 
@@ -627,7 +622,7 @@
             // 
             // modülToolStripMenuItem
             // 
-            modülToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { eDefterKontorTakipToolStripMenuItem, eFaturaXMLExcelToolStripMenuItem });
+            modülToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { eDefterKontorTakipToolStripMenuItem, eFaturaXMLExcelToolStripMenuItem, excelParçalaToolStripMenuItem });
             modülToolStripMenuItem.Name = "modülToolStripMenuItem";
             modülToolStripMenuItem.Size = new Size(54, 20);
             modülToolStripMenuItem.Text = "Modül";
@@ -645,6 +640,20 @@
             eFaturaXMLExcelToolStripMenuItem.Size = new Size(183, 22);
             eFaturaXMLExcelToolStripMenuItem.Text = "e-Fatura XML - Excel";
             eFaturaXMLExcelToolStripMenuItem.Click += eFaturaXMLExcelToolStripMenuItem_Click;
+            // 
+            // excelParçalaToolStripMenuItem
+            // 
+            excelParçalaToolStripMenuItem.Name = "excelParçalaToolStripMenuItem";
+            excelParçalaToolStripMenuItem.Size = new Size(183, 22);
+            excelParçalaToolStripMenuItem.Text = "Excel Parçala";
+            excelParçalaToolStripMenuItem.Click += excelParçalaToolStripMenuItem_Click;
+            // 
+            // toolTip1
+            // 
+            toolTip1.AutoPopDelay = 5000;
+            toolTip1.InitialDelay = 300;
+            toolTip1.ReshowDelay = 100;
+            toolTip1.Popup += toolTip1_Popup;
             // 
             // MainForm
             // 
@@ -735,6 +744,7 @@
         private Button button2;
         private Button button1;
         private ToolStripMenuItem veriTabanınıYedekleToolStripMenuItem;
-        private Label label5;
+        private ToolTip toolTip1;
+        private ToolStripMenuItem excelParçalaToolStripMenuItem;
     }
 }

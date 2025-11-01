@@ -994,7 +994,7 @@ namespace HesapTakip
             }
         }
 
-        private async void BtnSplitAndSave_Click(object sender, EventArgs e)
+        public async void BtnSplitAndSave_Click(object sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
             {
@@ -1116,7 +1116,10 @@ namespace HesapTakip
                 }
             }
         }
-
+        public void StartSplitInteractive()
+        {
+            BtnSplitAndSave_Click(this, EventArgs.Empty);
+        }
 
         private Button btnUpload;
         private ComboBox cmbTableSelector;
