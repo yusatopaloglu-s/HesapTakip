@@ -234,8 +234,8 @@ namespace HesapTakip
                             return;
                         }
 
-                        int maxRowsPerFile = 600; // Başlık dahil toplam 600 satır
-                        int maxDataRowsPerFile = maxRowsPerFile - 1; // Başlık hariç 599 veri satırı
+                        int maxRowsPerFile = 600;
+                        int maxDataRowsPerFile = maxRowsPerFile - 1;
                         int totalDataRows = dgvData.Rows.Count;
                         int fileCount = (int)Math.Ceiling((double)totalDataRows / maxDataRowsPerFile);
 
@@ -244,16 +244,14 @@ namespace HesapTakip
                             Path.GetFileNameWithoutExtension(saveFileDialog.FileName).Replace("_Part1", "")
                         );
 
+                        var trCulture = new CultureInfo("tr-TR"); 
+
                         for (int fileIndex = 0; fileIndex < fileCount; fileIndex++)
                         {
                             string filePath = $"{baseFilePath}_Part{fileIndex + 1}.csv";
 
-                            // UTF-8 with BOM for Turkish characters
-                            using (var writer = new StreamWriter(filePath, false, Encoding.UTF8))
+                            using (var writer = CreateCsvWriter(filePath))
                             {
-                                // Write UTF-8 BOM for correct character encoding
-                                writer.Write('\uFEFF');
-
                                 // Başlık satırını yaz
                                 var headers = new List<string>();
                                 for (int col = 0; col < dgvData.Columns.Count; col++)
@@ -271,8 +269,9 @@ namespace HesapTakip
                                     var fields = new List<string>();
                                     for (int col = 0; col < dgvData.Columns.Count; col++)
                                     {
-                                        string value = dgvData.Rows[row].Cells[col].Value?.ToString() ?? "";
-                                        fields.Add(EscapeCsvField(value, ';'));
+                                        var cellValue = dgvData.Rows[row].Cells[col].Value;
+                                        string formattedValue = FormatCellForCsv(cellValue, trCulture);
+                                        fields.Add(EscapeCsvField(formattedValue, ';'));
                                     }
                                     writer.WriteLine(string.Join(";", fields));
                                 }
@@ -292,19 +291,103 @@ namespace HesapTakip
                 }
             }
         }
+        private StreamWriter CreateCsvWriter(string path, bool utf8Bom = false)
+        {
+            // For better compatibility with Excel in Turkish locale use Windows-1254 by default.
+            // If utf8Bom == true, write UTF-8 with BOM.
+            if (utf8Bom)
+                return new StreamWriter(path, false, new UTF8Encoding(true));
+
+            return new StreamWriter(path, false, Encoding.GetEncoding(1254));
+        }
+
+        private Encoding DetectFileEncoding(string path)
+        {
+            // Detect BOM if present. If none, assume Windows-1254 for Turkish CSV compatibility.
+            var bom = new byte[4];
+            try
+            {
+                using (var fs = File.OpenRead(path))
+                {
+                    int read = fs.Read(bom, 0, Math.Min(4, (int)fs.Length));
+                }
+            }
+            catch
+            {
+                return Encoding.GetEncoding(1254);
+            }
+
+            if (bom.Length >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) return Encoding.UTF8;
+            if (bom.Length >= 2 && bom[0] == 0xFF && bom[1] == 0xFE) return Encoding.Unicode; // UTF-16 LE
+            if (bom.Length >= 2 && bom[0] == 0xFE && bom[1] == 0xFF) return Encoding.BigEndianUnicode; // UTF-16 BE
+            // default to Windows-1254 for Turkish CSV/Excel compatibility
+            return Encoding.GetEncoding(1254);
+        }
+
+        private StreamWriter CreateUtf8Writer(string path)
+        {
+            return new StreamWriter(path, false, new UTF8Encoding(true));
+        }
+
+        private string FormatCellForCsv(object val, CultureInfo trCulture)
+        {
+            if (val == null || val == DBNull.Value) return "";
+
+            string result;
+            switch (val)
+            {
+                case DateTime dt:
+                    result = dt.ToString("dd.MM.yyyy", trCulture);
+                    break;
+                case double d:
+                    result = d.ToString("N2", trCulture);
+                    break;
+                case float f:
+                    result = f.ToString("N2", trCulture);
+                    break;
+                case decimal m:
+                    result = m.ToString("N2", trCulture);
+                    break;
+                case int i:
+                    result = i.ToString(trCulture);
+                    break;
+                case long l:
+                    result = l.ToString(trCulture);
+                    break;
+                case string s:
+                    // String değerlerde BOM karakterini temizle
+                    result = s.TrimStart('\uFEFF', '\u200B');
+                    break;
+                default:
+                    // Sayısal değerler için genel kontrol
+                    if (val.GetType().IsPrimitive && !(val is bool) && !(val is char))
+                    {
+                        if (double.TryParse(val.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var dbl))
+                        {
+                            result = dbl.ToString("N2", trCulture);
+                            break;
+                        }
+                    }
+                    result = val.ToString()?.TrimStart('\uFEFF', '\u200B') ?? "";
+                    break;
+            }
+
+            return result;
+        }
 
         private string EscapeCsvField(string field, char separator = ';')
         {
             if (string.IsNullOrEmpty(field))
                 return "";
 
-            // Sayısal değerlerde ondalık ayracını koru (virgül)
-            // Tarih formatını koru
+           
+            field = field.TrimStart('\uFEFF', '\u200B');
 
-            // Eğer alanda noktalı virgül, çift tırnak veya satır sonu karakteri varsa, tırnak içine al
+
+
             if (field.Contains(separator) || field.Contains("\"") || field.Contains("\r") || field.Contains("\n"))
             {
-                // İçindeki çift tırnakları çiftleyerek escape et
+                
                 field = field.Replace("\"", "\"\"");
                 return $"\"{field}\"";
             }
@@ -312,8 +395,7 @@ namespace HesapTakip
             return field;
         }
 
-  
-       
+
         private void CmbTableSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
 
@@ -994,58 +1076,58 @@ namespace HesapTakip
             }
         }
 
-        public async void BtnSplitAndSave_Click(object sender, EventArgs e)
-        {
-            using var ofd = new OpenFileDialog
-            {
-                Filter = "Excel dosyaları|*.xlsx;*.xls|CSV dosyaları|*.csv",
-                Multiselect = false
-            };
-            if (ofd.ShowDialog() != DialogResult.OK) return;
+        /* public async void BtnSplitAndSave_Click(object sender, EventArgs e)
+         {
+             using var ofd = new OpenFileDialog
+             {
+                 Filter = "Excel dosyaları|*.xlsx;*.xls|CSV dosyaları|*.csv",
+                 Multiselect = false
+             };
+             if (ofd.ShowDialog() != DialogResult.OK) return;
 
-            string sourcePath = ofd.FileName;
-            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+             string sourcePath = ofd.FileName;
+             string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
 
-            using var sfd = new SaveFileDialog
-            {
-                Filter = ext == ".csv" ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
-                FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1"
-            };
-            if (sfd.ShowDialog() != DialogResult.OK) return;
+             using var sfd = new SaveFileDialog
+             {
+                 Filter = ext == ".csv" ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
+                 FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1"
+             };
+             if (sfd.ShowDialog() != DialogResult.OK) return;
 
-            string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
-            string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
+             string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
+             string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
 
-            progressBarSplit.Value = 0;
-            progressBarSplit.Visible = true;
-            lblSplitStatus.Text = "Başlatılıyor...";
-            lblSplitStatus.Visible = true;
-            btnSplitAndSave.Enabled = false;
+             progressBarSplit.Value = 0;
+             progressBarSplit.Visible = true;
+             lblSplitStatus.Text = "Başlatılıyor...";
+             lblSplitStatus.Visible = true;
+             btnSplitAndSave.Enabled = false;
 
-            var progress = new Progress<int>(p =>
-            {
-                progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
-                lblSplitStatus.Text = $"İlerleme: {p}%";
-            });
+             var progress = new Progress<int>(p =>
+             {
+                 progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
+                 lblSplitStatus.Text = $"İlerleme: {p}%";
+             });
 
-            try
-            {
-                await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, progress));
-                MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Bölme sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                progressBarSplit.Visible = false;
-                lblSplitStatus.Visible = false;
-                btnSplitAndSave.Enabled = true;
-            }
-        }
-
-        private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, IProgress<int> progress)
+             try
+             {
+                 await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, progress));
+                 MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
+             }
+             catch (Exception ex)
+             {
+                 MessageBox.Show($"Bölme sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+             }
+             finally
+             {
+                 progressBarSplit.Visible = false;
+                 lblSplitStatus.Visible = false;
+                 btnSplitAndSave.Enabled = true;
+             }
+         }
+         */
+        /* private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, IProgress<int> progress)
         {
             const int maxRowsWithHeader = 600; // başlık dahil
             string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
@@ -1115,6 +1197,221 @@ namespace HesapTakip
                     progress.Report((int)((fi + 1) / (double)fileCount * 100));
                 }
             }
+       */
+
+        public async void BtnSplitAndSave_Click(object sender, EventArgs e)
+        {
+            using var ofd = new OpenFileDialog
+            {
+                Filter = "Excel dosyaları|*.xlsx;*.xls|CSV dosyaları|*.csv",
+                Multiselect = false
+            };
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+
+            string sourcePath = ofd.FileName;
+            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+
+            // Excel dosyası ise kullanıcıya CSV'ye dönüştürme sorusu sor
+            bool convertToCsv = false;
+            if (ext == ".xlsx" || ext == ".xls")
+            {
+                var result = MessageBox.Show(
+                    "Excel dosyasını CSV formatına dönüştürmek istiyor musunuz?",
+                    "Dönüştürme Seçeneği",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                convertToCsv = (result == DialogResult.Yes);
+            }
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = convertToCsv ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
+                FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1" + (convertToCsv ? ".csv" : ".xlsx")
+            };
+
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+
+            string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
+            string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
+
+            progressBarSplit.Value = 0;
+            progressBarSplit.Visible = true;
+            lblSplitStatus.Text = "Başlatılıyor...";
+            lblSplitStatus.Visible = true;
+            btnSplitAndSave.Enabled = false;
+
+            var progress = new Progress<int>(p =>
+            {
+                progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
+                lblSplitStatus.Text = $"İlerleme: {p}%";
+            });
+
+            try
+            {
+                await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, convertToCsv, progress));
+                MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Bölme sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                progressBarSplit.Visible = false;
+                lblSplitStatus.Visible = false;
+                btnSplitAndSave.Enabled = true;
+            }
+        }
+
+        private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, bool convertToCsv, IProgress<int> progress)
+        {
+            const int maxRowsWithHeader = 600; // başlık dahil
+            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
+
+            // CSV'ye dönüştürme seçeneği aktifse veya orijinal dosya CSV ise CSV formatında kaydet
+            bool useCsvFormat = convertToCsv || ext == ".csv";
+
+            if (useCsvFormat)
+            {
+                // Excel dosyasını CSV'ye dönüştür veya CSV dosyasını işle
+                if (ext == ".xlsx" || ext == ".xls")
+                {
+                    // Excel'i CSV'ye dönüştür ve parçala
+                    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                    using var p = new ExcelPackage(new FileInfo(sourcePath));
+                    var ws = p.Workbook.Worksheets.FirstOrDefault();
+                    if (ws == null || ws.Dimension == null) return;
+
+                    int totalRows = ws.Dimension.End.Row;
+                    int totalCols = ws.Dimension.End.Column;
+                    int headerRows = 1;
+                    int dataRows = Math.Max(0, totalRows - headerRows);
+                    int perFile = maxRowsWithHeader - headerRows;
+                    int fileCount = Math.Max(1, (int)Math.Ceiling((double)dataRows / perFile));
+
+                    var trCulture = new CultureInfo("tr-TR");
+
+                    for (int fi = 0; fi < fileCount; fi++)
+                    {
+                        var outPath = Path.Combine(targetDir, $"{baseName}_Part{fi + 1}.csv");
+                        using var writer = CreateCsvWriter(outPath);
+
+                        // Başlık satırını yaz - Excel dosyasının 1. satırındaki hücreleri kullan
+                        var headerValues = new List<string>();
+                        for (int c = 1; c <= totalCols; c++)
+                        {
+                            var headerCellVal = ws.Cells[1, c].Value;
+                            string headerText = FormatCellForCsv(headerCellVal, trCulture);
+                            headerText = headerText.TrimStart('\uFEFF', '\u200B');
+                            headerValues.Add(EscapeCsvField(headerText, ';'));
+                        }
+                        writer.WriteLine(string.Join(";", headerValues));
+
+                        // Veri satırlarını yaz
+                        int startRow = fi * perFile + headerRows + 1;
+                        int endRow = Math.Min(totalRows, startRow + perFile - 1);
+
+                        for (int r = startRow; r <= endRow; r++)
+                        {
+                            var rowValues = new List<string>();
+                            for (int c = 1; c <= totalCols; c++)
+                            {
+                                rowValues.Add(EscapeCsvField(FormatCellForCsv(ws.Cells[r, c].Value, trCulture), ';'));
+                            }
+                            writer.WriteLine(string.Join(";", rowValues));
+                        }
+
+                        progress.Report((int)((fi + 1) / (double)fileCount * 100));
+                    }
+                }
+                else
+                {
+                    // Orijinal CSV dosyasını parçala
+                    var sourceEnc = DetectFileEncoding(sourcePath);
+                    var allLines = File.ReadAllLines(sourcePath, sourceEnc);
+                    if (allLines.Length == 0) return;
+
+                    // Remove BOM from header line if present
+                    string header = allLines[0].TrimStart('\uFEFF');
+                    int totalData = Math.Max(0, allLines.Length - 1);
+                    int perFile = maxRowsWithHeader - 1;
+                    int fileCount = Math.Max(1, (int)Math.Ceiling((double)totalData / perFile));
+
+                    for (int i = 0; i < fileCount; i++)
+                    {
+                        int start = 1 + (i * perFile);
+                        int end = Math.Min(allLines.Length - 1, start + perFile - 1);
+                        var outPath = Path.Combine(targetDir, $"{baseName}_Part{i + 1}.csv");
+                        using var sw = CreateCsvWriter(outPath);
+                        sw.WriteLine(header);
+                        for (int r = start; r <= end; r++) sw.WriteLine(allLines[r]);
+
+                        progress.Report((int)((i + 1) / (double)fileCount * 100));
+                    }
+                }
+            }
+            else
+            {
+                // Excel formatında parçala (orijinal kod)
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                using var p = new ExcelPackage(new FileInfo(sourcePath));
+                var ws = p.Workbook.Worksheets.FirstOrDefault();
+                if (ws == null || ws.Dimension == null) return;
+
+                int totalRows = ws.Dimension.End.Row;
+                int totalCols = ws.Dimension.End.Column;
+                int headerRows = 1;
+                int dataRows = Math.Max(0, totalRows - headerRows);
+                int perFile = maxRowsWithHeader - headerRows;
+                int fileCount = Math.Max(1, (int)Math.Ceiling((double)dataRows / perFile));
+
+                for (int fi = 0; fi < fileCount; fi++)
+                {
+                    var outPath = Path.Combine(targetDir, $"{baseName}_Part{fi + 1}.xlsx");
+                    using var outPkg = new ExcelPackage(new FileInfo(outPath));
+                    var outWs = outPkg.Workbook.Worksheets.Add(ws.Name ?? "Sheet1");
+
+                    // Başlık kopyala
+                    for (int c = 1; c <= totalCols; c++)
+                        outWs.Cells[1, c].Value = ws.Cells[1, c].Value;
+
+                    int startRow = fi * perFile + headerRows + 1;
+                    int endRow = Math.Min(totalRows, startRow + perFile - 1);
+                    int outRow = headerRows + 1;
+
+                    for (int r = startRow; r <= endRow; r++)
+                    {
+                        for (int c = 1; c <= totalCols; c++)
+                            outWs.Cells[outRow, c].Value = ws.Cells[r, c].Value;
+                        outRow++;
+                    }
+
+                    outWs.Cells.AutoFitColumns();
+                    outPkg.Save();
+
+                    progress.Report((int)((fi + 1) / (double)fileCount * 100));
+                }
+            }
+        }
+
+        private string NormalizeHeader(string header)
+        {
+            if (string.IsNullOrEmpty(header))
+                return header;
+
+            
+            header = header.TrimStart('\uFEFF', '\u200B');
+
+            
+            if (header.Contains("#"))
+            {
+                
+                return header;
+            }
+
+            return header;
         }
         public void StartSplitInteractive()
         {
