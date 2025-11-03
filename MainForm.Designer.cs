@@ -249,6 +249,8 @@
             btn_showdeletedtransactions.TabIndex = 20;
             btn_showdeletedtransactions.Text = "Silinenleri Göster";
             btn_showdeletedtransactions.UseVisualStyleBackColor = true;
+            btn_showdeletedtransactions.Visible = false;
+            btn_showdeletedtransactions.Click += btn_showdeletedtransactions_Click;
             // 
             // btnSaveToDb
             // 

@@ -690,7 +690,7 @@ namespace HesapTakip
                 if (isDeleted && _showingDeletedCustomers)
                 {
                     // Silinmiş müşteri - sadece görüntüleme modunda
-                    
+
                     dgvTransactions.ReadOnly = true;
                     StatustLabel_info.Text = "Bu müşteri silinmiş durumda. Sadece görüntüleme yapabilirsiniz.";
                     btnAddTransaction.Enabled = false;
@@ -712,7 +712,7 @@ namespace HesapTakip
                 else if (isDeleted && !_showingDeletedCustomers)
                 {
                     // Aktif listede silinmiş müşteri bulunmamalı, ama yine de işlem yapma
-                    
+
                     StatustLabel_info.Text = "---Silinen Müşteriler Sayfasındasınız !";
                     dgvTransactions.ReadOnly = true;
                     btnAddTransaction.Enabled = false;
@@ -2526,6 +2526,11 @@ namespace HesapTakip
                 MessageBox.Show("Silinmiş müşteriler yüklenirken hata: " + ex.Message, "Hata",
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void btn_showdeletedtransactions_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
