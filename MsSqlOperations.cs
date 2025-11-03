@@ -1,11 +1,7 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Collections.Generic;
 
 namespace HesapTakip
 {
@@ -73,9 +69,9 @@ namespace HesapTakip
                     conn.Open();
                     // Create database if not exists
                     string sql = $@"IF DB_ID(N'{databaseName}') IS NULL
-BEGIN
-    CREATE DATABASE [{databaseName}];
-END";
+                        BEGIN
+                          CREATE DATABASE [{databaseName}];
+                            END";
                     using (var cmd = new SqlCommand(sql, conn))
                     {
                         cmd.ExecuteNonQuery();
@@ -115,7 +111,8 @@ END";
                         { "Name", "NVARCHAR(255) NOT NULL" },
                         { "EDefter", "INT DEFAULT 0" },
                         { "Taxid","NVARCHAR(11) DEFAULT NULL" },
-                        { "ActivityCode","NVARCHAR(6) DEFAULT NULL" }
+                        { "ActivityCode","NVARCHAR(6) DEFAULT NULL" },
+                        { "IsDeleted", "BIT DEFAULT 0" }
                     }, conn);
 
                     // Transactions tablosu - MSSQL uyumlu
@@ -230,7 +227,7 @@ END";
         {
             var dt = new DataTable();
             using (var conn = new SqlConnection(_connectionString))
-            using (var adapter = new SqlDataAdapter("SELECT * FROM Customers", conn))
+            using (var adapter = new SqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode,IsDeleted FROM Customers WHERE IsDeleted = 0", conn))
             {
                 adapter.Fill(dt);
             }
@@ -261,13 +258,13 @@ END";
             }
         }
 
-        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null)
+        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null, bool deleted = false)
         {
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
                 using (var cmd = new SqlCommand(
-                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode WHERE CustomerID = @id", conn))
+                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode, IsDeleted = @deleted WHERE CustomerID = @id", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", newName);
@@ -275,6 +272,7 @@ END";
                     cmd.Parameters.AddWithValue("@id", customerId);
                     cmd.Parameters.AddWithValue("@taxid", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
                     cmd.Parameters.AddWithValue("@activitycode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
+                    cmd.Parameters.AddWithValue("@deleted", deleted ? 1 : 0);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -286,41 +284,63 @@ END";
             }
         }
 
+        /*  public bool DeleteCustomer(int customerId)
+          {
+              try
+              {
+                  using (var conn = new SqlConnection(_connectionString))
+                  {
+                      conn.Open();
+
+                      using (var transaction = conn.BeginTransaction())
+                      {
+                          try
+                          {
+                              // Önce Transactions tablosundan sil
+                              using (var cmd1 = new SqlCommand("DELETE FROM Transactions WHERE CustomerID = @id", conn, transaction))
+                              {
+                                  cmd1.Parameters.AddWithValue("@id", customerId);
+                                  cmd1.ExecuteNonQuery();
+                              }
+
+                              // Sonra Customers tablosundan sil
+                              using (var cmd2 = new SqlCommand("DELETE FROM Customers WHERE CustomerID = @id", conn, transaction))
+                              {
+                                  cmd2.Parameters.AddWithValue("@id", customerId);
+                                  cmd2.ExecuteNonQuery();
+                              }
+
+                              transaction.Commit();
+                              return true;
+                          }
+                          catch
+                          {
+                              transaction.Rollback();
+                              throw;
+                          }
+                      }
+                  }
+              }
+              catch (Exception ex)
+              {
+                  System.Diagnostics.Debug.WriteLine($"MSSQL DeleteCustomer hatası: {ex.Message}");
+                  return false;
+              }
+          }
+          */
+
         public bool DeleteCustomer(int customerId)
         {
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "UPDATE Customers SET IsDeleted = 1 WHERE CustomerID = @id", conn))
                 {
                     conn.Open();
-
-                    using (var transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Önce Transactions tablosundan sil
-                            using (var cmd1 = new SqlCommand("DELETE FROM Transactions WHERE CustomerID = @id", conn, transaction))
-                            {
-                                cmd1.Parameters.AddWithValue("@id", customerId);
-                                cmd1.ExecuteNonQuery();
-                            }
-
-                            // Sonra Customers tablosundan sil
-                            using (var cmd2 = new SqlCommand("DELETE FROM Customers WHERE CustomerID = @id", conn, transaction))
-                            {
-                                cmd2.Parameters.AddWithValue("@id", customerId);
-                                cmd2.ExecuteNonQuery();
-                            }
-
-                            transaction.Commit();
-                            return true;
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
+                    cmd.Parameters.AddWithValue("@id", customerId);
+                    cmd.ExecuteNonQuery();
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -328,6 +348,17 @@ END";
                 System.Diagnostics.Debug.WriteLine($"MSSQL DeleteCustomer hatası: {ex.Message}");
                 return false;
             }
+        }
+
+        public DataTable GetDeletedCustomers()
+        {
+            var dt = new DataTable();
+            using (var conn = new SqlConnection(_connectionString))
+            using (var adapter = new SqlDataAdapter("SELECT CustomerID, Name, EDefter, Taxid, ActivityCode, IsDeleted FROM Customers WHERE IsDeleted = 1", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
         }
 
         public DataTable GetTransactions(int customerId)

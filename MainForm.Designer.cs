@@ -32,6 +32,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             splitContainer1 = new SplitContainer();
             customerPanel = new Panel();
+            btn_showdeletedcustomers = new Button();
             label4 = new Label();
             btnEditCustomer = new Button();
             btnDeleteCustomer = new Button();
@@ -39,7 +40,7 @@
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
             button2 = new Button();
-            button1 = new Button();
+            btn_showdeletedtransactions = new Button();
             link_yusa = new LinkLabel();
             statusStrip1 = new StatusStrip();
             progressBar1 = new ToolStripProgressBar();
@@ -116,6 +117,7 @@
             // 
             customerPanel.AutoSize = true;
             customerPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            customerPanel.Controls.Add(btn_showdeletedcustomers);
             customerPanel.Controls.Add(label4);
             customerPanel.Controls.Add(btnEditCustomer);
             customerPanel.Controls.Add(btnDeleteCustomer);
@@ -126,6 +128,16 @@
             customerPanel.Name = "customerPanel";
             customerPanel.Size = new Size(261, 569);
             customerPanel.TabIndex = 0;
+            // 
+            // btn_showdeletedcustomers
+            // 
+            btn_showdeletedcustomers.Location = new Point(128, 543);
+            btn_showdeletedcustomers.Name = "btn_showdeletedcustomers";
+            btn_showdeletedcustomers.Size = new Size(116, 23);
+            btn_showdeletedcustomers.TabIndex = 5;
+            btn_showdeletedcustomers.Text = "Silinenleri Göster";
+            btn_showdeletedcustomers.UseVisualStyleBackColor = true;
+            btn_showdeletedcustomers.Click += btn_showdeletedcustomers_Click;
             // 
             // label4
             // 
@@ -194,7 +206,7 @@
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             gbTransactions.Controls.Add(button2);
-            gbTransactions.Controls.Add(button1);
+            gbTransactions.Controls.Add(btn_showdeletedtransactions);
             gbTransactions.Controls.Add(link_yusa);
             gbTransactions.Controls.Add(statusStrip1);
             gbTransactions.Controls.Add(btnSaveToDb);
@@ -230,15 +242,14 @@
             button2.UseVisualStyleBackColor = true;
             button2.Visible = false;
             // 
-            // button1
+            // btn_showdeletedtransactions
             // 
-            button1.Location = new Point(466, 218);
-            button1.Name = "button1";
-            button1.Size = new Size(120, 23);
-            button1.TabIndex = 20;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Visible = false;
+            btn_showdeletedtransactions.Location = new Point(466, 218);
+            btn_showdeletedtransactions.Name = "btn_showdeletedtransactions";
+            btn_showdeletedtransactions.Size = new Size(120, 23);
+            btn_showdeletedtransactions.TabIndex = 20;
+            btn_showdeletedtransactions.Text = "Silinenleri Göster";
+            btn_showdeletedtransactions.UseVisualStyleBackColor = true;
             // 
             // link_yusa
             // 
@@ -462,8 +473,8 @@
             btnAddTransaction.Size = new Size(120, 23);
             btnAddTransaction.TabIndex = 4;
             btnAddTransaction.Text = "Hareket Ekle";
+            toolTip1.SetToolTip(btnAddTransaction, "Klavyeden \"+\" Borç/Gelir\r\nveya \"-\" Alacak / Gider\r\nKaydı yapar\r\n");
             btnAddTransaction.UseVisualStyleBackColor = true;
-            btnAddTransaction.Visible = false;
             btnAddTransaction.Click += btnAddTransaction_Click;
             // 
             // tableLayoutPanel1
@@ -650,9 +661,11 @@
             // 
             // toolTip1
             // 
-            toolTip1.AutoPopDelay = 5000;
-            toolTip1.InitialDelay = 300;
+            toolTip1.AutomaticDelay = 100;
+            toolTip1.AutoPopDelay = 1000;
+            toolTip1.InitialDelay = 100;
             toolTip1.ReshowDelay = 100;
+            toolTip1.ShowAlways = true;
             toolTip1.Popup += toolTip1_Popup;
             // 
             // MainForm
@@ -742,9 +755,10 @@
         private ToolStripStatusLabel toolStripStatusLabelVersion;
         private ToolStripMenuItem eFaturaXMLExcelToolStripMenuItem;
         private Button button2;
-        private Button button1;
+        private Button btn_showdeletedtransactions;
         private ToolStripMenuItem veriTabanınıYedekleToolStripMenuItem;
         private ToolTip toolTip1;
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
+        private Button btn_showdeletedcustomers;
     }
 }

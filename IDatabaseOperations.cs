@@ -12,8 +12,9 @@ namespace HesapTakip
         // Müşteri işlemleri
         DataTable GetCustomers();
         bool AddCustomer(string name, bool edefter, string taxid = null, string activitycode = null);
-        bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null);
+        bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null, bool deleted = false);
         bool DeleteCustomer(int customerId);
+        DataTable GetDeletedCustomers();
 
         // Hareket işlemleri
         DataTable GetTransactions(int customerId);
