@@ -112,7 +112,7 @@ namespace HesapTakip
                         try
                         {
                             LoadCustomers();
-                            
+
                             InitializeAutoComplete();
                             LoadSuggestions();
                             dtpDate.Value = DateTime.Today;
@@ -673,33 +673,51 @@ namespace HesapTakip
         {
             if (dgvCustomers.CurrentRow == null) return;
 
-            var isDeleted = false;
-            if (dgvCustomers.Columns["IsDeleted"] != null && dgvCustomers.CurrentRow.Cells["IsDeleted"].Value != null)
+            try
             {
-                isDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
-            }
-
-            if (!isDeleted && !_showingDeletedCustomers)
-            {
-                // Aktif müşteri - normal işlemler
                 var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+                var isDeleted = false;
+
+                if (dgvCustomers.Columns["IsDeleted"] != null && dgvCustomers.CurrentRow.Cells["IsDeleted"].Value != null)
+                {
+                    isDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
+                }
+
+                // SİLİNMİŞ MÜŞTERİLER DE DAHİL TÜM MÜŞTERİLER İÇİN HESAP HAREKETLERİNİ YÜKLE
                 LoadTransactions(customerID);
-                gbTransactions.Enabled = true;
                 CalculateAndDisplayTotal(customerID);
-            }
-            else
-            {
-                // Silinmiş müşteri veya silinmiş müşteriler listesindeyse
-                gbTransactions.Enabled = false;
-                dgvTransactions.DataSource = null;
-                lblTotal.Text = "Toplam Bakiye: 0,00 ₺";
 
                 if (isDeleted && _showingDeletedCustomers)
                 {
-                    // Silinmiş müşteri seçildiğinde bilgi ver
-                    var customerName = dgvCustomers.CurrentRow.Cells["Name"].Value?.ToString() ?? "bu müşteri";
-                    statusLabel.Text = $"{customerName} silinmiş durumda. Geri almak için düzenle butonunu kullanın.";
+                    // Silinmiş müşteri - sadece görüntüleme modunda
+                    //gbTransactions.Enabled = false;
+                    dgvTransactions.ReadOnly = true;
+                    statusLabel.Text = "Bu müşteri silinmiş durumda. Sadece görüntüleme yapabilirsiniz.";
+
+
                 }
+                else if (isDeleted && !_showingDeletedCustomers)
+                {
+                    // Aktif listede silinmiş müşteri bulunmamalı, ama yine de işlem yapma
+                    //gbTransactions.Enabled = false;
+                    statusLabel.Text = "Bu müşteri silinmiş durumda.";
+
+
+
+                }
+                else
+                {
+                    // Aktif müşteri - tüm işlemler aktif
+                    //gbTransactions.Enabled = true;
+                    statusLabel.Text = "";
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Müşteri bilgileri yüklenirken hata: " + ex.Message, "Hata",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         private void ClearTransactionInputs()
@@ -2414,11 +2432,6 @@ namespace HesapTakip
                 btn_showdeletedcustomers.Click -= btn_showdeletedcustomers_Click;
                 btn_showdeletedcustomers.Click += btn_showActiveCustomers_Click;
 
-                // İşlemler panelini devre dışı bırak (silinmiş müşteri seçiliyse)
-                gbTransactions.Enabled = false;
-                  dgvTransactions.DataSource = dgvTransactions;
-                 lblTotal.Text = "Toplam Bakiye: 0,00 ₺";
-
 
                 MessageBox.Show("Silinmiş müşteriler listelendi. Bir müşteriyi geri almak için düzenle butonunu kullanın.", "Bilgi",
                                MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2440,7 +2453,7 @@ namespace HesapTakip
                 btn_showdeletedcustomers.Text = "Silinmiş Müşterileri Göster";
                 btn_showdeletedcustomers.Click -= btn_showActiveCustomers_Click;
                 btn_showdeletedcustomers.Click += btn_showdeletedcustomers_Click;
-             
+
 
 
             }
@@ -2471,6 +2484,19 @@ namespace HesapTakip
                 if (dgvCustomers.Columns["IsDeleted"] != null)
                     dgvCustomers.Columns["IsDeleted"].Visible = false;
 
+                btnAddTransaction.Enabled = false;
+                btnDeleteTransaction.Enabled = false;
+                btnEditTransaction.Enabled = false;
+                btnExportPdf.Enabled = true;
+                btnImportExcel.Enabled = false;
+                btnSaveToDb.Enabled = false;
+                btnAddDescipt.Enabled = false; 
+                btnRemoveDescipt.Enabled = false; 
+                txtAmount.Enabled = false;
+                txtDescription.Enabled = false;
+                dtpDate.Enabled = false;
+
+
             }
             catch (Exception ex)
             {
@@ -2478,5 +2504,5 @@ namespace HesapTakip
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        }
     }
+}
