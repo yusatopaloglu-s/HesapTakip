@@ -283,51 +283,7 @@ namespace HesapTakip
                 return false;
             }
         }
-
-        /*  public bool DeleteCustomer(int customerId)
-          {
-              try
-              {
-                  using (var conn = new SqlConnection(_connectionString))
-                  {
-                      conn.Open();
-
-                      using (var transaction = conn.BeginTransaction())
-                      {
-                          try
-                          {
-                              // Önce Transactions tablosundan sil
-                              using (var cmd1 = new SqlCommand("DELETE FROM Transactions WHERE CustomerID = @id", conn, transaction))
-                              {
-                                  cmd1.Parameters.AddWithValue("@id", customerId);
-                                  cmd1.ExecuteNonQuery();
-                              }
-
-                              // Sonra Customers tablosundan sil
-                              using (var cmd2 = new SqlCommand("DELETE FROM Customers WHERE CustomerID = @id", conn, transaction))
-                              {
-                                  cmd2.Parameters.AddWithValue("@id", customerId);
-                                  cmd2.ExecuteNonQuery();
-                              }
-
-                              transaction.Commit();
-                              return true;
-                          }
-                          catch
-                          {
-                              transaction.Rollback();
-                              throw;
-                          }
-                      }
-                  }
-              }
-              catch (Exception ex)
-              {
-                  System.Diagnostics.Debug.WriteLine($"MSSQL DeleteCustomer hatası: {ex.Message}");
-                  return false;
-              }
-          }
-          */
+             
 
         public bool DeleteCustomer(int customerId)
         {

@@ -658,17 +658,6 @@ namespace HesapTakip
             }
         }
 
-        /*   public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
-           {
-               if (dgvCustomers.CurrentRow != null)
-               {
-                   var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
-                   LoadTransactions(customerID);
-                   gbTransactions.Enabled = true;
-                   CalculateAndDisplayTotal(customerID);
-               }
-           }
-           */
         public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvCustomers.CurrentRow == null) return;

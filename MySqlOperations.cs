@@ -242,52 +242,7 @@ namespace HesapTakip
                 return false;
             }
         }
-
-       /* public bool DeleteCustomer(int customerId)
-        {
-            try
-            {
-                using (var conn = new MySqlConnection(_connectionString))
-                using (var cmd = new MySqlCommand())
-                  {
-                     cmd.Connection = conn;
-                     conn.Open();
-
-                     using (var transaction = conn.BeginTransaction())
-                     {
-                         try
-                         {
-                             cmd.Transaction = transaction;
-
-                             // Önce Transactions tablosundan sil
-                             cmd.CommandText = "DELETE FROM Transactions WHERE CustomerID = @id";
-                             cmd.Parameters.AddWithValue("@id", customerId);
-                             cmd.ExecuteNonQuery();
-
-                             // Sonra Customers tablosundan sil
-                             cmd.CommandText = "DELETE FROM Customers WHERE CustomerID = @id";
-                             cmd.ExecuteNonQuery();
-
-                             transaction.Commit();
-                             return true;
-
-                             transaction.Commit();
-                             return true;
-                         }
-                         catch
-                         {
-                             transaction.Rollback();
-                             throw;
-                         }
-                     }
-                 }
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        */
+            
         public bool DeleteCustomer(int customerId)
         {
             try
