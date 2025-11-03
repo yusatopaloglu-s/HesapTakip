@@ -690,27 +690,63 @@ namespace HesapTakip
                 if (isDeleted && _showingDeletedCustomers)
                 {
                     // Silinmiş müşteri - sadece görüntüleme modunda
-                    //gbTransactions.Enabled = false;
+                    
                     dgvTransactions.ReadOnly = true;
-                    statusLabel.Text = "Bu müşteri silinmiş durumda. Sadece görüntüleme yapabilirsiniz.";
+                    StatustLabel_info.Text = "Bu müşteri silinmiş durumda. Sadece görüntüleme yapabilirsiniz.";
+                    btnAddTransaction.Enabled = false;
+                    btnDeleteTransaction.Enabled = false;
+                    btnEditTransaction.Enabled = false;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = false;
+                    btnSaveToDb.Enabled = false;
+                    btnAddDescipt.Enabled = false;
+                    btnRemoveDescipt.Enabled = false;
+                    txtAmount.Enabled = false;
+                    txtDescription.Enabled = false;
+                    dtpDate.Enabled = false;
+                    btn_showdeletedtransactions.Enabled = false;
+
 
 
                 }
                 else if (isDeleted && !_showingDeletedCustomers)
                 {
                     // Aktif listede silinmiş müşteri bulunmamalı, ama yine de işlem yapma
-                    //gbTransactions.Enabled = false;
-                    statusLabel.Text = "Bu müşteri silinmiş durumda.";
-
+                    
+                    StatustLabel_info.Text = "---Silinen Müşteriler Sayfasındasınız !";
+                    dgvTransactions.ReadOnly = true;
+                    btnAddTransaction.Enabled = false;
+                    btnDeleteTransaction.Enabled = false;
+                    btnEditTransaction.Enabled = false;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = false;
+                    btnSaveToDb.Enabled = false;
+                    btnAddDescipt.Enabled = false;
+                    btnRemoveDescipt.Enabled = false;
+                    txtAmount.Enabled = false;
+                    txtDescription.Enabled = false;
+                    dtpDate.Enabled = false;
+                    btn_showdeletedtransactions.Enabled = false;
 
 
                 }
                 else
                 {
                     // Aktif müşteri - tüm işlemler aktif
-                    //gbTransactions.Enabled = true;
-                    statusLabel.Text = "";
-
+                    gbTransactions.Enabled = true;
+                    StatustLabel_info.Text = "";
+                    btnAddTransaction.Enabled = true;
+                    btnDeleteTransaction.Enabled = true;
+                    btnEditTransaction.Enabled = true;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = true;
+                    btnSaveToDb.Enabled = true;
+                    btnAddDescipt.Enabled = true;
+                    btnRemoveDescipt.Enabled = true;
+                    txtAmount.Enabled = true;
+                    txtDescription.Enabled = true;
+                    dtpDate.Enabled = true;
+                    btn_showdeletedtransactions.Enabled = true;
 
                 }
             }
@@ -2483,19 +2519,6 @@ namespace HesapTakip
                     dgvCustomers.Columns["ActivityCode"].Visible = false;
                 if (dgvCustomers.Columns["IsDeleted"] != null)
                     dgvCustomers.Columns["IsDeleted"].Visible = false;
-
-                btnAddTransaction.Enabled = false;
-                btnDeleteTransaction.Enabled = false;
-                btnEditTransaction.Enabled = false;
-                btnExportPdf.Enabled = true;
-                btnImportExcel.Enabled = false;
-                btnSaveToDb.Enabled = false;
-                btnAddDescipt.Enabled = false; 
-                btnRemoveDescipt.Enabled = false; 
-                txtAmount.Enabled = false;
-                txtDescription.Enabled = false;
-                dtpDate.Enabled = false;
-
 
             }
             catch (Exception ex)

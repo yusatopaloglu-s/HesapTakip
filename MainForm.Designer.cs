@@ -71,6 +71,7 @@
             progressBar1 = new ToolStripProgressBar();
             statusLabel = new ToolStripStatusLabel();
             toolStripStatusLabelVersion = new ToolStripStatusLabel();
+            StatustLabel_info = new ToolStripStatusLabel();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
@@ -569,7 +570,7 @@
             // 
             // statusStrip1
             // 
-            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion });
+            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion, StatustLabel_info });
             statusStrip1.Location = new Point(0, 571);
             statusStrip1.Name = "statusStrip1";
             statusStrip1.Size = new Size(866, 22);
@@ -590,6 +591,11 @@
             // 
             toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
             toolStripStatusLabelVersion.Size = new Size(0, 17);
+            // 
+            // StatustLabel_info
+            // 
+            StatustLabel_info.Name = "StatustLabel_info";
+            StatustLabel_info.Size = new Size(0, 17);
             // 
             // menuStrip1
             // 
@@ -759,5 +765,6 @@
         private ToolTip toolTip1;
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
         private Button btn_showdeletedcustomers;
+        private ToolStripStatusLabel StatustLabel_info;
     }
 }
