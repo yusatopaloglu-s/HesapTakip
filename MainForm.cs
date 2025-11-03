@@ -2494,6 +2494,7 @@ namespace HesapTakip
             try
             {
                 dgvCustomers.Columns.Clear();
+                dgvTransactions.Columns.Clear();
                 var dt = _db.GetDeletedCustomers();
                 dgvCustomers.DataSource = dt;
 

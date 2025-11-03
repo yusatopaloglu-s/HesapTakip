@@ -132,6 +132,7 @@
             // 
             // btn_showdeletedcustomers
             // 
+            btn_showdeletedcustomers.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btn_showdeletedcustomers.Location = new Point(134, 518);
             btn_showdeletedcustomers.Name = "btn_showdeletedcustomers";
             btn_showdeletedcustomers.Size = new Size(116, 23);
