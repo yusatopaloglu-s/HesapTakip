@@ -124,7 +124,8 @@ namespace HesapTakip
                     { "Name", "TEXT NOT NULL" },
                     { "EDefter", "INTEGER DEFAULT 0" },
                     { "Taxid","TEXT DEFAULT NULL" },
-                    { "ActivityCode","TEXT DEFAULT NULL" }
+                    { "ActivityCode","TEXT DEFAULT NULL" },
+                    { "IsDeleted", "INTEGER DEFAULT 0" }
                 }, conn);
 
                 // Transactions tablosu - SQLite uyumlu
@@ -210,7 +211,7 @@ namespace HesapTakip
         {
             var dt = new DataTable();
             using (var conn = new SQLiteConnection(_connectionString))
-            using (var adapter = new SQLiteDataAdapter("SELECT * FROM Customers", conn))
+            using (var adapter = new SQLiteDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode,IsDeleted FROM Customers WHERE IsDeleted = 0", conn))
             {
                 adapter.Fill(dt);
             }
@@ -241,13 +242,13 @@ namespace HesapTakip
             }
         }
 
-        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null)
+        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null, bool deleted = false)
         {
             try
             {
                 using (var conn = new SQLiteConnection(_connectionString))
                 using (var cmd = new SQLiteCommand(
-                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode WHERE CustomerID = @id", conn))
+                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode, IsDeleted = @deleted WHERE CustomerID = @id", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", newName);
@@ -255,6 +256,7 @@ namespace HesapTakip
                     cmd.Parameters.AddWithValue("@id", customerId);
                     cmd.Parameters.AddWithValue("@taxid", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
                     cmd.Parameters.AddWithValue("@activitycode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
+                    cmd.Parameters.AddWithValue("@deleted", deleted ? 1 : 0);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -265,42 +267,19 @@ namespace HesapTakip
                 return false;
             }
         }
-
+               
         public bool DeleteCustomer(int customerId)
         {
             try
             {
                 using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand(
+                    "UPDATE Customers SET IsDeleted = 1 WHERE customerId = @id", conn))
                 {
                     conn.Open();
-
-                    using (var transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Önce Transactions tablosundan sil
-                            using (var cmd1 = new SQLiteCommand("DELETE FROM Transactions WHERE CustomerID = @id", conn, transaction))
-                            {
-                                cmd1.Parameters.AddWithValue("@id", customerId);
-                                cmd1.ExecuteNonQuery();
-                            }
-
-                            // Sonra Customers tablosundan sil
-                            using (var cmd2 = new SQLiteCommand("DELETE FROM Customers WHERE CustomerID = @id", conn, transaction))
-                            {
-                                cmd2.Parameters.AddWithValue("@id", customerId);
-                                cmd2.ExecuteNonQuery();
-                            }
-
-                            transaction.Commit();
-                            return true;
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
+                    cmd.Parameters.AddWithValue("@id", customerId);
+                    cmd.ExecuteNonQuery();
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -308,6 +287,16 @@ namespace HesapTakip
                 Logger.Log($"SQLite DeleteCustomer hatası: {ex.Message}");
                 return false;
             }
+        }
+        public DataTable GetDeletedCustomers()
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT CustomerID, Name, EDefter, Taxid, ActivityCode, IsDeleted FROM Customers WHERE IsDeleted = 1", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
         }
 
         public DataTable GetTransactions(int customerId)

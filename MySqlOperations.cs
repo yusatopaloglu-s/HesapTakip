@@ -1,3 +1,6 @@
+using DocumentFormat.OpenXml.Office.Word;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using DocumentFormat.OpenXml.Wordprocessing;
 using MySql.Data.MySqlClient;
 using System.Data;
 using System.Text.Json;
@@ -95,7 +98,8 @@ namespace HesapTakip
                     { "Name", "VARCHAR(255) NOT NULL" },
                     { "EDefter", "INT DEFAULT 0" },
                     { "Taxid","VARCHAR(11) DEFAULT NULL" },
-                    { "ActivityCode","VARCHAR(6) DEFAULT NULL" }
+                    { "ActivityCode","VARCHAR(6) DEFAULT NULL" },
+                    { "IsDeleted", "TINYINT(1) DEFAULT 0" }
                 }, conn);
 
                 // Transactions tablosu  
@@ -182,7 +186,7 @@ namespace HesapTakip
         {
             var dt = new DataTable();
             using (var conn = new MySqlConnection(_connectionString))
-            using (var adapter = new MySqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode FROM Customers", conn))
+            using (var adapter = new MySqlDataAdapter("SELECT CustomerID,Name,EDefter,Taxid,ActivityCode,IsDeleted FROM Customers WHERE IsDeleted = 0", conn))
             {
                 adapter.Fill(dt);
             }
@@ -214,13 +218,13 @@ namespace HesapTakip
             }
         }
 
-        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null)
+        public bool UpdateCustomer(int customerId, string newName, bool edefter, string taxid = null, string activitycode = null, bool deleted = false)
         {
             try
             {
                 using (var conn = new MySqlConnection(_connectionString))
                 using (var cmd = new MySqlCommand(
-                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode WHERE CustomerID = @id", conn))
+                    "UPDATE Customers SET Name = @name, EDefter = @edefter, Taxid = @taxid, ActivityCode = @activitycode, IsDeleted = @deleted WHERE CustomerID = @id", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@name", newName);
@@ -228,6 +232,27 @@ namespace HesapTakip
                     cmd.Parameters.AddWithValue("@id", customerId);
                     cmd.Parameters.AddWithValue("@taxid", string.IsNullOrEmpty(taxid) ? (object)DBNull.Value : taxid);
                     cmd.Parameters.AddWithValue("@activitycode", string.IsNullOrEmpty(activitycode) ? (object)DBNull.Value : activitycode);
+                    cmd.Parameters.AddWithValue("@deleted", deleted ? 1 : 0);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+            
+        public bool DeleteCustomer(int customerId)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(_connectionString))
+                using (var cmd = new MySqlCommand(
+                    "UPDATE Customers SET IsDeleted = 1 WHERE CustomerID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", customerId);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -238,46 +263,15 @@ namespace HesapTakip
             }
         }
 
-        public bool DeleteCustomer(int customerId)
+        public DataTable GetDeletedCustomers()
         {
-            try
+            var dt = new DataTable();
+            using (var conn = new MySqlConnection(_connectionString))
+            using (var adapter = new MySqlDataAdapter("SELECT CustomerID, Name, EDefter, Taxid, ActivityCode, IsDeleted FROM Customers WHERE IsDeleted = 1", conn))
             {
-                using (var conn = new MySqlConnection(_connectionString))
-                using (var cmd = new MySqlCommand())
-                {
-                    cmd.Connection = conn;
-                    conn.Open();
-
-                    using (var transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            cmd.Transaction = transaction;
-
-                            // Önce Transactions tablosundan sil
-                            cmd.CommandText = "DELETE FROM Transactions WHERE CustomerID = @id";
-                            cmd.Parameters.AddWithValue("@id", customerId);
-                            cmd.ExecuteNonQuery();
-
-                            // Sonra Customers tablosundan sil
-                            cmd.CommandText = "DELETE FROM Customers WHERE CustomerID = @id";
-                            cmd.ExecuteNonQuery();
-
-                            transaction.Commit();
-                            return true;
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
-                }
+                adapter.Fill(dt);
             }
-            catch
-            {
-                return false;
-            }
+            return dt;
         }
 
         public DataTable GetTransactions(int customerId)

@@ -32,6 +32,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             splitContainer1 = new SplitContainer();
             customerPanel = new Panel();
+            btn_showdeletedcustomers = new Button();
             label4 = new Label();
             btnEditCustomer = new Button();
             btnDeleteCustomer = new Button();
@@ -39,12 +40,7 @@
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
             button2 = new Button();
-            button1 = new Button();
-            link_yusa = new LinkLabel();
-            statusStrip1 = new StatusStrip();
-            progressBar1 = new ToolStripProgressBar();
-            statusLabel = new ToolStripStatusLabel();
-            toolStripStatusLabelVersion = new ToolStripStatusLabel();
+            btn_showdeletedtransactions = new Button();
             btnSaveToDb = new Button();
             btnImportExcel = new Button();
             btnResetSettings = new Button();
@@ -70,6 +66,12 @@
             label1 = new Label();
             dgvTransactions = new DataGridView();
             lstSuggestions = new ListBox();
+            link_yusa = new LinkLabel();
+            statusStrip1 = new StatusStrip();
+            progressBar1 = new ToolStripProgressBar();
+            statusLabel = new ToolStripStatusLabel();
+            toolStripStatusLabelVersion = new ToolStripStatusLabel();
+            StatustLabel_info = new ToolStripStatusLabel();
             menuStrip1 = new MenuStrip();
             veriTabanıYeriniSıfırlaToolStripMenuItem = new ToolStripMenuItem();
             güncellemeKontrolEtToolStripMenuItem = new ToolStripMenuItem();
@@ -87,11 +89,11 @@
             customerPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             gbTransactions.SuspendLayout();
-            statusStrip1.SuspendLayout();
             tableLayoutPanel2.SuspendLayout();
             totalPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).BeginInit();
+            statusStrip1.SuspendLayout();
             menuStrip1.SuspendLayout();
             SuspendLayout();
             // 
@@ -116,6 +118,7 @@
             // 
             customerPanel.AutoSize = true;
             customerPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            customerPanel.Controls.Add(btn_showdeletedcustomers);
             customerPanel.Controls.Add(label4);
             customerPanel.Controls.Add(btnEditCustomer);
             customerPanel.Controls.Add(btnDeleteCustomer);
@@ -126,6 +129,16 @@
             customerPanel.Name = "customerPanel";
             customerPanel.Size = new Size(261, 569);
             customerPanel.TabIndex = 0;
+            // 
+            // btn_showdeletedcustomers
+            // 
+            btn_showdeletedcustomers.Location = new Point(134, 518);
+            btn_showdeletedcustomers.Name = "btn_showdeletedcustomers";
+            btn_showdeletedcustomers.Size = new Size(116, 23);
+            btn_showdeletedcustomers.TabIndex = 5;
+            btn_showdeletedcustomers.Text = "Silinenleri Göster";
+            btn_showdeletedcustomers.UseVisualStyleBackColor = true;
+            btn_showdeletedcustomers.Click += btn_showdeletedcustomers_Click;
             // 
             // label4
             // 
@@ -139,7 +152,7 @@
             // btnEditCustomer
             // 
             btnEditCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnEditCustomer.Location = new Point(128, 514);
+            btnEditCustomer.Location = new Point(134, 489);
             btnEditCustomer.Name = "btnEditCustomer";
             btnEditCustomer.Size = new Size(116, 23);
             btnEditCustomer.TabIndex = 3;
@@ -150,7 +163,7 @@
             // btnDeleteCustomer
             // 
             btnDeleteCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnDeleteCustomer.Location = new Point(6, 543);
+            btnDeleteCustomer.Location = new Point(12, 518);
             btnDeleteCustomer.Name = "btnDeleteCustomer";
             btnDeleteCustomer.Size = new Size(113, 23);
             btnDeleteCustomer.TabIndex = 2;
@@ -161,7 +174,7 @@
             // btnAddCustomer
             // 
             btnAddCustomer.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnAddCustomer.Location = new Point(6, 514);
+            btnAddCustomer.Location = new Point(12, 489);
             btnAddCustomer.Name = "btnAddCustomer";
             btnAddCustomer.Size = new Size(116, 23);
             btnAddCustomer.TabIndex = 1;
@@ -185,7 +198,7 @@
             dgvCustomers.RowHeadersVisible = false;
             dgvCustomers.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvCustomers.Size = new Size(261, 489);
+            dgvCustomers.Size = new Size(261, 464);
             dgvCustomers.TabIndex = 0;
             dgvCustomers.SelectionChanged += dgvCustomers_SelectionChanged;
             // 
@@ -194,9 +207,7 @@
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             gbTransactions.Controls.Add(button2);
-            gbTransactions.Controls.Add(button1);
-            gbTransactions.Controls.Add(link_yusa);
-            gbTransactions.Controls.Add(statusStrip1);
+            gbTransactions.Controls.Add(btn_showdeletedtransactions);
             gbTransactions.Controls.Add(btnSaveToDb);
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
@@ -230,52 +241,16 @@
             button2.UseVisualStyleBackColor = true;
             button2.Visible = false;
             // 
-            // button1
+            // btn_showdeletedtransactions
             // 
-            button1.Location = new Point(466, 218);
-            button1.Name = "button1";
-            button1.Size = new Size(120, 23);
-            button1.TabIndex = 20;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Visible = false;
-            // 
-            // link_yusa
-            // 
-            link_yusa.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            link_yusa.AutoSize = true;
-            link_yusa.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
-            link_yusa.Location = new Point(438, 536);
-            link_yusa.Name = "link_yusa";
-            link_yusa.Size = new Size(145, 15);
-            link_yusa.TabIndex = 7;
-            link_yusa.TabStop = true;
-            link_yusa.Text = "SMMM YUŞA TOPALOĞLU";
-            link_yusa.LinkClicked += link_yusa_LinkClicked;
-            // 
-            // statusStrip1
-            // 
-            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion });
-            statusStrip1.Location = new Point(3, 544);
-            statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(595, 22);
-            statusStrip1.TabIndex = 19;
-            statusStrip1.Text = "statusStrip1";
-            // 
-            // progressBar1
-            // 
-            progressBar1.Name = "progressBar1";
-            progressBar1.Size = new Size(100, 16);
-            // 
-            // statusLabel
-            // 
-            statusLabel.Name = "statusLabel";
-            statusLabel.Size = new Size(0, 17);
-            // 
-            // toolStripStatusLabelVersion
-            // 
-            toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
-            toolStripStatusLabelVersion.Size = new Size(0, 17);
+            btn_showdeletedtransactions.Location = new Point(466, 218);
+            btn_showdeletedtransactions.Name = "btn_showdeletedtransactions";
+            btn_showdeletedtransactions.Size = new Size(120, 23);
+            btn_showdeletedtransactions.TabIndex = 20;
+            btn_showdeletedtransactions.Text = "Silinenleri Göster";
+            btn_showdeletedtransactions.UseVisualStyleBackColor = true;
+            btn_showdeletedtransactions.Visible = false;
+            btn_showdeletedtransactions.Click += btn_showdeletedtransactions_Click;
             // 
             // btnSaveToDb
             // 
@@ -462,8 +437,8 @@
             btnAddTransaction.Size = new Size(120, 23);
             btnAddTransaction.TabIndex = 4;
             btnAddTransaction.Text = "Hareket Ekle";
+            toolTip1.SetToolTip(btnAddTransaction, "Klavyeden \"+\" Borç/Gelir\r\nveya \"-\" Alacak / Gider\r\nKaydı yapar\r\n");
             btnAddTransaction.UseVisualStyleBackColor = true;
-            btnAddTransaction.Visible = false;
             btnAddTransaction.Click += btnAddTransaction_Click;
             // 
             // tableLayoutPanel1
@@ -582,6 +557,48 @@
             lstSuggestions.TabIndex = 11;
             lstSuggestions.Visible = false;
             // 
+            // link_yusa
+            // 
+            link_yusa.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            link_yusa.AutoSize = true;
+            link_yusa.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            link_yusa.Location = new Point(720, 565);
+            link_yusa.Name = "link_yusa";
+            link_yusa.Size = new Size(145, 15);
+            link_yusa.TabIndex = 7;
+            link_yusa.TabStop = true;
+            link_yusa.Text = "SMMM YUŞA TOPALOĞLU";
+            link_yusa.LinkClicked += link_yusa_LinkClicked;
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.Items.AddRange(new ToolStripItem[] { progressBar1, statusLabel, toolStripStatusLabelVersion, StatustLabel_info });
+            statusStrip1.Location = new Point(0, 571);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(866, 22);
+            statusStrip1.TabIndex = 19;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // progressBar1
+            // 
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(100, 16);
+            // 
+            // statusLabel
+            // 
+            statusLabel.Name = "statusLabel";
+            statusLabel.Size = new Size(0, 17);
+            // 
+            // toolStripStatusLabelVersion
+            // 
+            toolStripStatusLabelVersion.Name = "toolStripStatusLabelVersion";
+            toolStripStatusLabelVersion.Size = new Size(0, 17);
+            // 
+            // StatustLabel_info
+            // 
+            StatustLabel_info.Name = "StatustLabel_info";
+            StatustLabel_info.Size = new Size(0, 17);
+            // 
             // menuStrip1
             // 
             menuStrip1.Font = new Font("Segoe UI", 9F, FontStyle.Underline);
@@ -650,9 +667,11 @@
             // 
             // toolTip1
             // 
-            toolTip1.AutoPopDelay = 5000;
-            toolTip1.InitialDelay = 300;
+            toolTip1.AutomaticDelay = 100;
+            toolTip1.AutoPopDelay = 1000;
+            toolTip1.InitialDelay = 100;
             toolTip1.ReshowDelay = 100;
+            toolTip1.ShowAlways = true;
             toolTip1.Popup += toolTip1_Popup;
             // 
             // MainForm
@@ -660,6 +679,8 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(866, 593);
+            Controls.Add(link_yusa);
+            Controls.Add(statusStrip1);
             Controls.Add(splitContainer1);
             Controls.Add(menuStrip1);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -678,9 +699,6 @@
             customerPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
             gbTransactions.ResumeLayout(false);
-            gbTransactions.PerformLayout();
-            statusStrip1.ResumeLayout(false);
-            statusStrip1.PerformLayout();
             tableLayoutPanel2.ResumeLayout(false);
             tableLayoutPanel2.PerformLayout();
             totalPanel.ResumeLayout(false);
@@ -688,6 +706,8 @@
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTransactions).EndInit();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             ResumeLayout(false);
@@ -742,9 +762,11 @@
         private ToolStripStatusLabel toolStripStatusLabelVersion;
         private ToolStripMenuItem eFaturaXMLExcelToolStripMenuItem;
         private Button button2;
-        private Button button1;
+        private Button btn_showdeletedtransactions;
         private ToolStripMenuItem veriTabanınıYedekleToolStripMenuItem;
         private ToolTip toolTip1;
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
+        private Button btn_showdeletedcustomers;
+        private ToolStripStatusLabel StatustLabel_info;
     }
 }

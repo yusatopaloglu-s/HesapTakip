@@ -112,6 +112,7 @@ namespace HesapTakip
                         try
                         {
                             LoadCustomers();
+
                             InitializeAutoComplete();
                             LoadSuggestions();
                             dtpDate.Value = DateTime.Today;
@@ -295,6 +296,7 @@ namespace HesapTakip
                     dgvCustomers.Columns["EDefter"].Visible = false;
                     dgvCustomers.Columns["Taxid"].Visible = false;
                     dgvCustomers.Columns["ActivityCode"].Visible = false;
+                    dgvCustomers.Columns["IsDeleted"].Visible = false;
                 }
             }
             catch (Exception ex)
@@ -455,7 +457,7 @@ namespace HesapTakip
             var customerName = dgvCustomers.CurrentRow.Cells["Name"].Value?.ToString() ?? "bu müşteri";
 
             var confirmResult = MessageBox.Show(
-                $"{customerName} müşterisini ve tüm hareketlerini silmek istediğinize emin misiniz?\nBu işlem geri alınamaz!",
+                $"{customerName} listeden silmek istediğinize emin misiniz?\nBu işlem geri verileri silmez. Listede görünmez yapar.",
                 "Müşteri Silme Onayı",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
@@ -658,15 +660,91 @@ namespace HesapTakip
 
         public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
-            if (dgvCustomers.CurrentRow != null)
+            if (dgvCustomers.CurrentRow == null) return;
+
+            try
             {
                 var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+                var isDeleted = false;
+
+                if (dgvCustomers.Columns["IsDeleted"] != null && dgvCustomers.CurrentRow.Cells["IsDeleted"].Value != null)
+                {
+                    isDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
+                }
+
+                // SİLİNMİŞ MÜŞTERİLER DE DAHİL TÜM MÜŞTERİLER İÇİN HESAP HAREKETLERİNİ YÜKLE
                 LoadTransactions(customerID);
-                gbTransactions.Enabled = true;
                 CalculateAndDisplayTotal(customerID);
+
+                if (isDeleted && _showingDeletedCustomers)
+                {
+                    // Silinmiş müşteri - sadece görüntüleme modunda
+
+                    dgvTransactions.ReadOnly = true;
+                    StatustLabel_info.Text = "Bu müşteri silinmiş durumda. Sadece görüntüleme yapabilirsiniz.";
+                    btnAddTransaction.Enabled = false;
+                    btnDeleteTransaction.Enabled = false;
+                    btnEditTransaction.Enabled = false;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = false;
+                    btnSaveToDb.Enabled = false;
+                    btnAddDescipt.Enabled = false;
+                    btnRemoveDescipt.Enabled = false;
+                    txtAmount.Enabled = false;
+                    txtDescription.Enabled = false;
+                    dtpDate.Enabled = false;
+                    btn_showdeletedtransactions.Enabled = false;
+
+
+
+                }
+                else if (isDeleted && !_showingDeletedCustomers)
+                {
+                    // Aktif listede silinmiş müşteri bulunmamalı, ama yine de işlem yapma
+
+                    StatustLabel_info.Text = "---Silinen Müşteriler Sayfasındasınız !";
+                    dgvTransactions.ReadOnly = true;
+                    btnAddTransaction.Enabled = false;
+                    btnDeleteTransaction.Enabled = false;
+                    btnEditTransaction.Enabled = false;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = false;
+                    btnSaveToDb.Enabled = false;
+                    btnAddDescipt.Enabled = false;
+                    btnRemoveDescipt.Enabled = false;
+                    txtAmount.Enabled = false;
+                    txtDescription.Enabled = false;
+                    dtpDate.Enabled = false;
+                    btn_showdeletedtransactions.Enabled = false;
+
+
+                }
+                else
+                {
+                    // Aktif müşteri - tüm işlemler aktif
+                    gbTransactions.Enabled = true;
+                    StatustLabel_info.Text = "";
+                    btnAddTransaction.Enabled = true;
+                    btnDeleteTransaction.Enabled = true;
+                    btnEditTransaction.Enabled = true;
+                    btnExportPdf.Enabled = true;
+                    btnImportExcel.Enabled = true;
+                    btnSaveToDb.Enabled = true;
+                    btnAddDescipt.Enabled = true;
+                    btnRemoveDescipt.Enabled = true;
+                    txtAmount.Enabled = true;
+                    txtDescription.Enabled = true;
+                    dtpDate.Enabled = true;
+                    btn_showdeletedtransactions.Enabled = true;
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Müşteri bilgileri yüklenirken hata: " + ex.Message, "Hata",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void ClearTransactionInputs()
         {
             dtpDate.Value = DateTime.Today;
@@ -1194,20 +1272,23 @@ namespace HesapTakip
             private bool _edefter;
             private string _currentTaxId;
             private string _currentActivityCode;
+            private bool _deleted;
             private TextBox txtCustomerName;
             private CheckBox chkEDefter;
             private Button btnSave;
             private TextBox txtCustomerTaxid;
             private TextBox txtCustomerActivityCode;
+            private CheckBox chkDeleted;
 
 
-            public EditCustomerForm(int customerId, string currentName, bool edefter, string taxId, string activityCode)
+            public EditCustomerForm(int customerId, string currentName, bool edefter, string taxId, string activityCode, bool Isdeleted)
             {
                 _customerId = customerId;
                 _currentName = currentName;
                 _edefter = edefter;
                 _currentTaxId = taxId;
                 _currentActivityCode = activityCode;
+                _deleted = Isdeleted;
 
                 InitializeForm();
             }
@@ -1257,8 +1338,12 @@ namespace HesapTakip
                 this.Controls.Add(lblActivityCode);
                 this.Controls.Add(txtCustomerActivityCode);
 
+                // Silinmiş Müşteri CheckBox
+                chkDeleted = new CheckBox { Text = "Silinmiş Müşteri", Location = new Point(20, 140), Width = 110, Checked = _deleted };
+                this.Controls.Add(chkDeleted);
+
                 // Kaydet Butonu
-                btnSave = new Button { Text = "Kaydet", Location = new Point(120, 150), Width = 80 };
+                btnSave = new Button { Text = "Kaydet", Location = new Point(130, 150), Width = 80 };
                 btnSave.Click += BtnSave_Click;
                 this.Controls.Add(btnSave);
 
@@ -1300,6 +1385,7 @@ namespace HesapTakip
             public bool UpdatedEDefter => chkEDefter.Checked;
             public string UpdatedTaxId => string.IsNullOrEmpty(txtCustomerTaxid.Text.Trim()) ? null : txtCustomerTaxid.Text.Trim();
             public string UpdatedActivityCode => string.IsNullOrEmpty(txtCustomerActivityCode.Text.Trim()) ? null : txtCustomerActivityCode.Text.Trim();
+            public bool UpdatedIsDeleted => chkDeleted.Checked;
         }
         private void btnEditCustomer_Click(object sender, EventArgs e)
         {
@@ -1312,7 +1398,7 @@ namespace HesapTakip
             int customerId = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
             string currentName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
             bool currentEDefter = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["EDefter"].Value);
-
+            bool IsDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
 
             object taxIdValue = dgvCustomers.CurrentRow.Cells["TaxID"].Value;
             object activityCodeValue = dgvCustomers.CurrentRow.Cells["ActivityCode"].Value;
@@ -1320,11 +1406,11 @@ namespace HesapTakip
             string currentTaxId = taxIdValue != null && taxIdValue != DBNull.Value ? taxIdValue.ToString() : "";
             string currentActivityCode = activityCodeValue != null && activityCodeValue != DBNull.Value ? activityCodeValue.ToString() : "";
 
-            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter, currentTaxId, currentActivityCode))
+            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter, currentTaxId, currentActivityCode, IsDeleted))
             {
                 if (editForm.ShowDialog() == DialogResult.OK)
                 {
-                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter, editForm.UpdatedTaxId, editForm.UpdatedActivityCode);
+                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter, editForm.UpdatedTaxId, editForm.UpdatedActivityCode, editForm.UpdatedIsDeleted);
                     if (success)
                     {
                         LoadCustomers();
@@ -2064,7 +2150,7 @@ namespace HesapTakip
                                             values.Add(EscapeMySqlValue(val));
                                         }
 
-                                        // Write single-row INSERT for simplicity (sağlam ve yeniden yüklenebilir)
+                                        // Write single-row INSERT basitleştirilmiş (sağlam ve yeniden yüklenebilir)
                                         writer.WriteLine(insertPrefix + "(" + string.Join(", ", values) + ");");
                                     }
                                 }
@@ -2203,7 +2289,7 @@ namespace HesapTakip
                             {
                                 string fullName = $"[{schema}].[{table}]";
 
-                                // Build simple CREATE TABLE script from INFORMATION_SCHEMA.COLUMNS
+                                //  CREATE TABLE script from INFORMATION_SCHEMA.COLUMNS
                                 var colDefs = new List<string>();
                                 using (var cmd = new System.Data.SqlClient.SqlCommand(
                                     @"SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, IS_NULLABLE, COLUMN_DEFAULT
@@ -2246,7 +2332,7 @@ namespace HesapTakip
                                                 else
                                                     typeSpec += "(MAX)";
                                             }
-                                            // Basit yaklaşım; karmaşık tipler için geliştirilebilir
+                                            // Basit yaklaşım
 
                                             string nullSpec = isNullable == "YES" ? "NULL" : "NOT NULL";
                                             colDefs.Add($"[{colName}] {typeSpec} {nullSpec}");
@@ -2356,6 +2442,84 @@ namespace HesapTakip
             var ef = Application.OpenForms.OfType<EFaturaxmlForm>().FirstOrDefault() ?? new EFaturaxmlForm(_db);
             if (!ef.Visible) ef.Show();
             ef.StartSplitInteractive();
+        }
+
+        private bool _showingDeletedCustomers = false;
+
+        private void btn_showdeletedcustomers_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                LoadDeletedCustomers();
+
+                // Silinmiş müşteriler yüklendikten sonra buton metnini değiştir
+                btn_showdeletedcustomers.Text = "Aktif Müşterileri Göster";
+                btn_showdeletedcustomers.Click -= btn_showdeletedcustomers_Click;
+                btn_showdeletedcustomers.Click += btn_showActiveCustomers_Click;
+
+
+                MessageBox.Show("Silinmiş müşteriler listelendi. Bir müşteriyi geri almak için düzenle butonunu kullanın.", "Bilgi",
+                               MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Silinmiş müşteriler yüklenirken hata: " + ex.Message, "Hata",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btn_showActiveCustomers_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                LoadCustomers();
+
+                // Buton metnini ve event'ini eski haline getir
+                btn_showdeletedcustomers.Text = "Silinmiş Müşterileri Göster";
+                btn_showdeletedcustomers.Click -= btn_showActiveCustomers_Click;
+                btn_showdeletedcustomers.Click += btn_showdeletedcustomers_Click;
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Aktif müşteriler yüklenirken hata: " + ex.Message, "Hata",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void LoadDeletedCustomers()
+        {
+            try
+            {
+                dgvCustomers.Columns.Clear();
+                var dt = _db.GetDeletedCustomers();
+                dgvCustomers.DataSource = dt;
+
+                // Kolonları formatla
+                if (dgvCustomers.Columns["CustomerID"] != null)
+                    dgvCustomers.Columns["CustomerID"].Visible = false;
+                if (dgvCustomers.Columns["EDefter"] != null)
+                    dgvCustomers.Columns["EDefter"].Visible = false;
+                if (dgvCustomers.Columns["Taxid"] != null)
+                    dgvCustomers.Columns["Taxid"].Visible = false;
+                if (dgvCustomers.Columns["ActivityCode"] != null)
+                    dgvCustomers.Columns["ActivityCode"].Visible = false;
+                if (dgvCustomers.Columns["IsDeleted"] != null)
+                    dgvCustomers.Columns["IsDeleted"].Visible = false;
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Silinmiş müşteriler yüklenirken hata: " + ex.Message, "Hata",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btn_showdeletedtransactions_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
