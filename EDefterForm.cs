@@ -88,6 +88,9 @@ namespace HesapTakip
 
             if (dgvFirmaList.Columns.Contains("ActivityCode"))
                 dgvFirmaList.Columns["ActivityCode"].Visible = false;
+
+            if (dgvFirmaList.Columns.Contains("IsDeleted"))
+                dgvFirmaList.Columns["IsDeleted"].Visible = false;
         }
 
         private void LoadTransactions(int customerID)
