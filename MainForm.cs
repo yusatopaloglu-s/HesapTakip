@@ -2522,5 +2522,6 @@ namespace HesapTakip
         {
 
         }
+
     }
 }
