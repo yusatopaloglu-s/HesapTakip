@@ -39,6 +39,7 @@
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
             gbTransactions = new GroupBox();
+            label5 = new Label();
             button2 = new Button();
             btn_showdeletedtransactions = new Button();
             btnSaveToDb = new Button();
@@ -207,6 +208,7 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
             gbTransactions.Controls.Add(btn_showdeletedtransactions);
             gbTransactions.Controls.Add(btnSaveToDb);
@@ -231,6 +233,15 @@
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Location = new Point(226, 101);
+            label5.Name = "label5";
+            label5.Size = new Size(236, 15);
+            label5.TabIndex = 22;
+            label5.Text = "\"+\" ve \"-\" Tuşları ile Hareket Ekleyebilirsiniz.";
             // 
             // button2
             // 
@@ -440,6 +451,7 @@
             btnAddTransaction.Text = "Hareket Ekle";
             toolTip1.SetToolTip(btnAddTransaction, "Klavyeden \"+\" Borç/Gelir\r\nveya \"-\" Alacak / Gider\r\nKaydı yapar\r\n");
             btnAddTransaction.UseVisualStyleBackColor = true;
+            btnAddTransaction.Visible = false;
             btnAddTransaction.Click += btnAddTransaction_Click;
             // 
             // tableLayoutPanel1
@@ -523,7 +535,6 @@
             txtAmount.Name = "txtAmount";
             txtAmount.Size = new Size(221, 23);
             txtAmount.TabIndex = 3;
-            toolTip1.SetToolTip(txtAmount, "Klavyeden \"+\" Borç/Gelir\r\nveya \"-\" Alacak / Gider\r\nKaydı yapar");
             // 
             // label1
             // 
@@ -700,6 +711,7 @@
             customerPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
             gbTransactions.ResumeLayout(false);
+            gbTransactions.PerformLayout();
             tableLayoutPanel2.ResumeLayout(false);
             tableLayoutPanel2.PerformLayout();
             totalPanel.ResumeLayout(false);
@@ -769,5 +781,6 @@
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
         private Button btn_showdeletedcustomers;
         private ToolStripStatusLabel StatustLabel_info;
+        private Label label5;
     }
 }
