@@ -454,6 +454,7 @@ namespace HesapTakip
                 return Regex.Replace(input, @"[^\w\s]", "");
             }
         }
+
         private void btn_alttur_Click(object sender, EventArgs e)
         {
             if (_db == null)
@@ -500,9 +501,9 @@ namespace HesapTakip
                 var issueDate = xml.Descendants(cbc + "IssueDate").FirstOrDefault()?.Value ?? "";
                 var invoiceNumber = xml.Descendants(cbc + "ID").FirstOrDefault()?.Value ?? "";
                 var supplierTaxId = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "PartyIdentification").Descendants(cbc + "ID").FirstOrDefault()?.Value ?? "";
-                var supplierNameNode = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
-                var supplierFirstName = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "";
-                var supplierFamilyName = xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "";
+                var supplierNameNode = TextCleaner.CleanText(xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "");
+                var supplierFirstName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "");
+                var supplierFamilyName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "");
                 var customerTaxId = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyIdentification").Descendants(cbc + "ID").FirstOrDefault()?.Value ?? "";
                 var customerNameNode = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? ""); 
                 var customerFirstName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "");
@@ -609,6 +610,7 @@ namespace HesapTakip
 
                 var defaultSubRecordType = "Mal Satışı"; // veya "Mal Alışı" için uygun değer
 
+                
                 if (isSatis)
                 {
                     if (BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber)) return;
@@ -699,6 +701,15 @@ namespace HesapTakip
                        // Console.WriteLine($"Eşleşme bulunamadı: {itemName}");
                     }
 
+                    if(selectedTable== "Luca İşletme Satış")
+                    {
+                        saleType = "Normal Satışlar";
+                    }
+                    else if ( selectedTable=="Luca İşletme Alış")
+                    {
+                        saleType = "Normal Alım";
+                    }
+                    
 
 
                     if (isSatis)
@@ -1075,130 +1086,7 @@ namespace HesapTakip
                 }
             }
         }
-
-        /* public async void BtnSplitAndSave_Click(object sender, EventArgs e)
-         {
-             using var ofd = new OpenFileDialog
-             {
-                 Filter = "Excel dosyaları|*.xlsx;*.xls|CSV dosyaları|*.csv",
-                 Multiselect = false
-             };
-             if (ofd.ShowDialog() != DialogResult.OK) return;
-
-             string sourcePath = ofd.FileName;
-             string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
-
-             using var sfd = new SaveFileDialog
-             {
-                 Filter = ext == ".csv" ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
-                 FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1"
-             };
-             if (sfd.ShowDialog() != DialogResult.OK) return;
-
-             string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
-             string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
-
-             progressBarSplit.Value = 0;
-             progressBarSplit.Visible = true;
-             lblSplitStatus.Text = "Başlatılıyor...";
-             lblSplitStatus.Visible = true;
-             btnSplitAndSave.Enabled = false;
-
-             var progress = new Progress<int>(p =>
-             {
-                 progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
-                 lblSplitStatus.Text = $"İlerleme: {p}%";
-             });
-
-             try
-             {
-                 await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, progress));
-                 MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
-             }
-             catch (Exception ex)
-             {
-                 MessageBox.Show($"Bölme sırasında hata: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-             }
-             finally
-             {
-                 progressBarSplit.Visible = false;
-                 lblSplitStatus.Visible = false;
-                 btnSplitAndSave.Enabled = true;
-             }
-         }
-         */
-        /* private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, IProgress<int> progress)
-        {
-            const int maxRowsWithHeader = 600; // başlık dahil
-            string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
-
-            if (ext == ".csv")
-            {
-                // CSV: satır bazlı parça
-                var allLines = File.ReadAllLines(sourcePath, Encoding.UTF8);
-                if (allLines.Length == 0) return;
-
-                string header = allLines[0];
-                int totalData = Math.Max(0, allLines.Length - 1);
-                int perFile = maxRowsWithHeader - 1;
-                int fileCount = Math.Max(1, (int)Math.Ceiling((double)totalData / perFile));
-
-                for (int i = 0; i < fileCount; i++)
-                {
-                    int start = 1 + i * perFile;
-                    int end = Math.Min(allLines.Length - 1, start + perFile - 1);
-                    var outPath = Path.Combine(targetDir, $"{baseName}_Part{i + 1}.csv");
-                    using var sw = new StreamWriter(outPath, false, new UTF8Encoding(true));
-                    sw.WriteLine(header);
-                    for (int r = start; r <= end; r++) sw.WriteLine(allLines[r]);
-
-                    progress.Report((int)((i + 1) / (double)fileCount * 100));
-                }
-            }
-            else
-            {
-                // Excel: EPPlus ile parça
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-                using var p = new ExcelPackage(new FileInfo(sourcePath));
-                var ws = p.Workbook.Worksheets.FirstOrDefault();
-                if (ws == null || ws.Dimension == null) return;
-
-                int totalRows = ws.Dimension.End.Row;
-                int totalCols = ws.Dimension.End.Column;
-                int headerRows = 1;
-                int dataRows = Math.Max(0, totalRows - headerRows);
-                int perFile = maxRowsWithHeader - headerRows;
-                int fileCount = Math.Max(1, (int)Math.Ceiling((double)dataRows / perFile));
-
-                for (int fi = 0; fi < fileCount; fi++)
-                {
-                    var outPath = Path.Combine(targetDir, $"{baseName}_Part{fi + 1}.xlsx");
-                    using var outPkg = new ExcelPackage(new FileInfo(outPath));
-                    var outWs = outPkg.Workbook.Worksheets.Add(ws.Name ?? "Sheet1");
-
-                    // Başlık kopyala
-                    for (int c = 1; c <= totalCols; c++)
-                        outWs.Cells[1, c].Value = ws.Cells[1, c].Value;
-
-                    int startRow = fi * perFile + headerRows + 1;
-                    int endRow = Math.Min(totalRows, startRow + perFile - 1);
-                    int outRow = headerRows + 1;
-
-                    for (int r = startRow; r <= endRow; r++)
-                    {
-                        for (int c = 1; c <= totalCols; c++)
-                            outWs.Cells[outRow, c].Value = ws.Cells[r, c].Value;
-                        outRow++;
-                    }
-
-                    outWs.Cells.AutoFitColumns();
-                    outPkg.Save();
-
-                    progress.Report((int)((fi + 1) / (double)fileCount * 100));
-                }
-            }
-       */
-
+    
         public async void BtnSplitAndSave_Click(object sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
@@ -1431,6 +1319,8 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            lblSplitStatus = new Label();
+            progressBarSplit = new ProgressBar();
             btnSplitAndSave = new Button();
             btn_alttur = new Button();
             BtnExportCSV = new Button();
@@ -1441,8 +1331,6 @@ namespace HesapTakip
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
-            progressBarSplit = new ProgressBar();
-            lblSplitStatus = new Label();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -1504,6 +1392,23 @@ namespace HesapTakip
             groupBox2.Size = new Size(1326, 118);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
+            // 
+            // lblSplitStatus
+            // 
+            lblSplitStatus.AutoSize = true;
+            lblSplitStatus.Location = new Point(776, 14);
+            lblSplitStatus.Name = "lblSplitStatus";
+            lblSplitStatus.Size = new Size(0, 15);
+            lblSplitStatus.TabIndex = 13;
+            lblSplitStatus.Visible = false;
+            // 
+            // progressBarSplit
+            // 
+            progressBarSplit.Location = new Point(776, 30);
+            progressBarSplit.Name = "progressBarSplit";
+            progressBarSplit.Size = new Size(100, 23);
+            progressBarSplit.TabIndex = 12;
+            progressBarSplit.Visible = false;
             // 
             // btnSplitAndSave
             // 
@@ -1596,36 +1501,18 @@ namespace HesapTakip
             // dgvData
             // 
             dgvData.AllowUserToAddRows = false;
-            dgvData.AllowUserToDeleteRows = false;
             dgvData.AllowUserToOrderColumns = true;
             dgvData.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvData.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
             dgvData.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCells;
             dgvData.BackgroundColor = SystemColors.Control;
             dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvData.EditMode = DataGridViewEditMode.EditOnF2;
             dgvData.Location = new Point(0, 150);
             dgvData.Name = "dgvData";
             dgvData.ReadOnly = true;
             dgvData.Size = new Size(1326, 281);
             dgvData.TabIndex = 2;
-            // 
-            // progressBarSplit
-            // 
-            progressBarSplit.Location = new Point(776, 30);
-            progressBarSplit.Name = "progressBarSplit";
-            progressBarSplit.Size = new Size(100, 23);
-            progressBarSplit.TabIndex = 12;
-            progressBarSplit.Visible = false;
-            // 
-            // lblSplitStatus
-            // 
-            lblSplitStatus.AutoSize = true;
-            lblSplitStatus.Location = new Point(776, 14);
-            lblSplitStatus.Name = "lblSplitStatus";
-            lblSplitStatus.Size = new Size(0, 15);
-            lblSplitStatus.TabIndex = 13;
-            lblSplitStatus.Visible = false;
-            lblSplitStatus.Text = "";
             // 
             // EFaturaxmlForm
             // 
