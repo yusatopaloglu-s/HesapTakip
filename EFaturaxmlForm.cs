@@ -1054,12 +1054,12 @@ namespace HesapTakip
 
                 case "Luca İşletme Satış":
                     data = LucaIsletmeSatisData;
-                    columns = new[] { "İŞLEM", "KATEGORİ", "BELGE TÜRÜ", "EVRAK TARİHİ", "KAYIT TARİHİ", "SERİ NO", "EVRAK NO", "TCKN/VKN", "VERGİ DAİRESİ", "SOYADI ÜNVAN", "ADI DEVAMI", "ADRES", "CARİ HESAP", "KDV İSTİSNASI", "KOD", "BELGE TÜRÜ(DB)", "ALIŞ/SATIŞ TÜRÜ", "KAYIT ALT TÜRÜ", "MAL VE HİZMET KODU", "AÇIKLAMA", "MİKTAR", "B.FİYAT", "TUTAR", "TEVKİFAT", "KDV ORANI", "KDV TUTARI", "TOPLAM TUTAR", "KREDİLİ TUTAR", "STOPAJ KODU", "STOPAJ TUTARI", "DÖNEMSELLIK İLKESİ", "FAALIYET KODU", "ÖDEME TÜRÜ" };
+                    columns = new[] { "İŞLEM", "KATEGORİ", "BELGE TÜRÜ", "EVRAK TARİHİ", "KAYIT TARİHİ", "SERİ NO", "EVRAK NO", "TCKN/VKN", "VERGİ DAİRESİ", "SOYADI ÜNVAN", "ADI DEVAMI", "ADRES", "CARİ HESAP", "KDV İSTİSNASI", "KOD", "BELGE TÜRÜ(DB)", "ALIŞ/SATIŞ TÜRÜ", "KAYIT ALT TÜRÜ", "MAL VE HİZMET KODU", "AÇIKLAMA", "MİKTAR", "B.FİYAT", "TUTAR", "TEVKİFAT", "KDV ORANI", "ÖZEL MATRAH İŞLEM BEDELİ", "MATRAHTAN DÜŞÜLECEK TUTAR", "MATRAHA DAHİL OLMAYAN BEDEL", "KDV TUTARI", "TOPLAM TUTAR", "KREDİLİ TUTAR", "STOPAJ KODU", "STOPAJ TUTARI", "DÖNEMSELLIK İLKESİ", "FAALIYET KODU", "ÖDEME TÜRÜ" };
                     foreach (var column in columns)
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", "", item.ItemName, "", "", item.TaxableAmount, "", item.Percent,"","","", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
                     }
                     break;
 
