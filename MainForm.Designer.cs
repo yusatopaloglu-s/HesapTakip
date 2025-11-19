@@ -690,6 +690,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            AutoSizeMode = AutoSizeMode.GrowAndShrink;
             ClientSize = new Size(866, 593);
             Controls.Add(link_yusa);
             Controls.Add(statusStrip1);
