@@ -119,8 +119,7 @@ namespace HesapTakip
             }
             UpdateDataGridView();
         }
-
-        private void UploadButton_Click(object sender, EventArgs e)
+        private async void UploadButton_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog
             {
@@ -130,12 +129,72 @@ namespace HesapTakip
             {
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    foreach (var file in openFileDialog.FileNames)
+                    var files = openFileDialog.FileNames;
+                    if (files == null || files.Length == 0)
                     {
-                        var xmlDoc = XDocument.Load(file);
-                        ProcessXml(xmlDoc);
+                        return;
                     }
-                    UpdateDataGridView();
+
+                    try
+                    {
+                        // Prepare progress UI
+                        progressBarSplit.Minimum = 0;
+                        progressBarSplit.Maximum = files.Length;
+                        progressBarSplit.Value = 0;
+                        progressBarSplit.Visible = true;
+
+                        lblSplitStatus.Visible = true;
+                        lblSplitStatus.Text = $"0 / {files.Length}";
+
+                        btnUpload.Enabled = false;
+
+                        // Process files on background thread but execute ProcessXml on UI thread
+                        await Task.Run(() =>
+                        {
+                            for (int i = 0; i < files.Length; i++)
+                            {
+                                var file = files[i];
+                                try
+                                {
+                                    var xmlDoc = XDocument.Load(file);
+
+                                    // ProcessXml touches UI-bound collections/controls, so invoke on UI thread
+                                    try
+                                    {
+                                        this.Invoke(new Action(() => ProcessXml(xmlDoc)));
+                                    }
+                                    catch (Exception exInvoke)
+                                    {
+                                        // If invoke fails, try to show message on UI thread
+                                        this.Invoke(new Action(() => MessageBox.Show($"XML işleme hatası (UI): {exInvoke.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Show load error on UI thread
+                                    this.Invoke(new Action(() => MessageBox.Show($"XML yükleme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error)));
+                                }
+
+                                // Update progress on UI thread
+                                int progress = i + 1;
+                                this.Invoke(new Action(() =>
+                                {
+                                    progressBarSplit.Value = Math.Min(progressBarSplit.Maximum, progress);
+                                    lblSplitStatus.Text = $"{progress} / {files.Length}";
+                                }));
+                            }
+                        });
+
+                        // Final update
+                        UpdateDataGridView();
+                    }
+                    finally
+                    {
+                        // Restore UI
+                        btnUpload.Enabled = true;
+                        progressBarSplit.Visible = false;
+                        lblSplitStatus.Visible = false;
+                    }
                 }
             }
         }
@@ -244,7 +303,7 @@ namespace HesapTakip
                             Path.GetFileNameWithoutExtension(saveFileDialog.FileName).Replace("_Part1", "")
                         );
 
-                        var trCulture = new CultureInfo("tr-TR"); 
+                        var trCulture = new CultureInfo("tr-TR");
 
                         for (int fileIndex = 0; fileIndex < fileCount; fileIndex++)
                         {
@@ -380,14 +439,14 @@ namespace HesapTakip
             if (string.IsNullOrEmpty(field))
                 return "";
 
-           
+
             field = field.TrimStart('\uFEFF', '\u200B');
 
 
 
             if (field.Contains(separator) || field.Contains("\"") || field.Contains("\r") || field.Contains("\n"))
             {
-                
+
                 field = field.Replace("\"", "\"\"");
                 return $"\"{field}\"";
             }
@@ -405,7 +464,7 @@ namespace HesapTakip
             UpdateDataGridView();
         }
 
-        
+
         private void CbxCustomerList_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cbx_customerlist.SelectedItem != null)
@@ -466,7 +525,7 @@ namespace HesapTakip
             {
                 categoryForm.ShowDialog();
             }
-            LoadExpenseMatchings(); 
+            LoadExpenseMatchings();
         }
         private void LoadExpenseMatchings()
         {
@@ -505,7 +564,7 @@ namespace HesapTakip
                 var supplierFirstName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "");
                 var supplierFamilyName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingSupplierParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "");
                 var customerTaxId = xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyIdentification").Descendants(cbc + "ID").FirstOrDefault()?.Value ?? "";
-                var customerNameNode = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? ""); 
+                var customerNameNode = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "PartyName").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "");
                 var customerFirstName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FirstName").FirstOrDefault()?.Value ?? "");
                 var customerFamilyName = TextCleaner.CleanText(xml.Descendants(cac + "AccountingCustomerParty").Descendants(cac + "Party").Descendants(cac + "Person").Descendants(cbc + "FamilyName").FirstOrDefault()?.Value ?? "");
                 var uuid = xml.Descendants(cbc + "UUID").FirstOrDefault()?.Value ?? "";
@@ -549,7 +608,7 @@ namespace HesapTakip
                     double taxableVal = double.TryParse(taxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var t) ? t : 0.0;
                     double taxVal = double.TryParse(taxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0.0;
 
-                   
+
                     if (percentVal == 0.0)
                     {
                         taxExemptAmount0 = taxableVal;
@@ -596,7 +655,7 @@ namespace HesapTakip
                 var payableAmount = legalMonetaryTotal.Descendants(cbc + "PayableAmount").FirstOrDefault()?.Value ?? "0.00";
                 var depositCode = xml.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cac + "TaxCategory").Descendants(cbc + "TaxExemptionReasonCode").FirstOrDefault()?.Value ?? "";
                 var depositAmount = depositCode == "351" ? (double.TryParse(taxExclusiveAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var exclusive) && double.TryParse(taxableAmount18.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var tax18) && double.TryParse(taxableAmount8.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var tax8) ? (exclusive - (tax18 + tax8)).ToString("F2", CultureInfo.InvariantCulture) : "0.00") : "0.00";
-                               
+
                 var taxOffice = "";
                 var lastName = string.IsNullOrEmpty(supplierNameNode) ? supplierFamilyName : "";
                 var firstName = string.IsNullOrEmpty(supplierNameNode) ? supplierFirstName : supplierNameNode;
@@ -610,7 +669,7 @@ namespace HesapTakip
 
                 var defaultSubRecordType = "Mal Satışı"; // veya "Mal Alışı" için uygun değer
 
-                
+
                 if (isSatis)
                 {
                     if (BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber)) return;
@@ -686,7 +745,7 @@ namespace HesapTakip
                     var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxPercent = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
 
-                  // string itemName = item.Element("Description")?.Value?.Trim() ?? ""; // Örnek: itemName alımı
+                    // string itemName = item.Element("Description")?.Value?.Trim() ?? ""; // Örnek: itemName alımı
                     string subRecordType = "";
 
                     if (!string.IsNullOrEmpty(itemName) && _expenseMatchings != null && _expenseMatchings.TryGetValue(itemName, out string matchedType))
@@ -697,19 +756,19 @@ namespace HesapTakip
                     {
                         // Eşleşme yoksa varsayılan veya uyarı
                         subRecordType = ""; // Veya boş bırak
-                                                              // Opsiyonel: Log veya uyarı
-                       // Console.WriteLine($"Eşleşme bulunamadı: {itemName}");
+                                            // Opsiyonel: Log veya uyarı
+                                            // Console.WriteLine($"Eşleşme bulunamadı: {itemName}");
                     }
 
-                    if(selectedTable== "Luca İşletme Satış")
+                    if (selectedTable == "Luca İşletme Satış")
                     {
                         saleType = "Normal Satışlar";
                     }
-                    else if ( selectedTable=="Luca İşletme Alış")
+                    else if (selectedTable == "Luca İşletme Alış")
                     {
                         saleType = "Normal Alım";
                     }
-                    
+
 
 
                     if (isSatis)
@@ -1059,7 +1118,7 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", "", item.ItemName, "", "", item.TaxableAmount, "", item.Percent,"","","", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", "", item.ItemName, "", "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
                     }
                     break;
 
@@ -1086,7 +1145,7 @@ namespace HesapTakip
                 }
             }
         }
-    
+
         public async void BtnSplitAndSave_Click(object sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog
@@ -1289,13 +1348,13 @@ namespace HesapTakip
             if (string.IsNullOrEmpty(header))
                 return header;
 
-            
+
             header = header.TrimStart('\uFEFF', '\u200B');
 
-            
+
             if (header.Contains("#"))
             {
-                
+
                 return header;
             }
 
@@ -1396,7 +1455,7 @@ namespace HesapTakip
             // lblSplitStatus
             // 
             lblSplitStatus.AutoSize = true;
-            lblSplitStatus.Location = new Point(776, 14);
+            lblSplitStatus.Location = new Point(341, 77);
             lblSplitStatus.Name = "lblSplitStatus";
             lblSplitStatus.Size = new Size(0, 15);
             lblSplitStatus.TabIndex = 13;
@@ -1404,7 +1463,7 @@ namespace HesapTakip
             // 
             // progressBarSplit
             // 
-            progressBarSplit.Location = new Point(776, 30);
+            progressBarSplit.Location = new Point(416, 72);
             progressBarSplit.Name = "progressBarSplit";
             progressBarSplit.Size = new Size(100, 23);
             progressBarSplit.TabIndex = 12;
@@ -1412,7 +1471,7 @@ namespace HesapTakip
             // 
             // btnSplitAndSave
             // 
-            btnSplitAndSave.Location = new Point(670, 14);
+            btnSplitAndSave.Location = new Point(658, 14);
             btnSplitAndSave.Name = "btnSplitAndSave";
             btnSplitAndSave.Size = new Size(100, 39);
             btnSplitAndSave.TabIndex = 11;
@@ -1541,5 +1600,7 @@ namespace HesapTakip
         private Button btnSplitAndSave;
         private Label lblSplitStatus;
         private ProgressBar progressBarSplit;
+
+
     }
 }
