@@ -5,9 +5,5 @@ Borç Alacak takibi. Excel - PDF Çıktı<br>
 E-defter gönderimleri takip. <br>
 E-fatura xml-ubl kaynak dosyalarını Excel tablosuna çevirme modülü. <br>
 --Herhangi bir hata veya uyarı mesajı ile karşılaşırsanız Issues altına ekleyebilirsiniz<br>
-<img src="https://i.imgur.com/ptMd70r.png"><br>
-<img src="https://i.imgur.com/HiCMTVR.png"><br>
-<img src="https://i.imgur.com/hzeOXfa.png"><br>
-<img src="https://i.imgur.com/qGdZBG2.png"><br>
-<img src="https://i.imgur.com/1UUnfx9.png"><br>
+<blockquote class="imgur-embed-pub" lang="en" data-id="a/UJpRjjc" data-context="false" ><a href="//imgur.com/a/UJpRjjc"></a></blockquote><script async src="//s.imgur.com/min/embed.js" charset="utf-8"></script>
 
