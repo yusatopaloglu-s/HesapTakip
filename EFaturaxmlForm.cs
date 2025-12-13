@@ -1183,7 +1183,18 @@ namespace HesapTakip
             string targetDir = Path.GetDirectoryName(sfd.FileName) ?? Environment.CurrentDirectory;
             string baseName = Path.GetFileNameWithoutExtension(sfd.FileName);
 
-            progressBarSplit.Value = 0;
+            // Ensure progress bar range is clamped and exceptions handled to avoid ArgumentOutOfRange
+            try
+            {
+                progressBarSplit.Minimum = 0;
+                progressBarSplit.Maximum = 100;
+                progressBarSplit.Value = 0;
+            }
+            catch
+            {
+                // ignore if control not yet created or other UI timing issues
+            }
+
             progressBarSplit.Visible = true;
             lblSplitStatus.Text = "Başlatılıyor...";
             lblSplitStatus.Visible = true;
@@ -1191,8 +1202,18 @@ namespace HesapTakip
 
             var progress = new Progress<int>(p =>
             {
-                progressBarSplit.Value = Math.Min(100, Math.Max(0, p));
-                lblSplitStatus.Text = $"İlerleme: {p}%";
+                // Safely clamp the incoming percentage to the progress bar's valid range
+                try
+                {
+                    int safe = Math.Min(progressBarSplit.Maximum, Math.Max(progressBarSplit.Minimum, p));
+                    // Only set when different to reduce redundant cross-thread ops
+                    if (progressBarSplit.Value != safe) progressBarSplit.Value = safe;
+                }
+                catch
+                {
+                    // If for any reason setting Value fails, ignore to avoid crashing the UI thread
+                }
+                lblSplitStatus.Text = $"İlerleme: {Math.Min(100, Math.Max(0, p))}%";
             });
 
             try
@@ -1206,6 +1227,12 @@ namespace HesapTakip
             }
             finally
             {
+                try
+                {
+                    progressBarSplit.Value = progressBarSplit.Maximum;
+                }
+                catch { }
+
                 progressBarSplit.Visible = false;
                 lblSplitStatus.Visible = false;
                 btnSplitAndSave.Enabled = true;

@@ -32,13 +32,17 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             splitContainer1 = new SplitContainer();
             customerPanel = new Panel();
+            txtCustomerSearch = new TextBox();
             btn_showdeletedcustomers = new Button();
             label4 = new Label();
             btnEditCustomer = new Button();
             btnDeleteCustomer = new Button();
             btnAddCustomer = new Button();
             dgvCustomers = new DataGridView();
+            btnClearCustomerSearch = new Button();
             gbTransactions = new GroupBox();
+            cbYear = new ComboBox();
+            label6 = new Label();
             label5 = new Label();
             button2 = new Button();
             btn_showdeletedtransactions = new Button();
@@ -119,17 +123,27 @@
             // 
             customerPanel.AutoSize = true;
             customerPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            customerPanel.Controls.Add(txtCustomerSearch);
             customerPanel.Controls.Add(btn_showdeletedcustomers);
             customerPanel.Controls.Add(label4);
             customerPanel.Controls.Add(btnEditCustomer);
             customerPanel.Controls.Add(btnDeleteCustomer);
             customerPanel.Controls.Add(btnAddCustomer);
             customerPanel.Controls.Add(dgvCustomers);
+            customerPanel.Controls.Add(btnClearCustomerSearch);
             customerPanel.Dock = DockStyle.Fill;
             customerPanel.Location = new Point(0, 0);
             customerPanel.Name = "customerPanel";
             customerPanel.Size = new Size(261, 569);
             customerPanel.TabIndex = 0;
+            // 
+            // txtCustomerSearch
+            // 
+            txtCustomerSearch.Location = new Point(100, -2);
+            txtCustomerSearch.Name = "txtCustomerSearch";
+            txtCustomerSearch.PlaceholderText = "Müşteri ara...";
+            txtCustomerSearch.Size = new Size(100, 23);
+            txtCustomerSearch.TabIndex = 6;
             // 
             // btn_showdeletedcustomers
             // 
@@ -145,7 +159,7 @@
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(90, 1);
+            label4.Location = new Point(12, 2);
             label4.Name = "label4";
             label4.Size = new Size(82, 15);
             label4.TabIndex = 4;
@@ -194,20 +208,33 @@
             dgvCustomers.BackgroundColor = SystemColors.Control;
             dgvCustomers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvCustomers.ColumnHeadersVisible = false;
-            dgvCustomers.Location = new Point(0, 19);
+            dgvCustomers.Location = new Point(0, 22);
             dgvCustomers.Name = "dgvCustomers";
             dgvCustomers.ReadOnly = true;
             dgvCustomers.RowHeadersVisible = false;
             dgvCustomers.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             dgvCustomers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvCustomers.Size = new Size(261, 464);
+            dgvCustomers.Size = new Size(261, 461);
             dgvCustomers.TabIndex = 0;
             dgvCustomers.SelectionChanged += dgvCustomers_SelectionChanged;
+            // 
+            // btnClearCustomerSearch
+            // 
+            btnClearCustomerSearch.Location = new Point(200, -2);
+            btnClearCustomerSearch.Name = "btnClearCustomerSearch";
+            btnClearCustomerSearch.Size = new Size(24, 23);
+            btnClearCustomerSearch.TabIndex = 7;
+            btnClearCustomerSearch.Text = "X";
+            btnClearCustomerSearch.UseVisualStyleBackColor = true;
+            btnClearCustomerSearch.Visible = false;
+            btnClearCustomerSearch.Click += btnClearCustomerSearch_Click;
             // 
             // gbTransactions
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(cbYear);
+            gbTransactions.Controls.Add(label6);
             gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
             gbTransactions.Controls.Add(btn_showdeletedtransactions);
@@ -234,10 +261,28 @@
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
             // 
+            // cbYear
+            // 
+            cbYear.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbYear.Location = new Point(49, 101);
+            cbYear.Name = "cbYear";
+            cbYear.Size = new Size(92, 23);
+            cbYear.TabIndex = 2;
+            cbYear.SelectedIndexChanged += cbYear_SelectedIndexChanged;
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.Location = new Point(18, 105);
+            label6.Name = "label6";
+            label6.Size = new Size(20, 15);
+            label6.TabIndex = 23;
+            label6.Text = "Yıl";
+            // 
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(226, 101);
+            label5.Location = new Point(226, 104);
             label5.Name = "label5";
             label5.Size = new Size(236, 15);
             label5.TabIndex = 22;
@@ -781,7 +826,11 @@
         private ToolTip toolTip1;
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
         private Button btn_showdeletedcustomers;
+        private ComboBox cbYear;
+        private TextBox txtCustomerSearch;
+        private Button btnClearCustomerSearch;
         private ToolStripStatusLabel StatustLabel_info;
         private Label label5;
+        private Label label6;
     }
-}
+ }

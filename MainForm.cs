@@ -25,13 +25,17 @@ namespace HesapTakip
         private IDatabaseOperations _db;
         private DataSet dataSet = new DataSet();
         private List<string> _suggestions = new List<string>();
+        // BindingSource for customers to support filtering
+        private BindingSource customersBinding = new BindingSource();
+        // Debounce timer for search box
+        private System.Windows.Forms.Timer searchTimer = new System.Windows.Forms.Timer();
         private static bool _versionChecked = false;
         private async void MainForm_Load(object sender, EventArgs e)
         {
             // Başlangıçta progress gizli; arka planda DB init başlatılacak
             progressBar1.Visible = false;
 
-            // Versiyon bilgisini hızlıca göster
+            // Versiyon bilgisini hızlıca göstere
             toolStripStatusLabelVersion.Text = $"v{GetCurrentVersion()}";
 
             // Açılışta sessizce versiyon kontrolü yap
@@ -46,6 +50,23 @@ namespace HesapTakip
             // Do not initialize database synchronously in constructor. Initialization will be performed in Load event (background).
             txtAmount.KeyDown += TxtAmount_KeyDown;
             txtAmount.KeyPress += TxtAmount_KeyPress;
+            // Wire search textbox if present
+            try
+            {
+                if (this.Controls.Find("txtCustomerSearch", true).FirstOrDefault() is TextBox tb)
+                {
+                    tb.TextChanged += txtCustomerSearch_TextChanged;
+                }
+                if (this.Controls.Find("btnClearCustomerSearch", true).FirstOrDefault() is Button cb)
+                {
+                    cb.Click += btnClearCustomerSearch_Click;
+                }
+            }
+            catch { }
+
+            // Configure debounce timer
+            searchTimer.Interval = 350; // ms
+            searchTimer.Tick += SearchTimer_Tick;
         }
 
         private async Task InitializeApplicationAsync()
@@ -288,7 +309,8 @@ namespace HesapTakip
             {
                 dgvCustomers.Columns.Clear();
                 var dt = _db.GetCustomers();
-                dgvCustomers.DataSource = dt;
+                customersBinding.DataSource = dt;
+                dgvCustomers.DataSource = customersBinding;
 
                 if (dgvCustomers.Columns["CustomerID"] != null)
                 {
@@ -310,14 +332,93 @@ namespace HesapTakip
             try
             {
                 var dt = _db.GetTransactions(customerID);
-                dataSet.Tables["Transactions"]?.Clear();
+                // Keep a named table in dataset for filtering
+                if (dataSet.Tables.Contains("Transactions"))
+                    dataSet.Tables.Remove("Transactions");
+                dt.TableName = "Transactions";
                 dataSet.Tables.Add(dt);
-                dgvTransactions.DataSource = dt;
+                dgvTransactions.DataSource = dataSet.Tables["Transactions"];
                 FormatTransactionGrid();
+                // Fill year combo box based on loaded transactions
+                FillYearCombo();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("İşlemler yüklenirken hata: " + ex.Message);
+            }
+        }
+
+        private void FillYearCombo()
+        {
+            try
+            {
+                if (!dataSet.Tables.Contains("Transactions"))
+                {
+                    cbYear.DataSource = null;
+                    cbYear.Items.Clear();
+                    cbYear.Visible = false;
+                    return;
+                }
+
+                var dt = dataSet.Tables["Transactions"];
+                if (!dt.Columns.Contains("Date"))
+                {
+                    cbYear.DataSource = null;
+                    cbYear.Visible = false;
+                    return;
+                }
+
+                var years = dt.AsEnumerable()
+                    .Where(r => r.Field<object>("Date") != null && r.Field<object>("Date") != DBNull.Value)
+                    .Select(r => Convert.ToDateTime(r.Field<object>("Date")).Year)
+                    .Distinct()
+                    .OrderByDescending(y => y)
+                    .ToList();
+
+                if (years.Count == 0)
+                {
+                    cbYear.DataSource = null;
+                    cbYear.Visible = false;
+                    return;
+                }
+
+                cbYear.Visible = true;
+                cbYear.DataSource = years;
+                cbYear.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"FillYearCombo error: {ex.Message}");
+                cbYear.Visible = false;
+            }
+        }
+
+        private void ApplyYearFilter(int year)
+        {
+            try
+            {
+                if (!dataSet.Tables.Contains("Transactions")) return;
+
+                var dv = new DataView(dataSet.Tables["Transactions"]);
+                var start = new DateTime(year, 1, 1);
+                var end = start.AddYears(1);
+
+                // Filter using Date column comparison - use InvariantCulture for formatting
+                dv.RowFilter = $"Date >= '#{start:MM/dd/yyyy}#' AND Date < '#{end:MM/dd/yyyy}#'";
+                dgvTransactions.DataSource = dv;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ApplyYearFilter error: {ex.Message}");
+            }
+        }
+
+        private void cbYear_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cbYear.SelectedItem == null) return;
+            if (int.TryParse(cbYear.SelectedItem.ToString(), out int year))
+            {
+                ApplyYearFilter(year);
             }
         }
 
@@ -335,7 +436,8 @@ namespace HesapTakip
                 dgvTransactions.Columns["Description"].HeaderText = "Açıklama";
             if (dgvTransactions.Columns["Amount"] != null)
                 dgvTransactions.Columns["Amount"].HeaderText = "Tutar";
-            dgvTransactions.Columns["Amount"].Width = 90;
+            if (dgvTransactions.Columns.Contains("Amount"))
+                dgvTransactions.Columns["Amount"].Width = 90;
 
             foreach (DataGridViewRow row in dgvTransactions.Rows)
             {
@@ -343,18 +445,20 @@ namespace HesapTakip
                 var typeCell = row.Cells["Type"];
                 var amountCell = row.Cells["Amount"];
                 if (typeCell?.Value == null || amountCell?.Value == null) continue;
-                amountCell.Style.ForeColor = typeCell.Value.ToString().ToLower() switch
-                {
-                    "gelir" => System.Drawing.Color.Green,
-                    "gider" => System.Drawing.Color.Red,
-                    _ => dgvTransactions.DefaultCellStyle.ForeColor
-                };
+                var t = typeCell.Value.ToString().ToLower();
+                if (t == "gelir") amountCell.Style.ForeColor = System.Drawing.Color.Green;
+                else if (t == "gider") amountCell.Style.ForeColor = System.Drawing.Color.Red;
+                else amountCell.Style.ForeColor = dgvTransactions.DefaultCellStyle.ForeColor;
             }
 
             if (dgvTransactions.Columns["Date"] != null)
             {
-                dgvTransactions.Sort(dgvTransactions.Columns["Date"], ListSortDirection.Ascending);
-                dgvTransactions.Columns["Date"].HeaderCell.SortGlyphDirection = SortOrder.Ascending;
+                try
+                {
+                    dgvTransactions.Sort(dgvTransactions.Columns["Date"], ListSortDirection.Ascending);
+                    dgvTransactions.Columns["Date"].HeaderCell.SortGlyphDirection = SortOrder.Ascending;
+                }
+                catch { }
             }
         }
 
@@ -457,7 +561,7 @@ namespace HesapTakip
             var customerName = dgvCustomers.CurrentRow.Cells["Name"].Value?.ToString() ?? "bu müşteri";
 
             var confirmResult = MessageBox.Show(
-                $"{customerName} listeden silmek istediğinize emin misiniz?\nBu işlem geri verileri silmez. Listede görünmez yapar.",
+                $"{customerName} listeden silmek istediğinizden emin misiniz?\nBu işlem geri verileri silmez. Listede görünmez yapar.",
                 "Müşteri Silme Onayı",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
@@ -2194,7 +2298,6 @@ namespace HesapTakip
 
             if (val is byte[] bytes)
             {
-                // hex literal
                 return "0x" + BitConverter.ToString(bytes).Replace("-", "");
             }
 
@@ -2520,8 +2623,82 @@ namespace HesapTakip
 
         private void btn_showdeletedtransactions_Click(object sender, EventArgs e)
         {
-
+            // Designer references this; keep stub to avoid runtime error. Functionality not implemented.
         }
 
+        private void txtCustomerSearch_TextChanged(object sender, EventArgs e)
+        {
+            // Restart debounce timer
+            try
+            {
+                searchTimer.Stop();
+                searchTimer.Start();
+                // show/hide clear button
+                try
+                {
+                    var btn = this.Controls.Find("btnClearCustomerSearch", true).FirstOrDefault() as Button;
+                    var tb = sender as TextBox;
+                    if (btn != null && tb != null)
+                    {
+                        btn.Visible = !string.IsNullOrEmpty(tb.Text);
+                    }
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"txtCustomerSearch_TextChanged error: {ex.Message}");
+            }
+        }
+
+        private void btnClearCustomerSearch_Click(object sender, EventArgs e)
+        {
+            var tb = this.Controls.Find("txtCustomerSearch", true).FirstOrDefault() as TextBox;
+            if (tb == null) return;
+            tb.Clear();
+            ApplyCustomerFilter("");
+            try
+            {
+                var btn = this.Controls.Find("btnClearCustomerSearch", true).FirstOrDefault() as Button;
+                if (btn != null) btn.Visible = false;
+            }
+            catch { }
+        }
+
+        private void SearchTimer_Tick(object sender, EventArgs e)
+        {
+            searchTimer.Stop();
+            try
+            {
+                var tb = this.Controls.Find("txtCustomerSearch", true).FirstOrDefault() as TextBox;
+                if (tb == null) return;
+                ApplyCustomerFilter(tb.Text.Trim());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"SearchTimer_Tick error: {ex.Message}");
+            }
+        }
+
+        private void ApplyCustomerFilter(string term)
+        {
+            try
+            {
+                if (customersBinding?.DataSource == null) return;
+
+                if (string.IsNullOrEmpty(term))
+                {
+                    customersBinding.RemoveFilter();
+                    return;
+                }
+
+                string escaped = term.Replace("'", "''");
+                customersBinding.Filter = $"Name LIKE '%{escaped}%'";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ApplyCustomerFilter error: {ex.Message}");
+            }
+        }
     }
 }
