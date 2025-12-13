@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/github/v/release/yusatopaloglu-s/HesapTakip?color=%230567ff&label=Latest%20Release&style=for-the-badge)](https://github.com/yusatopaloglu-s/HesapTakip/releases/latest)
+![GitHub Downloads (specific asset, all releases)](https://img.shields.io/github/downloads/yusatopaloglu-s/HesapTakip/HesapTakip.zip?label=Total%20Downloads&style=for-the-badge)
 # HesapTakip
 MYSQL, MSSQL, SqLite veri tabanlarını kullanır. <br>
 MySQL ve MSSQL ağ üzerinden çalışırken , SqLite yerel dosyada kayıt tutar. <br>
