@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.6.8-1712</Version>
+    <Version>1.0.6.09</Version>
     <PackageVersion>1.0.0</PackageVersion>
     <NeutralLanguage>tr</NeutralLanguage>	  	    
     </PropertyGroup>
@@ -52,10 +52,6 @@
     <PackageReference Include="EPPlus" Version="7.5.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
     <PackageReference Include="MySql.Data" Version="9.4.0" />
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.5.109">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>  
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Octokit" Version="14.0.0" />
     <PackageReference Include="QuestPDF" Version="2024.12.3" />

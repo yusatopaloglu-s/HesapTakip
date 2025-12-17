@@ -1912,37 +1912,18 @@ namespace HesapTakip
 
         private static Version GetCurrentVersion()
         {
-            try
+            Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
+            if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
             {
-                var asm = System.Reflection.Assembly.GetExecutingAssembly();
-
-                // Prefer AssemblyInformationalVersion which Nerdbank.GitVersioning sets from git tags
-                var infoAttr = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute));
-                var infoVer = infoAttr?.InformationalVersion;
-
-                if (!string.IsNullOrEmpty(infoVer))
+                var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
                 {
-                    var parsed = ParseVersion(infoVer);
-                    if (parsed != null) return parsed;
+                    return fileVersion;
                 }
-
-                Version assemblyVersion = asm.GetName().Version;
-
-                if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
-                {
-                    var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
-                    {
-                        return fileVersion;
-                    }
-                }
-
-                return assemblyVersion ?? new Version(1, 0, 0);
             }
-            catch
-            {
-                return new Version(1, 0, 0);
-            }
+
+            return assemblyVersion ?? new Version(1, 0, 0);
         }
 
 
@@ -1951,50 +1932,13 @@ namespace HesapTakip
             try
             {
 
-                if (string.IsNullOrWhiteSpace(versionString)) return new Version(0, 0, 0);
+                string cleanVersion = versionString.Trim().TrimStart('v', 'V');
 
-                string cleaned = versionString.Trim().TrimStart('v', 'V');
 
-                // If there's a hyphen suffix (e.g. 1.0.6.8-1712), treat numeric suffix as an additional indicator
-                int suffixNum = -1;
-                string basePart = cleaned;
-                int dashIndex = cleaned.IndexOf('-');
-                if (dashIndex >= 0)
-                {
-                    basePart = cleaned.Substring(0, dashIndex);
-                    var m = System.Text.RegularExpressions.Regex.Match(cleaned.Substring(dashIndex + 1), @"\d+");
-                    if (m.Success)
-                    {
-                        int.TryParse(m.Value, out suffixNum);
-                    }
-                }
+                string versionOnly = System.Text.RegularExpressions.Regex.Match(cleanVersion, @"[\d\.]+").Value;
 
-                // Extract numeric components from base part
-                var matches = System.Text.RegularExpressions.Regex.Matches(basePart, @"\d+");
-                var parts = new System.Collections.Generic.List<int>();
-                foreach (System.Text.RegularExpressions.Match match in matches)
-                {
-                    if (int.TryParse(match.Value, out int v)) parts.Add(v);
-                }
 
-                // If suffix present, use it as revision (or build when fewer components)
-                if (suffixNum >= 0)
-                {
-                    if (parts.Count >= 3)
-                        return new Version(parts[0], parts[1], parts[2], suffixNum);
-                    if (parts.Count == 2)
-                        return new Version(parts[0], parts[1], suffixNum);
-                    if (parts.Count == 1)
-                        return new Version(parts[0], suffixNum);
-                    return new Version(0, suffixNum);
-                }
-
-                // No suffix - construct from available parts safely
-                if (parts.Count >= 4) return new Version(parts[0], parts[1], parts[2], parts[3]);
-                if (parts.Count == 3) return new Version(parts[0], parts[1], parts[2]);
-                if (parts.Count == 2) return new Version(parts[0], parts[1]);
-                if (parts.Count == 1) return new Version(parts[0], 0);
-                return new Version(0, 0);
+                return Version.Parse(versionOnly);
             }
             catch
             {
