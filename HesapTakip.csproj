@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.6.8-1712</Version>
+    <Version>1.0.6.9</Version>
     <PackageVersion>1.0.0</PackageVersion>
     <NeutralLanguage>tr</NeutralLanguage>	  	    
     </PropertyGroup>
