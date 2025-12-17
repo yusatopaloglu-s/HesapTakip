@@ -1912,18 +1912,37 @@ namespace HesapTakip
 
         private static Version GetCurrentVersion()
         {
-            Version assemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-
-            if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
+            try
             {
-                var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
-                {
-                    return fileVersion;
-                }
-            }
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
 
-            return assemblyVersion ?? new Version(1, 0, 0);
+                // Prefer AssemblyInformationalVersion which Nerdbank.GitVersioning sets from git tags
+                var infoAttr = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+                var infoVer = infoAttr?.InformationalVersion;
+
+                if (!string.IsNullOrEmpty(infoVer))
+                {
+                    var parsed = ParseVersion(infoVer);
+                    if (parsed != null) return parsed;
+                }
+
+                Version assemblyVersion = asm.GetName().Version;
+
+                if (assemblyVersion == null || assemblyVersion.ToString() == "0.0.0.0")
+                {
+                    var versionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                    if (Version.TryParse(versionInfo.FileVersion, out Version fileVersion))
+                    {
+                        return fileVersion;
+                    }
+                }
+
+                return assemblyVersion ?? new Version(1, 0, 0);
+            }
+            catch
+            {
+                return new Version(1, 0, 0);
+            }
         }
 
 
@@ -1932,12 +1951,50 @@ namespace HesapTakip
             try
             {
 
-                string cleanVersion = versionString.Trim().TrimStart('v', 'V');
+                if (string.IsNullOrWhiteSpace(versionString)) return new Version(0, 0, 0);
 
+                string cleaned = versionString.Trim().TrimStart('v', 'V');
 
-                string versionOnly = System.Text.RegularExpressions.Regex.Match(cleanVersion, @"[\d\.]+").Value;
+                // If there's a hyphen suffix (e.g. 1.0.6.8-1712), treat numeric suffix as an additional indicator
+                int suffixNum = -1;
+                string basePart = cleaned;
+                int dashIndex = cleaned.IndexOf('-');
+                if (dashIndex >= 0)
+                {
+                    basePart = cleaned.Substring(0, dashIndex);
+                    var m = System.Text.RegularExpressions.Regex.Match(cleaned.Substring(dashIndex + 1), @"\d+");
+                    if (m.Success)
+                    {
+                        int.TryParse(m.Value, out suffixNum);
+                    }
+                }
 
-                return Version.Parse(versionOnly);
+                // Extract numeric components from base part
+                var matches = System.Text.RegularExpressions.Regex.Matches(basePart, @"\d+");
+                var parts = new System.Collections.Generic.List<int>();
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    if (int.TryParse(match.Value, out int v)) parts.Add(v);
+                }
+
+                // If suffix present, use it as revision (or build when fewer components)
+                if (suffixNum >= 0)
+                {
+                    if (parts.Count >= 3)
+                        return new Version(parts[0], parts[1], parts[2], suffixNum);
+                    if (parts.Count == 2)
+                        return new Version(parts[0], parts[1], suffixNum);
+                    if (parts.Count == 1)
+                        return new Version(parts[0], suffixNum);
+                    return new Version(0, suffixNum);
+                }
+
+                // No suffix - construct from available parts safely
+                if (parts.Count >= 4) return new Version(parts[0], parts[1], parts[2], parts[3]);
+                if (parts.Count == 3) return new Version(parts[0], parts[1], parts[2]);
+                if (parts.Count == 2) return new Version(parts[0], parts[1]);
+                if (parts.Count == 1) return new Version(parts[0], 0);
+                return new Version(0, 0);
             }
             catch
             {
@@ -2033,7 +2090,7 @@ namespace HesapTakip
         private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
+            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\ngoto :uitr\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\n:uitr\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
 
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
 
@@ -2354,7 +2411,7 @@ namespace HesapTakip
                         }
                     }
 
-                    MessageBox.Show("MSSQL sunucu tarafında yedekleme başarılı.\nNot: .bak dosyası sunucu dosya sistemine yazıldı.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("MSSQL sunucu tarafında yedekleme başarılı.\nNot: .bak dosyası sunucu dosya sistemine yazıldı.", "Başarili", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 catch (Exception serverEx)
