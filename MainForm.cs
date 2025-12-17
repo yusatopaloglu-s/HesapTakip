@@ -1937,6 +1937,7 @@ namespace HesapTakip
 
                 string versionOnly = System.Text.RegularExpressions.Regex.Match(cleanVersion, @"[\d\.]+").Value;
 
+
                 return Version.Parse(versionOnly);
             }
             catch
@@ -2033,7 +2034,7 @@ namespace HesapTakip
         private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
+            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\ngoto :uitr\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\n:uitr\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
 
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
 
@@ -2354,7 +2355,7 @@ namespace HesapTakip
                         }
                     }
 
-                    MessageBox.Show("MSSQL sunucu tarafında yedekleme başarılı.\nNot: .bak dosyası sunucu dosya sistemine yazıldı.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("MSSQL sunucu tarafında yedekleme başarılı.\nNot: .bak dosyası sunucu dosya sistemine yazıldı.", "Başarili", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 catch (Exception serverEx)
