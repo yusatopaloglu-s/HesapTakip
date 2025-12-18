@@ -1,6 +1,3 @@
-using DocumentFormat.OpenXml.Office.Word;
-using DocumentFormat.OpenXml.Office2010.Excel;
-using DocumentFormat.OpenXml.Wordprocessing;
 using MySql.Data.MySqlClient;
 using System.Data;
 using System.Text.Json;
@@ -242,7 +239,7 @@ namespace HesapTakip
                 return false;
             }
         }
-            
+
         public bool DeleteCustomer(int customerId)
         {
             try

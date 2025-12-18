@@ -408,11 +408,11 @@ namespace HesapTakip
                     foreach (string versionDir in versionDirs)
                     {
                         string userConfigPath = Path.Combine(versionDir, "user.config");
-                    if (File.Exists(userConfigPath))
-                    {
-                        // Eski user.config'ten ayarları oku ve yeni konuma taşı
-                        MigrateFromUserConfig(userConfigPath);
-                    }
+                        if (File.Exists(userConfigPath))
+                        {
+                            // Eski user.config'ten ayarları oku ve yeni konuma taşı
+                            MigrateFromUserConfig(userConfigPath);
+                        }
                     }
                 }
             }

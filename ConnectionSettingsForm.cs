@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using System.Windows.Forms;
-
-
 namespace HesapTakip
 {
     public partial class ConnectionSettingsForm : Form
@@ -49,7 +44,7 @@ namespace HesapTakip
             {
                 ctrl.Font = new Font("Segoe UI", 9F);
             }
-           
+
             LoadCurrentSettings();
             UpdateFormByDatabaseType();
         }
@@ -156,7 +151,7 @@ namespace HesapTakip
                 txtSqliteFilePath.Text = defaultPath;
             }
 
-            
+
         }
 
         private void cmbDatabaseType_SelectedIndexChanged(object sender, EventArgs e)
@@ -247,7 +242,7 @@ namespace HesapTakip
             lblPassword.Visible = !useWindowsAuth;
             txtPassword.Visible = !useWindowsAuth;
         }
-     
+
         private bool ValidateInputs()
         {
             string databaseType = cmbDatabaseType.SelectedItem?.ToString();
@@ -458,7 +453,7 @@ namespace HesapTakip
             this.Close();
         }
 
-               
+
         private void btn_crdb_sqlite_Click(object sender, EventArgs e)
         {
             string filePath = txtSqliteFilePath.Text?.Trim();

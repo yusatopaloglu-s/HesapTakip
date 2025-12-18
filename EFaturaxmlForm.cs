@@ -4,9 +4,6 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 
 namespace HesapTakip
