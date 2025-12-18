@@ -30,6 +30,9 @@ namespace HesapTakip
         // Debounce timer for search box
         private System.Windows.Forms.Timer searchTimer = new System.Windows.Forms.Timer();
         private static bool _versionChecked = false;
+        // Suppress flag to avoid programmatic selection from triggering SelectionChanged behavior
+        private bool _suppressCustomerSelectionChanged = false;
+
         private async void MainForm_Load(object sender, EventArgs e)
         {
             // Başlangıçta progress gizli; arka planda DB init başlatılacak
@@ -132,6 +135,8 @@ namespace HesapTakip
                         // Success - update UI on UI thread
                         try
                         {
+                            // Prevent selection-changed from loading transactions during initial binding
+                            _suppressCustomerSelectionChanged = true;
                             LoadCustomers();
 
                             InitializeAutoComplete();
@@ -144,7 +149,10 @@ namespace HesapTakip
                             progressBar1.Visible = false;
                             try { progressBar1.Style = ProgressBarStyle.Continuous; } catch { }
 
-                            gbTransactions.Enabled = true;
+                            // Keep transaction area disabled until user explicitly selects a customer
+                            SetTransactionControlsEnabled(false);
+                            // Allow selection handling after UI initialized
+                            _suppressCustomerSelectionChanged = false;
                         }
                         catch (Exception ex)
                         {
@@ -320,6 +328,18 @@ namespace HesapTakip
                     dgvCustomers.Columns["ActivityCode"].Visible = false;
                     dgvCustomers.Columns["IsDeleted"].Visible = false;
                 }
+
+                // Ensure no automatic selection happens and transaction UI stays disabled until user acts
+                try
+                {
+                    _suppressCustomerSelectionChanged = true;
+                    dgvCustomers.ClearSelection();
+                    SetTransactionControlsEnabled(false);
+                }
+                finally
+                {
+                    _suppressCustomerSelectionChanged = false;
+                }
             }
             catch (Exception ex)
             {
@@ -345,6 +365,53 @@ namespace HesapTakip
             catch (Exception ex)
             {
                 MessageBox.Show("İşlemler yüklenirken hata: " + ex.Message);
+            }
+        }
+
+        // Central helper to enable/disable transaction-related UI consistently
+        private void SetTransactionControlsEnabled(bool enabled)
+        {
+            try
+            {
+                // Group box
+                if (gbTransactions != null)
+                    gbTransactions.Enabled = enabled;
+
+                // Buttons and inputs - check for nulls because Designer fields may differ
+                if (btnAddTransaction != null) btnAddTransaction.Enabled = enabled;
+                if (btnDeleteTransaction != null) btnDeleteTransaction.Enabled = enabled;
+                if (btnEditTransaction != null) btnEditTransaction.Enabled = enabled;
+                if (btnExportPdf != null) btnExportPdf.Enabled = enabled;
+                if (btnImportExcel != null) btnImportExcel.Enabled = enabled;
+                if (btnSaveToDb != null) btnSaveToDb.Enabled = enabled;
+                if (btnAddDescipt != null) btnAddDescipt.Enabled = enabled;
+                if (btnRemoveDescipt != null) btnRemoveDescipt.Enabled = enabled;
+
+                if (txtAmount != null) txtAmount.Enabled = enabled;
+                if (txtDescription != null) txtDescription.Enabled = enabled;
+                if (dtpDate != null) dtpDate.Enabled = enabled;
+                if (btn_showdeletedtransactions != null) btn_showdeletedtransactions.Enabled = enabled;
+
+                if (dgvTransactions != null) dgvTransactions.ReadOnly = !enabled;
+
+                if (!enabled)
+                {
+                    try { StatustLabel_info.Text = "Lütfen bir müşteri seçin.";
+                       StatustLabel_info.ForeColor = System.Drawing.Color.OrangeRed;
+                                                                                                } catch { }
+                }
+                else
+                {
+                    try
+                    {
+                        if (StatustLabel_info.Text == "Lütfen bir müşteri seçin.") StatustLabel_info.Text = string.Empty;
+                    }
+                    catch { }
+                }
+            }
+            catch
+            {
+                // ignore
             }
         }
 
@@ -764,6 +831,8 @@ namespace HesapTakip
 
         public void dgvCustomers_SelectionChanged(object sender, EventArgs e)
         {
+            if (_suppressCustomerSelectionChanged) return;
+
             if (dgvCustomers.CurrentRow == null) return;
 
             try
@@ -1317,7 +1386,7 @@ namespace HesapTakip
                 Debug.WriteLine($"btnRemoveDescript_Click CRITICAL ERROR: {ex.Message}");
                 Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
 
-                MessageBox.Show($"Öneri silinirken beklenmeyen hata: {ex.Message}", "Kritik Hata",
+                MessageBox.Show($"Öneri silinirken beklenmedik hata: {ex.Message}", "Kritik Hata",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -1831,9 +1900,9 @@ namespace HesapTakip
                         statusProgress?.Report("Yeni sürüm bulundu...");
                         progress?.Report(30);
 
-                        var result = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nMevcut sürüm: {currentVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
+                        var res = MessageBox.Show($"Yeni sürüm bulundu: {latestVersion}\nMevcut sürüm: {currentVersion}\nGüncellemek ister misiniz?", "Güncelleme", MessageBoxButtons.YesNo);
 
-                        if (result == DialogResult.Yes)
+                        if (res == DialogResult.Yes)
                         {
                             await DownloadAndInstallUpdate(downloadUrl, progress, statusProgress);
                         }
@@ -2033,7 +2102,7 @@ namespace HesapTakip
         private static void CreateAndRunUpdateBatch(string updateFilesPath, IProgress<int> progress, IProgress<string> statusProgress)
         {
             string appPath = AppDomain.CurrentDomain.BaseDirectory;
-            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirasinda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
+            string batchContent = $"@echo off\nchcp 65001 >nul\necho HesapTakip Guncelleme Araci\necho ===========================\necho.\n\necho Uygulama kapatiliyor...\ntimeout /t 2 /nobreak >nul\n\ntaskkill /f /im \"HesapTakip.exe\" >nul 2>&1\ntaskkill /f /im \"HesapTakip\" >nul 2>&1\n\necho Ayarlar korunuyor...\n\nif exist \"{appPath}\\HesapTakip.config\" (\n    copy \"{appPath}\\HesapTakip.config\" \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config yedeklendi\n)\n\necho Guncelleme dosyalari kopyalaniyor...\nxcopy \"{updateFilesPath}\\*\" \"{appPath}\" /Y /E /I /Q\n\nif exist \"{appPath}\\HesapTakip.config.backup\" (\n    copy \"{appPath}\\HesapTakip.config.backup\" \"{appPath}\\HesapTakip.config\" >nul\n    del \"{appPath}\\HesapTakip.config.backup\" >nul\n    echo Config geri yuklendi\n)\n\nif %errorlevel% equ 0 (\n    echo.\n    echo Guncelleme basariyla tamamlandi!\n    echo Uygulama yeniden baslatiliyor...\n    echo.\n    \n    timeout /t 2 /nobreak >nul\n    cd /d \"{appPath}\"\n    start \"\" \"HesapTakip.exe\"\n) else (\n    echo.\n    echo Hata: Guncelleme sirainda problem olustu!\n    pause\n)\n\necho Temizlik yapiliyor...\nif exist \"{updateFilesPath}\" rmdir /s /q \"{updateFilesPath}\"\n\nexit\n";
 
             string batchFile = Path.Combine(Path.GetTempPath(), "HesapTakip_Update.bat");
 

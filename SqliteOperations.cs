@@ -267,7 +267,7 @@ namespace HesapTakip
                 return false;
             }
         }
-               
+
         public bool DeleteCustomer(int customerId)
         {
             try
