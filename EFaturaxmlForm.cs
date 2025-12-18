@@ -60,6 +60,7 @@ namespace HesapTakip
         private List<InvoiceData> BilancoAlisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeSatisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeAlisData = new List<InvoiceData>();
+        private List<InvoiceData> InvoiceItemsQuantityData = new List<InvoiceData>();
         private IDatabaseOperations _db;
         private Dictionary<string, string> _expenseMatchings; // ItemName -> SubRecordType
 
@@ -80,6 +81,7 @@ namespace HesapTakip
                 "Bilanço Alış",
                 "Luca İşletme Satış",
                 "Luca İşletme Alış",
+                "Fatura Kalemleri Adet"
 
             });
             cmbTableSelector.SelectedIndex = 0;
@@ -494,6 +496,7 @@ namespace HesapTakip
                 BilancoAlisData.Clear();
                 LucaIsletmeSatisData.Clear();
                 LucaIsletmeAlisData.Clear();
+                InvoiceItemsQuantityData.Clear();
                 UpdateDataGridView();
 
 
@@ -672,67 +675,69 @@ namespace HesapTakip
 
                 if (isSatis)
                 {
-                    if (BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber)) return;
-
-                    BilancoSatisData.Add(new InvoiceData
+                    if (!BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber))
                     {
-                        InvoiceType = invoiceType,
-                        IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
-                        InvoiceNumber = invoiceNumber,
-                        CustomerTaxId = customerTaxId,
-                        CustomerName = customerName,
-                        TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2),
-                        TaxableAmount1 = taxableAmount1.ToString("N2", formatter2),
-                        TaxAmount1 = taxAmount1.ToString("N2", formatter2),
-                        TaxableAmount8 = taxableAmount8.ToString("N2", formatter2),
-                        TaxAmount8 = taxAmount8.ToString("N2", formatter2),
-                        TaxableAmount10 = taxableAmount10.ToString("N2", formatter2),
-                        TaxAmount10 = taxAmount10.ToString("N2", formatter2),
-                        TaxableAmount18 = taxableAmount18.ToString("N2", formatter2),
-                        TaxAmount18 = taxAmount18.ToString("N2", formatter2),
-                        TaxableAmount20 = taxableAmount20.ToString("N2", formatter2),
-                        TaxAmount20 = taxAmount20.ToString("N2", formatter2),
-                        DepositAmount = double.TryParse(depositAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var dep) ? dep.ToString("N2", formatter2) : "0,00",
-                        Oiv = oiv.ToString("N2", formatter2),
-                        TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
-                        UUID = uuid,
-                        PaymentMethod = paymentMethod,
-                        KdvExemptionTable = kdvExemptionTable,
-                        KdvExemptionCode = kdvExemptionCode,
-                        SaleType = saleType
-                    });
+                        BilancoSatisData.Add(new InvoiceData
+                        {
+                            InvoiceType = invoiceType,
+                            IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
+                            InvoiceNumber = invoiceNumber,
+                            CustomerTaxId = customerTaxId,
+                            CustomerName = customerName,
+                            TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2),
+                            TaxableAmount1 = taxableAmount1.ToString("N2", formatter2),
+                            TaxAmount1 = taxAmount1.ToString("N2", formatter2),
+                            TaxableAmount8 = taxableAmount8.ToString("N2", formatter2),
+                            TaxAmount8 = taxAmount8.ToString("N2", formatter2),
+                            TaxableAmount10 = taxableAmount10.ToString("N2", formatter2),
+                            TaxAmount10 = taxAmount10.ToString("N2", formatter2),
+                            TaxableAmount18 = taxableAmount18.ToString("N2", formatter2),
+                            TaxAmount18 = taxAmount18.ToString("N2", formatter2),
+                            TaxableAmount20 = taxableAmount20.ToString("N2", formatter2),
+                            TaxAmount20 = taxAmount20.ToString("N2", formatter2),
+                            DepositAmount = double.TryParse(depositAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var dep) ? dep.ToString("N2", formatter2) : "0,00",
+                            Oiv = oiv.ToString("N2", formatter2),
+                            TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
+                            UUID = uuid,
+                            PaymentMethod = paymentMethod,
+                            KdvExemptionTable = kdvExemptionTable,
+                            KdvExemptionCode = kdvExemptionCode,
+                            SaleType = saleType
+                        });
+                    }
                 }
                 else
                 {
-                    if (BilancoAlisData.Any(d => d.InvoiceNumber == invoiceNumber)) return;
-
-                    BilancoAlisData.Add(new InvoiceData
+                    if (!BilancoAlisData.Any(d => d.InvoiceNumber == invoiceNumber))
                     {
-                        InvoiceType = invoiceType,
-                        IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
-                        InvoiceNumber = invoiceNumber,
-                        SupplierTaxId = supplierTaxId,
-                        SupplierName = supplierName,
-                        TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2),
-                        TaxableAmount1 = taxableAmount1.ToString("N2", formatter2),
-                        TaxAmount1 = taxAmount1.ToString("N2", formatter2),
-                        TaxableAmount8 = taxableAmount8.ToString("N2", formatter2),
-                        TaxAmount8 = taxAmount8.ToString("N2", formatter2),
-                        TaxableAmount10 = taxableAmount10.ToString("N2", formatter2),
-                        TaxAmount10 = taxAmount10.ToString("N2", formatter2),
-                        TaxableAmount18 = taxableAmount18.ToString("N2", formatter2),
-                        TaxAmount18 = taxAmount18.ToString("N2", formatter2),
-                        TaxableAmount20 = taxableAmount20.ToString("N2", formatter2),
-                        TaxAmount20 = taxAmount20.ToString("N2", formatter2),
-                        DepositAmount = double.TryParse(depositAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var dep) ? dep.ToString("N2", formatter2) : "0,00",
-                        Oiv = oiv.ToString("N2", formatter2),
-                        TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
-                        UUID = uuid,
-                        PaymentMethod = paymentMethod,
-                        KdvExemptionTable = kdvExemptionTable,
-                        KdvExemptionCode = kdvExemptionCode,
-                        SaleType = saleType
-                    });
+                        BilancoAlisData.Add(new InvoiceData
+                        {
+                            InvoiceType = invoiceType,
+                            IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
+                            InvoiceNumber = invoiceNumber,
+                            SupplierTaxId = supplierTaxId,
+                            SupplierName = supplierName,
+                            TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2),
+                            TaxableAmount1 = taxableAmount1.ToString("N2", formatter2),
+                            TaxAmount1 = taxAmount1.ToString("N2", formatter2),
+                            TaxableAmount8 = taxableAmount8.ToString("N2", formatter2),
+                            TaxAmount8 = taxAmount8.ToString("N2", formatter2),
+                            TaxableAmount10 = taxableAmount10.ToString("N2", formatter2),
+                            TaxAmount10 = taxAmount10.ToString("N2", formatter2),
+                            TaxableAmount18 = taxableAmount18.ToString("N2", formatter2),
+                            TaxAmount18 = taxAmount18.ToString("N2", formatter2),
+                            TaxableAmount20 = taxableAmount20.ToString("N2", formatter2),
+                            TaxAmount20 = taxAmount20.ToString("N2", formatter2),
+                            DepositAmount = double.TryParse(depositAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var dep) ? dep.ToString("N2", formatter2) : "0,00",
+                            Oiv = oiv.ToString("N2", formatter2),
+                            TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
+                            UUID = uuid,
+                            PaymentMethod = paymentMethod,
+                            KdvExemptionTable = kdvExemptionTable,
+                            KdvExemptionCode = kdvExemptionCode,
+                            SaleType = saleType
+                        });
+                    }
                 }
 
                 var invoiceLines = xml.Descendants(cac + "InvoiceLine");
@@ -769,7 +774,27 @@ namespace HesapTakip
                         saleType = "Normal Alım";
                     }
 
+                    // If user selected the "Fatura Kalemleri Adet" view, add each invoice line as its own entry
+                    if (selectedTable == "Fatura Kalemleri Adet")
+                    {
+                        // format numeric fields
+                        string formattedUnitPrice = double.TryParse(unitPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out var upVal) ? upVal.ToString("N2", formatter2) : unitPrice;
+                        string formattedLineTaxable = double.TryParse(lineTaxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var ltVal) ? ltVal.ToString("N2", formatter2) : lineTaxableAmount;
+                        string formattedLineTax = double.TryParse(lineTaxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var laVal) ? laVal.ToString("N2", formatter2) : lineTaxAmount;
 
+                        InvoiceItemsQuantityData.Add(new InvoiceData
+                        {
+                            IssueDate = DateTime.TryParse(issueDate, out var d2) ? d2.ToString("dd.MM.yyyy", culture) : "",
+                            InvoiceNumber = invoiceNumber,
+                            ItemName = itemName,
+                            Quantity = quantity,
+                            UnitPrice = formattedUnitPrice,
+                            TaxableAmount = formattedLineTaxable,
+                            TaxAmount = formattedLineTax,
+                            CustomerTaxId = customerTaxId,
+                            SupplierTaxId = supplierTaxId
+                        });
+                    }
 
                     if (isSatis)
                     {
@@ -939,6 +964,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "1",
+                                Quantity = quantity,
                                 TaxableAmount = taxableAmount1.ToString("N2", formatter2),
                                 TaxAmount = taxAmount1.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -965,6 +991,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "8",
+                                Quantity = quantity,
                                 TaxableAmount = taxableAmount8.ToString("N2", formatter2),
                                 TaxAmount = taxAmount8.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -991,6 +1018,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "10",
+                                Quantity = quantity,
                                 TaxableAmount = taxableAmount10.ToString("N2", formatter2),
                                 TaxAmount = taxAmount10.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -1017,6 +1045,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "18",
+                                Quantity = quantity,
                                 TaxableAmount = taxableAmount18.ToString("N2", formatter2),
                                 TaxAmount = taxAmount18.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -1043,6 +1072,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "20",
+                                Quantity = quantity,
                                 TaxableAmount = taxableAmount20.ToString("N2", formatter2),
                                 TaxAmount = taxAmount20.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -1069,6 +1099,7 @@ namespace HesapTakip
                                 ActivityCode = activityCode,
                                 SubRecordType = subRecordType,
                                 Percent = "0",
+                                Quantity = quantity,
                                 TaxableAmount = taxExemptAmount0.ToString("N2", formatter2),
                                 TaxAmount = "0,00",
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
@@ -1130,7 +1161,19 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, "", "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, item.Quantity, "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "");
+                    }
+                    break;
+
+                case "Fatura Kalemleri Adet":
+                    data = InvoiceItemsQuantityData;
+                    columns = new[] { "Evrak No", "Tarih", "TCKN/VKN", "Kalem Açıklama", "Miktar", "Birim Fiyat", "Tutar", "KDV Tutarı" };
+                    foreach (var column in columns)
+                        dgvData.Columns.Add(column, column);
+                    foreach (var item in data)
+                    {
+                        var party = string.IsNullOrEmpty(item.CustomerTaxId) ? item.SupplierTaxId : item.CustomerTaxId;
+                        dgvData.Rows.Add(item.InvoiceNumber, item.IssueDate, party, item.ItemName, item.Quantity, item.UnitPrice, item.TaxableAmount, item.TaxAmount);
                     }
                     break;
 
