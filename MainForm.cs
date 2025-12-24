@@ -497,6 +497,45 @@ namespace HesapTakip
                 // Filter using Date column comparison - use InvariantCulture for formatting
                 dv.RowFilter = $"Date >= '#{start:MM/dd/yyyy}#' AND Date < '#{end:MM/dd/yyyy}#'";
                 dgvTransactions.DataSource = dv;
+
+                // Compute total from filtered rows (show per-year total)
+                decimal total = 0m;
+                try
+                {
+                    foreach (DataRowView drv in dv)
+                    {
+                        object amtObj = null;
+                        object typeObj = null;
+                        try { amtObj = drv["Amount"]; } catch { }
+                        try { typeObj = drv["Type"]; } catch { }
+
+                        if (amtObj == null || amtObj == DBNull.Value) continue;
+
+                        string amtStr = amtObj.ToString();
+                        if (!decimal.TryParse(amtStr, NumberStyles.Any, CultureInfo.CurrentCulture, out decimal amt))
+                        {
+                            // try invariant
+                            decimal.TryParse(amtStr, NumberStyles.Any, CultureInfo.InvariantCulture, out amt);
+                        }
+
+                        string type = typeObj?.ToString() ?? string.Empty;
+                        if (type.Equals("Gelir", StringComparison.OrdinalIgnoreCase)) total += amt;
+                        else if (type.Equals("Gider", StringComparison.OrdinalIgnoreCase)) total -= amt;
+                        else total += amt; // default treat as positive
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"ApplyYearFilter - compute total error: {ex.Message}");
+                }
+
+                // Update total label to reflect filtered total
+                try
+                {
+                    lblTotal.Text = $"Toplam Bakiye: {total:N2} ₺";
+                    lblTotal.ForeColor = total >= 0 ? System.Drawing.Color.DarkGreen : System.Drawing.Color.DarkRed;
+                }
+                catch { }
             }
             catch (Exception ex)
             {
