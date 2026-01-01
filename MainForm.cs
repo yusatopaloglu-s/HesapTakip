@@ -319,7 +319,24 @@ namespace HesapTakip
             {
                 dgvCustomers.Columns.Clear();
                 var dt = _db.GetCustomers();
-                customersBinding.DataSource = dt;
+                // Sort customers alphabetically by Name before binding
+                try
+                {
+                    if (dt != null && dt.Columns.Contains("Name"))
+                    {
+                        dt.DefaultView.Sort = "Name ASC";
+                        customersBinding.DataSource = dt.DefaultView;
+                    }
+                    else
+                    {
+                        customersBinding.DataSource = dt;
+                    }
+                }
+                catch
+                {
+                    // Fallback to unsorted binding if anything goes wrong
+                    customersBinding.DataSource = dt;
+                }
                 dgvCustomers.DataSource = customersBinding;
 
                 if (dgvCustomers.Columns["CustomerID"] != null)
@@ -329,6 +346,7 @@ namespace HesapTakip
                     dgvCustomers.Columns["Taxid"].Visible = false;
                     dgvCustomers.Columns["ActivityCode"].Visible = false;
                     dgvCustomers.Columns["IsDeleted"].Visible = false;
+               
                 }
 
                 // Ensure no automatic selection happens and transaction UI stays disabled until user acts
@@ -415,6 +433,28 @@ namespace HesapTakip
             }
         }
 
+        // After loading transactions, update total label to reflect selected period if any,
+        // otherwise show overall total.
+        private void RefreshTotalForCustomer(int customerID)
+        {
+            try
+            {
+                if (cbYear != null && cbYear.Visible && cbYear.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int year))
+                {
+                    // Re-apply year filter which also computes and updates lblTotal
+                    ApplyYearFilter(year);
+                }
+                else
+                {
+                    CalculateAndDisplayTotal(customerID);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RefreshTotalForCustomer error: {ex.Message}");
+                CalculateAndDisplayTotal(customerID);
+            }
+        }
         private int ComputePeriodYear(DateTime date)
         {
             // If month is on/after period start, period year is the same year, else previous year
@@ -890,7 +930,7 @@ namespace HesapTakip
             if (success)
             {
                 LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);
+                RefreshTotalForCustomer(customerID);
                 ClearTransactionInputs();
 
                 // MessageBox.Show("İşlem başarıyla eklendi!");
@@ -970,7 +1010,7 @@ namespace HesapTakip
                 if (success)
                 {
                     LoadTransactions(customerID);
-                    CalculateAndDisplayTotal(customerID);
+                    RefreshTotalForCustomer(customerID);
                     ClearTransactionInputs();
                     return true;
                 }
@@ -1011,7 +1051,7 @@ namespace HesapTakip
                 if (success)
                 {
                     LoadTransactions(customerID);
-                    CalculateAndDisplayTotal(customerID);
+                    RefreshTotalForCustomer(customerID);
 
 
                 }
@@ -1042,9 +1082,12 @@ namespace HesapTakip
                     isDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
                 }
 
-                // SİLİNMİŞ MÜŞTERİLER DE DAHİL TÜM MÜŞTERİLER İÇİN HESAP HAREKETLERİNİ YÜKLE
-                LoadTransactions(customerID);
+                // Yüklemeden önce toplamı hesapla (genel toplam) - LoadTransactions içindeki FillYearCombo ve ApplyYearFilter
+                // varsa seçili dönemin toplamını gösterecek şekilde üzerine yazacaktır.
                 CalculateAndDisplayTotal(customerID);
+                // SİLİNMIŞ MÜŞTERİLER DE DAHİL TÜM MÜŞTERİLER İÇİN HESAP HAREKETLERİNİ YÜKLE
+                LoadTransactions(customerID);
+                RefreshTotalForCustomer(customerID);
 
                 if (isDeleted && _showingDeletedCustomers)
                 {
@@ -1277,7 +1320,7 @@ namespace HesapTakip
             {
                 var dt = _db.GetTransactions(customerID);
 
-                // Header'ları Türkçe'ye çevir
+                // Header'ları Türkçeye çevir
                 if (dt.Columns.Contains("TransactionID"))
                     dt.Columns["TransactionID"].ColumnName = "İşlemID";
                 if (dt.Columns.Contains("Date"))
@@ -1838,7 +1881,7 @@ namespace HesapTakip
                     if (success)
                     {
                         LoadTransactions(GetCurrentCustomerId());
-                        CalculateAndDisplayTotal(GetCurrentCustomerId());
+                        RefreshTotalForCustomer(GetCurrentCustomerId());
 
 
                     }
@@ -1983,7 +2026,7 @@ namespace HesapTakip
 
                 // Listeyi yenile
                 LoadTransactions(customerID);
-                CalculateAndDisplayTotal(customerID);
+                RefreshTotalForCustomer(customerID);
 
                 MessageBox.Show($"{successCount} kayıt başarıyla veritabanına kaydedildi!");
                 return successCount > 0;
@@ -2307,7 +2350,7 @@ namespace HesapTakip
             File.WriteAllText(batchFile, batchContent, new System.Text.UTF8Encoding(false));
             // Veya: File.WriteAllText(batchFile, batchContent, System.Text.Encoding.Default);
 
-            statusProgress?.Report("Güncelleme işlemi başlatılıyor...");
+            statusProgress?.Report("Güncelleme işlemi başlatiliyor...");
 
             Process.Start(new ProcessStartInfo
             {
@@ -2531,7 +2574,7 @@ namespace HesapTakip
                         }
                     }
 
-                    MessageBox.Show("MySQL yedeği oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("MySQL yedekleme oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
@@ -2747,7 +2790,7 @@ namespace HesapTakip
                         }
                     }
 
-                    MessageBox.Show("MSSQL client-side SQL dump oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("MSSQL yedekleme oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
@@ -2865,7 +2908,23 @@ namespace HesapTakip
                 dgvCustomers.Columns.Clear();
                 dgvTransactions.Columns.Clear();
                 var dt = _db.GetDeletedCustomers();
-                dgvCustomers.DataSource = dt;
+                // Sort deleted customers alphabetically as well
+                try
+                {
+                    if (dt != null && dt.Columns.Contains("Name"))
+                    {
+                        dt.DefaultView.Sort = "Name ASC";
+                        dgvCustomers.DataSource = dt.DefaultView;
+                    }
+                    else
+                    {
+                        dgvCustomers.DataSource = dt;
+                    }
+                }
+                catch
+                {
+                    dgvCustomers.DataSource = dt;
+                }
 
                 // Kolonları formatla
                 if (dgvCustomers.Columns["CustomerID"] != null)
