@@ -32,6 +32,8 @@ namespace HesapTakip
         private static bool _versionChecked = false;
         // Suppress flag to avoid programmatic selection from triggering SelectionChanged behavior
         private bool _suppressCustomerSelectionChanged = false;
+        // Period (fiscal) year start month - 1 = January
+        private readonly int periodStartMonth = 1; // user requested: 1 = Jan
 
         private async void MainForm_Load(object sender, EventArgs e)
         {
@@ -376,6 +378,27 @@ namespace HesapTakip
             try
             {
                 var dt = _db.GetTransactions(customerID);
+                // Ensure Period column exists and populate it based on periodStartMonth
+                if (!dt.Columns.Contains("Period"))
+                    dt.Columns.Add("Period", typeof(int));
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    try
+                    {
+                        if (row["Date"] != null && row["Date"] != DBNull.Value)
+                        {
+                            DateTime d = Convert.ToDateTime(row["Date"]);
+                            row["Period"] = ComputePeriodYear(d);
+                        }
+                        else
+                        {
+                            row["Period"] = DBNull.Value;
+                        }
+                    }
+                    catch { row["Period"] = DBNull.Value; }
+                }
+
                 // Keep a named table in dataset for filtering
                 if (dataSet.Tables.Contains("Transactions"))
                     dataSet.Tables.Remove("Transactions");
@@ -390,6 +413,14 @@ namespace HesapTakip
             {
                 MessageBox.Show("İşlemler yüklenirken hata: " + ex.Message);
             }
+        }
+
+        private int ComputePeriodYear(DateTime date)
+        {
+            // If month is on/after period start, period year is the same year, else previous year
+            if (date.Month >= periodStartMonth)
+                return date.Year;
+            return date.Year - 1;
         }
 
         // Central helper to enable/disable transaction-related UI consistently
@@ -443,30 +474,99 @@ namespace HesapTakip
         {
             try
             {
-                if (!dataSet.Tables.Contains("Transactions"))
+                // Read periods from DB (if supported)
+                DataTable periodsTable = null;
+                try
                 {
-                    cbYear.DataSource = null;
-                    cbYear.Items.Clear();
-                    cbYear.Visible = false;
-                    return;
+                    periodsTable = _db?.GetPeriods();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"GetPeriods failed: {ex.Message}");
+                    periodsTable = null;
                 }
 
-                var dt = dataSet.Tables["Transactions"];
-                if (!dt.Columns.Contains("Date"))
+                var dbYears = new HashSet<int>();
+                if (periodsTable != null && periodsTable.Rows.Count > 0)
                 {
-                    cbYear.DataSource = null;
-                    cbYear.Visible = false;
-                    return;
+                    foreach (DataRow r in periodsTable.Rows)
+                    {
+                        try
+                        {
+                            if (r["PeriodYear"] != null && r["PeriodYear"] != DBNull.Value)
+                                dbYears.Add(Convert.ToInt32(r["PeriodYear"]));
+                        }
+                        catch { }
+                    }
                 }
 
-                var years = dt.AsEnumerable()
-                    .Where(r => r.Field<object>("Date") != null && r.Field<object>("Date") != DBNull.Value)
-                    .Select(r => Convert.ToDateTime(r.Field<object>("Date")).Year)
-                    .Distinct()
-                    .OrderByDescending(y => y)
-                    .ToList();
+                // Derive years from transactions to ensure UI shows any existing data
+                var txYears = new HashSet<int>();
+                try
+                {
+                    if (dataSet.Tables.Contains("Transactions"))
+                    {
+                        var dt = dataSet.Tables["Transactions"];
+                        if (dt.Columns.Contains("Date") || dt.Columns.Contains("Period"))
+                        {
+                            foreach (DataRow r in dt.Rows)
+                            {
+                                try
+                                {
+                                    if (dt.Columns.Contains("Period") && r["Period"] != DBNull.Value)
+                                    {
+                                        txYears.Add(Convert.ToInt32(r["Period"]));
+                                    }
+                                    else if (r["Date"] != null && r["Date"] != DBNull.Value)
+                                    {
+                                        txYears.Add(ComputePeriodYear(Convert.ToDateTime(r["Date"])));
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Deriving years from transactions failed: {ex.Message}");
+                }
 
-                if (years.Count == 0)
+                // Backfill: if transactions have years not present in Periods table, insert them
+                try
+                {
+                    var toInsert = txYears.Except(dbYears).ToList();
+                    if (toInsert.Any())
+                    {
+                        foreach (var y in toInsert)
+                        {
+                            try
+                            {
+                                _db?.AddPeriod(y, y.ToString());
+                                dbYears.Add(y); // treat as inserted even if AddPeriod silently failed
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"AddPeriod({y}) failed: {ex.Message}");
+                            }
+                        }
+
+                        // Optionally refresh periodsTable from DB
+                        try { periodsTable = _db?.GetPeriods(); } catch { }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Backfill periods failed: {ex.Message}");
+                }
+
+                // Final union of years for UI
+                var years = new HashSet<int>(dbYears);
+                foreach (var y in txYears) years.Add(y);
+
+                var ordered = years.OrderByDescending(y => y).ToList();
+
+                if (ordered.Count == 0)
                 {
                     cbYear.DataSource = null;
                     cbYear.Visible = false;
@@ -474,8 +574,22 @@ namespace HesapTakip
                 }
 
                 cbYear.Visible = true;
-                cbYear.DataSource = years;
+                cbYear.DataSource = ordered;
                 cbYear.SelectedIndex = 0;
+
+                // Position add button
+                try
+                {
+                    var addBtn = this.Controls.Find("btnAddPeriod", true).FirstOrDefault() as Button;
+                    if (addBtn != null)
+                    {
+                        addBtn.Left = cbYear.Right + 4;
+                        addBtn.Top = cbYear.Top;
+                        addBtn.Height = cbYear.Height;
+                        addBtn.Visible = true;
+                    }
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -491,11 +605,20 @@ namespace HesapTakip
                 if (!dataSet.Tables.Contains("Transactions")) return;
 
                 var dv = new DataView(dataSet.Tables["Transactions"]);
-                var start = new DateTime(year, 1, 1);
-                var end = start.AddYears(1);
 
-                // Filter using Date column comparison - use InvariantCulture for formatting
-                dv.RowFilter = $"Date >= '#{start:MM/dd/yyyy}#' AND Date < '#{end:MM/dd/yyyy}#'";
+                // Prefer Period column filtering if available
+                if (dataSet.Tables["Transactions"].Columns.Contains("Period"))
+                {
+                    dv.RowFilter = $"Period = {year}";
+                }
+                else
+                {
+                    // Fallback to date-range filter assuming calendar year
+                    var start = new DateTime(year, 1, 1);
+                    var end = start.AddYears(1);
+                    dv.RowFilter = $"Date >= '#{start:MM/dd/yyyy}#' AND Date < '#{end:MM/dd/yyyy}#'";
+                }
+
                 dgvTransactions.DataSource = dv;
 
                 // Compute total from filtered rows (show per-year total)
@@ -568,6 +691,8 @@ namespace HesapTakip
                 dgvTransactions.Columns["Amount"].HeaderText = "Tutar";
             if (dgvTransactions.Columns.Contains("Amount"))
                 dgvTransactions.Columns["Amount"].Width = 90;
+            if (dgvTransactions.Columns["Period"] != null)
+                dgvTransactions.Columns["Period"].Visible = false;
 
             foreach (DataGridViewRow row in dgvTransactions.Rows)
             {
@@ -751,7 +876,16 @@ namespace HesapTakip
 
             var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
-            bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text, amount, GetSelectedTransactionType());
+            // compute period for the transaction; if user selected a period in cbYear and wants to attach, use that
+            int? period = null;
+            if (cbYear.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYear))
+            {
+                // if UI provides a checkbox 'assignToSelectedPeriod' we should prefer it.
+                // For now default: if selected year differs from ComputePeriodYear(date) we still store computed period.
+                period = ComputePeriodYear(dtpDate.Value);
+            }
+
+            bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text, amount, GetSelectedTransactionType(), period);
 
             if (success)
             {
@@ -2113,7 +2247,7 @@ namespace HesapTakip
                                 if (canReportProgress)
                                 {
                                     var progressPercentage = (int)((double)totalBytesRead / totalBytes * 100);
-                                    var overallProgress = 40 + (int)(progressPercentage * 0.5);
+                                    var overallProgress =  40 + (int)(progressPercentage * 0.5);
                                     progress?.Report(overallProgress);
                                     statusProgress?.Report($"İndiriliyor: {progressPercentage}%");
                                 }
@@ -2832,5 +2966,51 @@ namespace HesapTakip
                 Debug.WriteLine($"ApplyCustomerFilter error: {ex.Message}");
             }
         }
+
+         private void BtnAddPeriod_Click(object sender, EventArgs e)
+         {
+            using (var input = new InputForm("Yeni dönem yılı (örn: 2025):"))
+            {
+                if (input.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(input.InputText))
+                {
+                    if (int.TryParse(input.InputText.Trim(), out int newYear))
+                    {
+                        bool ok = _db?.AddPeriod(newYear, newYear.ToString()) ?? false;
+                        if (ok)
+                        {
+                            // Refresh periods from DB and select the newly added year if present
+                            FillYearCombo();
+                            try
+                            {
+                                if (cbYear.DataSource is IList<int> list)
+                                {
+                                    int idx = list.IndexOf(newYear);
+                                    if (idx >= 0) cbYear.SelectedIndex = idx;
+                                }
+                                else
+                                {
+                                    // if DataSource is not IList<int>, try to set SelectedItem
+                                    cbYear.SelectedItem = newYear;
+                                }
+                            }
+                            catch { }
+
+                            MessageBox.Show($"Dönem {newYear} eklendi.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Dönem eklenemedi. Lütfen tekrar deneyin veya logları kontrol edin.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Geçersiz yıl değeri.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+         }
+
+        // Designer wires to lowercase name; provide wrapper to call actual handler
+        private void btnAddPeriod_Click(object sender, EventArgs e) => BtnAddPeriod_Click(sender, e);
     }
 }

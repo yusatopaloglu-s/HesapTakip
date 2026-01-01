@@ -107,6 +107,7 @@ namespace HesapTakip
                     { "Date", "DATETIME" },
                     { "Description", "VARCHAR(255) NULL" },
                     { "Amount", "DECIMAL(18,2)" },
+                    { "Period", "INT NULL" },
                     { "Type", "VARCHAR(50)" },
                     { "IsDeleted", "TINYINT(1) DEFAULT 0" }
                 }, conn);
@@ -171,8 +172,15 @@ namespace HesapTakip
                    { "ItemName", "VARCHAR(255) NOT NULL" },
                    { "SubRecordType", "VARCHAR(255) NOT NULL" }
                    }, conn);
-            }
-        }
+
+                // Periods table
+                EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                {
+                    { "PeriodYear", "INT PRIMARY KEY" },
+                    { "DisplayName", "VARCHAR(255) NULL" }
+                }, conn);
+             }
+         }
 
         public IDbConnection GetConnection()
         {
@@ -276,7 +284,7 @@ namespace HesapTakip
             var dt = new DataTable();
             using (var conn = new MySqlConnection(_connectionString))
             using (var adapter = new MySqlDataAdapter(
-                "SELECT TransactionID, Date, Description, Amount, Type FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0 ORDER BY Date ASC",
+                "SELECT TransactionID, Date, Description, Amount, Type, Period FROM Transactions WHERE CustomerID = @customerID AND IsDeleted = 0 ORDER BY Date ASC",
                 conn))
             {
                 adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerId);
@@ -285,14 +293,14 @@ namespace HesapTakip
             return dt;
         }
 
-        public bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type)
+        public bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type, int? period = null)
         {
             try
             {
                 using (var conn = new MySqlConnection(_connectionString))
                 using (var cmd = new MySqlCommand(
-                    @"INSERT INTO Transactions (CustomerID, Date, Description, Amount, Type) 
-                      VALUES (@cid, @date, @desc, @amount, @type)", conn))
+                    @"INSERT INTO Transactions (CustomerID, Date, Description, Amount, Type, Period) 
+                      VALUES (@cid, @date, @desc, @amount, @type, @period)", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@cid", customerId);
@@ -300,6 +308,7 @@ namespace HesapTakip
                     cmd.Parameters.AddWithValue("@desc", description);
                     cmd.Parameters.AddWithValue("@amount", amount);
                     cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
@@ -310,20 +319,21 @@ namespace HesapTakip
             }
         }
 
-        public bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type)
+        public bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type, int? period = null)
         {
             try
             {
                 using (var conn = new MySqlConnection(_connectionString))
                 using (var cmd = new MySqlCommand(
                     @"UPDATE Transactions SET Date = @date, Description = @desc, 
-                      Amount = @amount, Type = @type WHERE TransactionID = @id", conn))
+                      Amount = @amount, Type = @type, Period = @period WHERE TransactionID = @id", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@date", date);
                     cmd.Parameters.AddWithValue("@desc", description);
                     cmd.Parameters.AddWithValue("@amount", amount);
                     cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@id", transactionId);
                     cmd.ExecuteNonQuery();
                     return true;
@@ -678,6 +688,37 @@ namespace HesapTakip
                 adapter.Fill(dt);
             }
             return dt;
+        }
+
+        public DataTable GetPeriods()
+        {
+            var dt = new DataTable();
+            using (var conn = new MySqlConnection(_connectionString))
+            using (var adapter = new MySqlDataAdapter("SELECT PeriodYear, DisplayName FROM Periods ORDER BY PeriodYear DESC", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddPeriod(int periodYear, string displayName = null)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(_connectionString))
+                using (var cmd = new MySqlCommand("INSERT IGNORE INTO Periods (PeriodYear, DisplayName) VALUES (@year, @disp)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@year", periodYear);
+                    cmd.Parameters.AddWithValue("@disp", string.IsNullOrEmpty(displayName) ? (object)DBNull.Value : displayName);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

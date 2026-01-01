@@ -55,6 +55,7 @@
             btnExportPdf = new Button();
             btnDeleteTransaction = new Button();
             btnExportExcel = new Button();
+            btnAddPeriod = new Button();
             tableLayoutPanel2 = new TableLayoutPanel();
             typeLabel = new Label();
             rbIncome = new RadioButton();
@@ -234,6 +235,7 @@
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             gbTransactions.Controls.Add(cbYear);
+            gbTransactions.Controls.Add(btnAddPeriod);
             gbTransactions.Controls.Add(label6);
             gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
@@ -269,6 +271,16 @@
             cbYear.Size = new Size(92, 23);
             cbYear.TabIndex = 2;
             cbYear.SelectedIndexChanged += cbYear_SelectedIndexChanged;
+            // 
+            // btnAddPeriod
+            // 
+            btnAddPeriod.Location = new Point(145, 101);
+            btnAddPeriod.Name = "btnAddPeriod";
+            btnAddPeriod.Size = new Size(24, 23);
+            btnAddPeriod.TabIndex = 3;
+            btnAddPeriod.Text = "+";
+            btnAddPeriod.UseVisualStyleBackColor = true;
+            btnAddPeriod.Click += btnAddPeriod_Click;
             // 
             // label6
             // 
@@ -827,6 +839,7 @@
         private ToolStripMenuItem excelParçalaToolStripMenuItem;
         private Button btn_showdeletedcustomers;
         private ComboBox cbYear;
+        private Button btnAddPeriod;
         private TextBox txtCustomerSearch;
         private Button btnClearCustomerSearch;
         private ToolStripStatusLabel StatustLabel_info;

@@ -20,8 +20,8 @@ namespace HesapTakip
 
         // Hareket işlemleri
         DataTable GetTransactions(int customerId);
-        bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type);
-        bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type);
+        bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type, int? period = null);
+        bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type, int? period = null);
         bool DeleteTransaction(int transactionId);
 
         // Öneri işlemleri
@@ -43,9 +43,13 @@ namespace HesapTakip
 
         //DBS Kategorileri
         DataTable GetCategories();
-        bool AddExpenseMatching(string itemName, string subRecordType);
-        bool DeleteExpenseMatching(string itemName);
-        DataTable GetExpenseMatchings();
+        // Expense matching (optional) - default implementations provided
+        bool AddExpenseMatching(string itemName, string subRecordType) { return false; }
+        bool DeleteExpenseMatching(string itemName) { return false; }
+        DataTable GetExpenseMatchings() { return new DataTable(); }
+        // Periods (fiscal years) management (optional)
+        DataTable GetPeriods() { return new DataTable(); }
+        bool AddPeriod(int periodYear, string displayName = null) { return false; }
     }
 
     // E-Defter işlemleri için yardımcı sınıf
