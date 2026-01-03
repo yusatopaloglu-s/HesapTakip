@@ -42,11 +42,11 @@
             btnClearCustomerSearch = new Button();
             gbTransactions = new GroupBox();
             cbYear = new ComboBox();
+            btnAddPeriod = new Button();
             label6 = new Label();
             label5 = new Label();
             button2 = new Button();
             btn_showdeletedtransactions = new Button();
-            btnSaveToDb = new Button();
             btnImportExcel = new Button();
             btnResetSettings = new Button();
             btnEditTransaction = new Button();
@@ -55,7 +55,6 @@
             btnExportPdf = new Button();
             btnDeleteTransaction = new Button();
             btnExportExcel = new Button();
-            btnAddPeriod = new Button();
             tableLayoutPanel2 = new TableLayoutPanel();
             typeLabel = new Label();
             rbIncome = new RadioButton();
@@ -240,7 +239,6 @@
             gbTransactions.Controls.Add(label5);
             gbTransactions.Controls.Add(button2);
             gbTransactions.Controls.Add(btn_showdeletedtransactions);
-            gbTransactions.Controls.Add(btnSaveToDb);
             gbTransactions.Controls.Add(btnImportExcel);
             gbTransactions.Controls.Add(btnResetSettings);
             gbTransactions.Controls.Add(btnEditTransaction);
@@ -321,23 +319,13 @@
             btn_showdeletedtransactions.Visible = false;
             btn_showdeletedtransactions.Click += btn_showdeletedtransactions_Click;
             // 
-            // btnSaveToDb
-            // 
-            btnSaveToDb.Location = new Point(463, 489);
-            btnSaveToDb.Name = "btnSaveToDb";
-            btnSaveToDb.Size = new Size(120, 23);
-            btnSaveToDb.TabIndex = 16;
-            btnSaveToDb.Text = "Excel'den Kaydet";
-            btnSaveToDb.UseVisualStyleBackColor = true;
-            btnSaveToDb.Click += btnSaveToDb_Click;
-            // 
             // btnImportExcel
             // 
             btnImportExcel.Location = new Point(463, 460);
             btnImportExcel.Name = "btnImportExcel";
-            btnImportExcel.Size = new Size(120, 23);
+            btnImportExcel.Size = new Size(120, 49);
             btnImportExcel.TabIndex = 14;
-            btnImportExcel.Text = "Excel'den Yükle";
+            btnImportExcel.Text = "Excel'den Yükle / Kaydet";
             btnImportExcel.UseVisualStyleBackColor = true;
             btnImportExcel.Click += btnImport_Click;
             // 
@@ -823,7 +811,6 @@
         private ToolStripMenuItem veriTabanıYeriSıfırlaToolStripMenuItem;
         private Label label4;
         private Button btnImportExcel;
-        private Button btnSaveToDb;
         private ToolStripMenuItem modülToolStripMenuItem;
         private ToolStripMenuItem eDefterKontorTakipToolStripMenuItem;
         private ToolStripMenuItem güncellemeKontrolEtToolStripMenuItem;
@@ -846,4 +833,4 @@
         private Label label5;
         private Label label6;
     }
- }
+}

@@ -478,7 +478,6 @@ namespace HesapTakip
                 if (btnEditTransaction != null) btnEditTransaction.Enabled = enabled;
                 if (btnExportPdf != null) btnExportPdf.Enabled = enabled;
                 if (btnImportExcel != null) btnImportExcel.Enabled = enabled;
-                if (btnSaveToDb != null) btnSaveToDb.Enabled = enabled;
                 if (btnAddDescipt != null) btnAddDescipt.Enabled = enabled;
                 if (btnRemoveDescipt != null) btnRemoveDescipt.Enabled = enabled;
 
@@ -1100,7 +1099,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = false;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = false;
-                    btnSaveToDb.Enabled = false;
                     btnAddDescipt.Enabled = false;
                     btnRemoveDescipt.Enabled = false;
                     txtAmount.Enabled = false;
@@ -1122,7 +1120,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = false;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = false;
-                    btnSaveToDb.Enabled = false;
                     btnAddDescipt.Enabled = false;
                     btnRemoveDescipt.Enabled = false;
                     txtAmount.Enabled = false;
@@ -1142,7 +1139,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = true;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = true;
-                    btnSaveToDb.Enabled = true;
                     btnAddDescipt.Enabled = true;
                     btnRemoveDescipt.Enabled = true;
                     txtAmount.Enabled = true;
@@ -2040,22 +2036,74 @@ namespace HesapTakip
 
         private void btnImport_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog ofd = new OpenFileDialog())
+            try
             {
-                ofd.Filter = "Excel Dosyaları|*.xlsx;*.xls";
-                if (ofd.ShowDialog() == DialogResult.OK)
+                // Ask user if they want to save an import template first
+                var saveTemplate = MessageBox.Show("Kayıt yapısına uygun bir şablon kaydetmek ister misiniz?", "Şablon Kaydet", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (saveTemplate == DialogResult.Yes)
                 {
-                    try
+                    using (SaveFileDialog sfd = new SaveFileDialog())
                     {
-                        DataTable importedData = ImportExcelData(ofd.FileName);
-                        dgvTransactions.DataSource = importedData;
-                        MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Hata: " + ex.Message);
+                        sfd.Filter = "Excel Dosyaları|*.xlsx";
+                        sfd.FileName = "HareketSablonu.xlsx";
+                        if (sfd.ShowDialog() == DialogResult.OK)
+                        {
+                            try
+                            {
+                                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                                using (var p = new ExcelPackage())
+                                {
+                                    var ws = p.Workbook.Worksheets.Add("Sablon");
+                                    // Row 1: Title
+                                    ws.Cells[1, 1].Value = "Hareketler - Şablon";
+                                    ws.Cells[1, 1, 1, 4].Merge = true;
+                                    ws.Cells[1, 1, 1, 4].Style.Font.Bold = true;
+
+                                    // Row 2: Headers
+                                    ws.Cells[2, 1].Value = "Tarih";
+                                    ws.Cells[2, 2].Value = "Açıklama";
+                                    ws.Cells[2, 3].Value = "Tutar";
+                                    ws.Cells[2, 4].Value = "Tür";
+                                    using (var hdr = ws.Cells[2, 1, 2, 4]) hdr.Style.Font.Bold = true;
+
+                                    // Simple column formats
+                                    ws.Column(1).Style.Numberformat.Format = "dd.MM.yyyy";
+                                    ws.Column(3).Style.Numberformat.Format = "#,##0.00";
+
+                                    p.SaveAs(new FileInfo(sfd.FileName));
+                                    MessageBox.Show("Şablon başarıyla kaydedildi: " + sfd.FileName);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Şablon kaydedilirken hata: " + ex.Message);
+                            }
+                        }
                     }
                 }
+
+                // Then proceed to open and import file
+                using (OpenFileDialog ofd = new OpenFileDialog())
+                {
+                    ofd.Filter = "Excel Dosyaları|*.xlsx;*.xls";
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        try
+                        {
+                            DataTable importedData = ImportExcelData(ofd.FileName);
+                            dgvTransactions.DataSource = importedData;
+                            MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Hata: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("İçe aktarma sırasında hata: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
