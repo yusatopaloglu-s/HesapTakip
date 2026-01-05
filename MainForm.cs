@@ -478,7 +478,6 @@ namespace HesapTakip
                 if (btnEditTransaction != null) btnEditTransaction.Enabled = enabled;
                 if (btnExportPdf != null) btnExportPdf.Enabled = enabled;
                 if (btnImportExcel != null) btnImportExcel.Enabled = enabled;
-                if (btnSaveToDb != null) btnSaveToDb.Enabled = enabled;
                 if (btnAddDescipt != null) btnAddDescipt.Enabled = enabled;
                 if (btnRemoveDescipt != null) btnRemoveDescipt.Enabled = enabled;
 
@@ -1100,7 +1099,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = false;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = false;
-                    btnSaveToDb.Enabled = false;
                     btnAddDescipt.Enabled = false;
                     btnRemoveDescipt.Enabled = false;
                     txtAmount.Enabled = false;
@@ -1122,7 +1120,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = false;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = false;
-                    btnSaveToDb.Enabled = false;
                     btnAddDescipt.Enabled = false;
                     btnRemoveDescipt.Enabled = false;
                     txtAmount.Enabled = false;
@@ -1142,7 +1139,6 @@ namespace HesapTakip
                     btnEditTransaction.Enabled = true;
                     btnExportPdf.Enabled = true;
                     btnImportExcel.Enabled = true;
-                    btnSaveToDb.Enabled = true;
                     btnAddDescipt.Enabled = true;
                     btnRemoveDescipt.Enabled = true;
                     txtAmount.Enabled = true;
@@ -1347,17 +1343,75 @@ namespace HesapTakip
             {
                 try
                 {
-                    // Toplam bakiyeyi hesapla
-                    decimal total = 0;
+                    // Support multiple possible column names (English / Turkish) to avoid "column does not belong to table" errors
+                    string[] dateCols = new[] { "Date", "Tarih" };
+                    string[] descCols = new[] { "Description", "Açıklama" };
+                    string[] amountCols = new[] { "Amount", "Tutar" };
+                    string[] typeCols = new[] { "Type", "Tür" };
+
+                    // Local helpers
+                    string GetString(DataRow row, string[] names)
+                    {
+                        foreach (var n in names)
+                        {
+                            if (transactions.Columns.Contains(n) && row.Table.Columns.Contains(n))
+                            {
+                                var v = row[n];
+                                if (v == null || v == DBNull.Value) return string.Empty;
+                                return v.ToString();
+                            }
+                        }
+                        return string.Empty;
+                    }
+
+                    bool TryGetDecimal(DataRow row, string[] names, out decimal result)
+                    {
+                        result = 0m;
+                        string s = GetString(row, names);
+                        if (string.IsNullOrWhiteSpace(s)) return false;
+
+                        // Remove currency symbols and whitespace
+                        s = s.Replace("₺", string.Empty).Trim();
+
+                        // Try parsing with current culture first then invariant
+                        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out result)) return true;
+                        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
+
+                        // Try replacing comma/dot heuristics
+                        var alt = s.Replace(',', '.');
+                        if (decimal.TryParse(alt, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
+
+                        alt = s.Replace('.', ',');
+                        if (decimal.TryParse(alt, NumberStyles.Any, CultureInfo.CurrentCulture, out result)) return true;
+
+                        return false;
+                    }
+
+                    bool TryGetDate(DataRow row, string[] names, out DateTime result)
+                    {
+                        result = DateTime.MinValue;
+                        string s = GetString(row, names);
+                        if (string.IsNullOrWhiteSpace(s)) return false;
+
+                        if (DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out result)) return true;
+                        if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out result)) return true;
+
+                        return false;
+                    }
+
+                    // Compute total safely using available columns
+                    decimal total = 0m;
                     foreach (DataRow row in transactions.Rows)
                     {
-                        if (decimal.TryParse(row["Amount"].ToString(), out decimal amount))
+                        if (TryGetDecimal(row, amountCols, out decimal amountValue))
                         {
-                            string type = row["Type"].ToString();
+                            string type = GetString(row, typeCols);
                             if (type.Equals("Gelir", StringComparison.OrdinalIgnoreCase))
-                                total += amount;
+                                total += amountValue;
                             else if (type.Equals("Gider", StringComparison.OrdinalIgnoreCase))
-                                total -= amount;
+                                total -= amountValue;
+                            else
+                                total += amountValue; // default
                         }
                     }
 
@@ -1421,13 +1475,13 @@ namespace HesapTakip
                                         // Data Rows
                                         foreach (DataRow row in transactions.Rows)
                                         {
-                                            // Format date properly
+                                            // Format date properly from available columns
                                             DateTime dateValue;
-                                            bool validDate = DateTime.TryParse(row["Date"].ToString(), out dateValue);
-                                            string dateStr = validDate ? dateValue.ToString("dd.MM.yyyy") : "Geçersiz Tarih";
+                                            bool hasDate = TryGetDate(row, dateCols, out dateValue);
+                                            string dateStr = hasDate ? dateValue.ToString("dd.MM.yyyy") : GetString(row, dateCols);
 
                                             // Get transaction type
-                                            string type = row["Type"].ToString();
+                                            string type = GetString(row, typeCols);
 
                                             // Set amount color based on type
                                             Color amountColor = Colors.Black;
@@ -1437,16 +1491,16 @@ namespace HesapTakip
                                                 amountColor = Colors.Red.Darken2;
 
                                             // Format amount
-                                            decimal amountValue;
-                                            bool validAmount = decimal.TryParse(row["Amount"].ToString(), out amountValue);
-                                            string amountStr = validAmount ? $"{amountValue:N2} ₺" : "Geçersiz Tutar";
+                                            decimal amountVal = 0m;
+                                            bool hasAmount = TryGetDecimal(row, amountCols, out amountVal);
+                                            string amountStr = hasAmount ? $"{amountVal:N2} ₺" : GetString(row, amountCols);
 
                                             // Create cells
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
                                                 .PaddingVertical(5).Text(dateStr);
 
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .PaddingVertical(5).Text(row["Description"].ToString());
+                                                .PaddingVertical(5).Text(GetString(row, descCols));
 
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
                                                 .PaddingVertical(5).AlignRight()
@@ -1982,22 +2036,74 @@ namespace HesapTakip
 
         private void btnImport_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog ofd = new OpenFileDialog())
+            try
             {
-                ofd.Filter = "Excel Dosyaları|*.xlsx;*.xls";
-                if (ofd.ShowDialog() == DialogResult.OK)
+                // Ask user if they want to save an import template first
+                var saveTemplate = MessageBox.Show("Kayıt yapısına uygun bir şablon kaydetmek ister misiniz?", "Şablon Kaydet", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (saveTemplate == DialogResult.Yes)
                 {
-                    try
+                    using (SaveFileDialog sfd = new SaveFileDialog())
                     {
-                        DataTable importedData = ImportExcelData(ofd.FileName);
-                        dgvTransactions.DataSource = importedData;
-                        MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Hata: " + ex.Message);
+                        sfd.Filter = "Excel Dosyaları|*.xlsx";
+                        sfd.FileName = "HareketSablonu.xlsx";
+                        if (sfd.ShowDialog() == DialogResult.OK)
+                        {
+                            try
+                            {
+                                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                                using (var p = new ExcelPackage())
+                                {
+                                    var ws = p.Workbook.Worksheets.Add("Sablon");
+                                    // Row 1: Title
+                                    ws.Cells[1, 1].Value = "Hareketler - Şablon";
+                                    ws.Cells[1, 1, 1, 4].Merge = true;
+                                    ws.Cells[1, 1, 1, 4].Style.Font.Bold = true;
+
+                                    // Row 2: Headers
+                                    ws.Cells[2, 1].Value = "Tarih";
+                                    ws.Cells[2, 2].Value = "Açıklama";
+                                    ws.Cells[2, 3].Value = "Tutar";
+                                    ws.Cells[2, 4].Value = "Tür";
+                                    using (var hdr = ws.Cells[2, 1, 2, 4]) hdr.Style.Font.Bold = true;
+
+                                    // Simple column formats
+                                    ws.Column(1).Style.Numberformat.Format = "dd.MM.yyyy";
+                                    ws.Column(3).Style.Numberformat.Format = "#,##0.00";
+
+                                    p.SaveAs(new FileInfo(sfd.FileName));
+                                    MessageBox.Show("Şablon başarıyla kaydedildi: " + sfd.FileName);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Şablon kaydedilirken hata: " + ex.Message);
+                            }
+                        }
                     }
                 }
+
+                // Then proceed to open and import file
+                using (OpenFileDialog ofd = new OpenFileDialog())
+                {
+                    ofd.Filter = "Excel Dosyaları|*.xlsx;*.xls";
+                    if (ofd.ShowDialog() == DialogResult.OK)
+                    {
+                        try
+                        {
+                            DataTable importedData = ImportExcelData(ofd.FileName);
+                            dgvTransactions.DataSource = importedData;
+                            MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Hata: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("İçe aktarma sırasında hata: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -2906,7 +3012,6 @@ namespace HesapTakip
             try
             {
                 dgvCustomers.Columns.Clear();
-                dgvTransactions.Columns.Clear();
                 var dt = _db.GetDeletedCustomers();
                 // Sort deleted customers alphabetically as well
                 try
