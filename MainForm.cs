@@ -396,25 +396,68 @@ namespace HesapTakip
             try
             {
                 var dt = _db.GetTransactions(customerID);
-                // Ensure Period column exists and populate it based on periodStartMonth
-                if (!dt.Columns.Contains("Period"))
-                    dt.Columns.Add("Period", typeof(int));
+                // Normalize Period column to integer type to ensure DataView filtering works reliably.
+                bool hasPeriodColumn = dt.Columns.Contains("Period");
 
-                foreach (DataRow row in dt.Rows)
+                // If Period exists but not int, create an int column and populate it from DB values (or compute from Date if null/non-numeric)
+                if (hasPeriodColumn && dt.Columns["Period"].DataType != typeof(int))
                 {
-                    try
+                    dt.Columns.Add("_PeriodTemp", typeof(int));
+                    foreach (DataRow row in dt.Rows)
                     {
-                        if (row["Date"] != null && row["Date"] != DBNull.Value)
+                        try
                         {
-                            DateTime d = Convert.ToDateTime(row["Date"]);
-                            row["Period"] = ComputePeriodYear(d);
+                            if (row["Period"] != null && row["Period"] != DBNull.Value)
+                            {
+                                if (int.TryParse(row["Period"].ToString(), out int p))
+                                    row["_PeriodTemp"] = p;
+                                else if (row["Date"] != null && row["Date"] != DBNull.Value)
+                                    row["_PeriodTemp"] = ComputePeriodYear(Convert.ToDateTime(row["Date"]));
+                                else
+                                    row["_PeriodTemp"] = DBNull.Value;
+                            }
+                            else
+                            {
+                                if (row["Date"] != null && row["Date"] != DBNull.Value)
+                                    row["_PeriodTemp"] = ComputePeriodYear(Convert.ToDateTime(row["Date"]));
+                                else
+                                    row["_PeriodTemp"] = DBNull.Value;
+                            }
                         }
-                        else
-                        {
-                            row["Period"] = DBNull.Value;
-                        }
+                        catch { row["_PeriodTemp"] = DBNull.Value; }
                     }
-                    catch { row["Period"] = DBNull.Value; }
+
+                    // Remove original Period column and rename temp
+                    int ord = dt.Columns["Period"].Ordinal;
+                    dt.Columns.Remove("Period");
+                    dt.Columns["_PeriodTemp"].ColumnName = "Period";
+                    // ensure Period is at original position not strictly necessary
+                }
+                else
+                {
+                    // Ensure Period column exists and is int
+                    if (!hasPeriodColumn)
+                        dt.Columns.Add("Period", typeof(int));
+
+                    foreach (DataRow row in dt.Rows)
+                    {
+                        try
+                        {
+                            if (row["Period"] != null && row["Period"] != DBNull.Value)
+                            {
+                                // already int (adapter), nothing to do
+                            }
+                            else if (row["Date"] != null && row["Date"] != DBNull.Value)
+                            {
+                                row["Period"] = ComputePeriodYear(Convert.ToDateTime(row["Date"]));
+                            }
+                            else
+                            {
+                                row["Period"] = DBNull.Value;
+                            }
+                        }
+                        catch { row["Period"] = DBNull.Value; }
+                    }
                 }
 
                 // Keep a named table in dataset for filtering
@@ -612,23 +655,34 @@ namespace HesapTakip
                     return;
                 }
 
-                cbYear.Visible = true;
-                cbYear.DataSource = ordered;
-                cbYear.SelectedIndex = 0;
-
-                // Position add button
+                // Preserve user's previous selection if possible
+                int? prevSelected = null;
                 try
                 {
-                    var addBtn = this.Controls.Find("btnAddPeriod", true).FirstOrDefault() as Button;
-                    if (addBtn != null)
+                    if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int p))
+                        prevSelected = p;
+                }
+                catch { prevSelected = null; }
+
+                cbYear.Visible = true;
+                cbYear.DataSource = ordered;
+
+                try
+                {
+                    if (prevSelected.HasValue && ordered.Contains(prevSelected.Value))
                     {
-                        addBtn.Left = cbYear.Right + 4;
-                        addBtn.Top = cbYear.Top;
-                        addBtn.Height = cbYear.Height;
-                        addBtn.Visible = true;
+                        cbYear.SelectedItem = prevSelected.Value;
+                    }
+                    else
+                    {
+                        // default to most recent year
+                        cbYear.SelectedIndex = 0;
                     }
                 }
-                catch { }
+                catch
+                {
+                    try { cbYear.SelectedIndex = 0; } catch { }
+                }
             }
             catch (Exception ex)
             {
@@ -915,12 +969,14 @@ namespace HesapTakip
 
             var customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
-            // compute period for the transaction; if user selected a period in cbYear and wants to attach, use that
+            // Determine period: prefer explicit selection in cbYear, otherwise compute from the chosen date
             int? period = null;
-            if (cbYear.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYear))
+            if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYear))
             {
-                // if UI provides a checkbox 'assignToSelectedPeriod' we should prefer it.
-                // For now default: if selected year differs from ComputePeriodYear(date) we still store computed period.
+                period = selYear;
+            }
+            else
+            {
                 period = ComputePeriodYear(dtpDate.Value);
             }
 
@@ -1005,7 +1061,14 @@ namespace HesapTakip
 
             try
             {
-                bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text?.Trim() ?? "", amount, isIncome ? "Gelir" : "Gider");
+                // Determine period: prefer explicit selection in cbYear, otherwise compute from date
+                int? period = null;
+                if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYear))
+                    period = selYear;
+                else
+                    period = ComputePeriodYear(dtpDate.Value);
+
+                bool success = _db.AddTransaction(customerID, dtpDate.Value, txtDescription.Text?.Trim() ?? "", amount, isIncome ? "Gelir" : "Gider", period);
                 if (success)
                 {
                     LoadTransactions(customerID);
@@ -1890,62 +1953,6 @@ namespace HesapTakip
                 }
             }
         }
-        private int GetCurrentCustomerId()
-        {
-            if (dgvCustomers.CurrentRow == null || dgvCustomers.CurrentRow.Cells["CustomerID"].Value == null)
-            {
-                MessageBox.Show("Lütfen bir müşteri seçin!");
-                return -1;
-            }
-            return Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
-        }
-        private void btnEditTransaction_Click(object sender, EventArgs e)
-        {
-            if (dgvTransactions.CurrentRow == null)
-            {
-                MessageBox.Show("Lütfen bir hareket seçin!");
-                return;
-            }
-
-            DataGridViewRow row = dgvTransactions.CurrentRow;
-            int transactionId = Convert.ToInt32(row.Cells["TransactionID"].Value);
-            DateTime date = Convert.ToDateTime(row.Cells["Date"].Value);
-            string desc = row.Cells["Description"].Value.ToString();
-
-            string amount = "";
-            if (row.Cells["Amount"].Value is decimal dec)
-                amount = dec.ToString(CultureInfo.InvariantCulture);
-            else
-                amount = Convert.ToDecimal(row.Cells["Amount"].Value).ToString(CultureInfo.InvariantCulture);
-
-            string type = row.Cells["Type"].Value.ToString();
-
-            using (EditTransactionForm editForm = new EditTransactionForm(date, desc, amount, type))
-            {
-                if (editForm.ShowDialog() == DialogResult.OK)
-                {
-
-                    if (!decimal.TryParse(editForm.Amount.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amountValue))
-                    {
-                        MessageBox.Show("Tutar değeri geçersiz!");
-                        return;
-                    }
-
-                    bool success = _db.UpdateTransaction(transactionId, editForm.TransactionDate, editForm.Description, amountValue, editForm.Type);
-                    if (success)
-                    {
-                        LoadTransactions(GetCurrentCustomerId());
-                        RefreshTotalForCustomer(GetCurrentCustomerId());
-
-
-                    }
-                    else
-                    {
-                        MessageBox.Show("Hareket güncellenirken hata oluştu!");
-                    }
-                }
-            }
-        }
         public partial class EditTransactionForm : Form
         {
             public DateTime TransactionDate;
@@ -2057,7 +2064,7 @@ namespace HesapTakip
                                     // Row 1: Title
                                     ws.Cells[1, 1].Value = "Hareketler - Şablon";
                                     ws.Cells[1, 1, 1, 4].Merge = true;
-                                    ws.Cells[1, 1, 1, 4].Style.Font.Bold = true;
+                                    ws.Cells[1, 1].Style.Font.Bold = true;
 
                                     // Row 2: Headers
                                     ws.Cells[2, 1].Value = "Tarih";
@@ -2126,13 +2133,23 @@ namespace HesapTakip
 
                     string type = row["Tür"]?.ToString() ?? "Gelir";
 
-                    bool success = _db.AddTransaction(customerID, date, description, amount, type);
+                    // Determine period for bulk-imported row: prefer explicit selection, otherwise compute from row date
+                    int? period = null;
+                    if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYearBulk))
+                        period = selYearBulk;
+                    else
+                        period = ComputePeriodYear(date);
+
+                    bool success = _db.AddTransaction(customerID, date, description, amount, type, period);
                     if (success) successCount++;
-                }
+                 }
 
                 // Listeyi yenile
-                LoadTransactions(customerID);
-                RefreshTotalForCustomer(customerID);
+                int currentCust = (dgvCustomers.CurrentRow != null && dgvCustomers.CurrentRow.Cells["CustomerID"]?.Value != null)
+                    ? Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value)
+                    : -1;
+                LoadTransactions(currentCust);
+                RefreshTotalForCustomer(currentCust);
 
                 MessageBox.Show($"{successCount} kayıt başarıyla veritabanına kaydedildi!");
                 return successCount > 0;
@@ -2144,8 +2161,8 @@ namespace HesapTakip
             }
         }
 
-        //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMI İÇİN ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
-        private bool ValidateExcelFormat(ExcelWorksheet worksheet)
+        //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMIÇIN ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
+ private bool ValidateExcelFormat(ExcelWorksheet worksheet)
         {
             // Başlık kontrolü
             if (worksheet.Cells[1, 1].Text != "Tarih" ||
@@ -2172,7 +2189,11 @@ namespace HesapTakip
             {
                 MessageBox.Show($"{data.Rows.Count} kayıt başarıyla veritabanına kaydedildi!");
                 // Listeyi yenile
-                LoadTransactions(GetCurrentCustomerId());
+                int currentCust = (dgvCustomers.CurrentRow != null && dgvCustomers.CurrentRow.Cells["CustomerID"]?.Value != null)
+                    ? Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value)
+                    : -1;
+                LoadTransactions(currentCust);
+                RefreshTotalForCustomer(currentCust);
             }
 
         }
@@ -2721,7 +2742,7 @@ namespace HesapTakip
                 return f.ToString(null, CultureInfo.InvariantCulture);
 
             // Fallback
-            string escaped = val.ToString().Replace("'", "\\'");
+            string escaped = val.ToString().Replace("'", "''");
             return $"'{escaped}'";
         }
 
@@ -2896,7 +2917,7 @@ namespace HesapTakip
                         }
                     }
 
-                    MessageBox.Show("MSSQL yedekleme oluşturuldu:\n" + sfd.FileName, "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("MSSQL yedekleme oluşturuldu:\n" + sfd.FileName, "Başarıyla", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
@@ -3176,5 +3197,71 @@ namespace HesapTakip
 
         // Designer wires to lowercase name; provide wrapper to call actual handler
         private void btnAddPeriod_Click(object sender, EventArgs e) => BtnAddPeriod_Click(sender, e);
+
+        private int GetCurrentCustomerId()
+        {
+            if (dgvCustomers == null || dgvCustomers.CurrentRow == null) return -1;
+            var cell = dgvCustomers.CurrentRow.Cells["CustomerID"];
+            if (cell == null || cell.Value == null) return -1;
+            try { return Convert.ToInt32(cell.Value); } catch { return -1; }
+        }
+
+        // Event handler wired by the Designer; implement here to ensure method exists and compiles.
+        private void btnEditTransaction_Click(object sender, EventArgs e)
+        {
+            if (dgvTransactions.CurrentRow == null)
+            {
+                MessageBox.Show("Lütfen bir hareket seçin!");
+                return;
+            }
+
+            DataGridViewRow row = dgvTransactions.CurrentRow;
+            int transactionId = Convert.ToInt32(row.Cells["TransactionID"].Value);
+            DateTime date = Convert.ToDateTime(row.Cells["Date"].Value);
+            string desc = row.Cells["Description"]?.Value?.ToString() ?? string.Empty;
+
+            string amount = "";
+            try
+            {
+                if (row.Cells["Amount"].Value is decimal dec)
+                    amount = dec.ToString(CultureInfo.InvariantCulture);
+                else
+                    amount = Convert.ToDecimal(row.Cells["Amount"].Value).ToString(CultureInfo.InvariantCulture);
+            }
+            catch { amount = row.Cells["Amount"].Value?.ToString() ?? ""; }
+
+            string type = row.Cells["Type"]?.Value?.ToString() ?? "Gelir";
+
+            using (EditTransactionForm editForm = new EditTransactionForm(date, desc, amount, type))
+            {
+                if (editForm.ShowDialog() == DialogResult.OK)
+                {
+                    if (!decimal.TryParse(editForm.Amount.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal amountValue))
+                    {
+                        MessageBox.Show("Tutar değeri geçersiz!");
+                        return;
+                    }
+
+                    // Determine period for updated transaction: prefer cbYear selection, otherwise compute from the edited date
+                    int? updPeriod = null;
+                    if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYearUp))
+                        updPeriod = selYearUp;
+                    else
+                        updPeriod = ComputePeriodYear(editForm.TransactionDate);
+
+                    bool success = _db.UpdateTransaction(transactionId, editForm.TransactionDate, editForm.Description, amountValue, editForm.Type, updPeriod);
+                    if (success)
+                    {
+                        int current = GetCurrentCustomerId();
+                        LoadTransactions(current);
+                        RefreshTotalForCustomer(current);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Hareket güncellenirken hata oluştu!");
+                    }
+                }
+            }
+        }
     }
 }
