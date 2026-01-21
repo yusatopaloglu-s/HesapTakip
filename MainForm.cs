@@ -1693,49 +1693,121 @@ namespace HesapTakip
             {
                 Debug.WriteLine("btnRemoveDescript_Click started");
 
-                if (lstSuggestions.SelectedItem != null)
+                // Basic null checks
+                if (lstSuggestions == null)
                 {
-                    string selected = lstSuggestions.SelectedItem.ToString();
-                    Debug.WriteLine($"Selected suggestion to remove: {selected}");
+                    MessageBox.Show("Öneriler listesi bulunamadı!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
-
-                    var result = MessageBox.Show(
-                        $"'{selected}' önerisini silmek istediğinizden emin misiniz?",
-                        "Öneri Silme",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
+                // Prefer using the text in txtDescription when present (user typed a value)
+                string candidate = null;
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(txtDescription?.Text))
                     {
-                        Debug.WriteLine("User confirmed deletion");
+                        candidate = txtDescription.Text.Trim();
+                    }
+                }
+                catch { candidate = null; }
 
-                        // Database tipini kontrol et
-                        string databaseType = AppConfigHelper.DatabaseType;
-                        Debug.WriteLine($"Current database type: {databaseType}");
+                // If no text in textbox, fallback to selected item in the list
+                if (string.IsNullOrEmpty(candidate))
+                {
+                    if (lstSuggestions.Items.Count == 0)
+                    {
+                        MessageBox.Show("Silinecek öneri yok!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
 
-                        bool success = _db.RemoveSuggestion(selected);
-                        Debug.WriteLine($"RemoveSuggestion result: {success}");
+                    int selIndex = lstSuggestions.SelectedIndex;
+                    if (selIndex >= 0 && selIndex < lstSuggestions.Items.Count)
+                    {
+                        candidate = lstSuggestions.Items[selIndex]?.ToString();
+                    }
+                    else if (lstSuggestions.SelectedItem != null)
+                    {
+                        candidate = lstSuggestions.SelectedItem.ToString();
+                    }
+                }
 
-                        if (success)
+                if (string.IsNullOrEmpty(candidate))
+                {
+                    MessageBox.Show("Lütfen silmek için bir öneri seçin veya Açıklama kutusuna yazın!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                Debug.WriteLine($"Candidate suggestion to remove: {candidate}");
+
+                var result = MessageBox.Show(
+                    $"'{candidate}' önerisini silmek istediğinizden emin misiniz?",
+                    "Öneri Silme",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result != DialogResult.Yes)
+                {
+                    Debug.WriteLine("User cancelled deletion");
+                    return;
+                }
+
+                Debug.WriteLine("User confirmed deletion");
+
+                bool success = false;
+                try
+                {
+                    // Call DB removal in a safe try/catch because DB implementation might throw
+                    success = _db.RemoveSuggestion(candidate);
+                    Debug.WriteLine($"RemoveSuggestion result: {success}");
+                }
+                catch (IndexOutOfRangeException iox)
+                {
+                    Debug.WriteLine($"RemoveSuggestion threw IndexOutOfRange: {iox}");
+                    MessageBox.Show("Öneri veritabanından silinirken beklenmedik bir indeks hatası oluştu. Lütfen logları kontrol edin.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"RemoveSuggestion error: {ex}");
+                    MessageBox.Show($"Öneri silinirken hata oluştu: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (success)
+                {
+                    // Refresh UI safely and try to preserve selection or textbox content
+                    try
+                    {
+                        LoadSuggestions();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"LoadSuggestions after delete failed: {ex}");
+                    }
+
+                    try
+                    {
+                        // If the textbox contained the deleted text, clear it
+                        if (string.Equals(txtDescription?.Text?.Trim(), candidate, StringComparison.OrdinalIgnoreCase))
                         {
-                            LoadSuggestions();
-
+                            txtDescription.Clear();
                         }
-                        else
+
+                        // Try to reselect a nearby item in the list
+                        if (lstSuggestions.Items.Count > 0)
                         {
-                            MessageBox.Show("Öneri silinirken hata oluştu veya öneri bulunamadı!", "Hata",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            int idx = Math.Max(0, Math.Min(lstSuggestions.Items.Count - 1, lstSuggestions.SelectedIndex));
+                            lstSuggestions.SelectedIndex = idx;
                         }
                     }
-                    else
-                    {
-                        Debug.WriteLine("User cancelled deletion");
-                    }
+                    catch { }
+
+                    MessageBox.Show("Öneri başarıyla silindi.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show("Lütfen silmek için bir öneri seçin!", "Uyarı",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Öneri silinirken hata oluştu veya öneri bulunamadı!", "Hata",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
@@ -1750,6 +1822,42 @@ namespace HesapTakip
             Debug.WriteLine("btnRemoveDescript_Click completed");
         }
 
+        private void btnEditCustomer_Click(object sender, EventArgs e)
+        {
+            if (dgvCustomers.CurrentRow == null)
+            {
+                MessageBox.Show("Lütfen bir müşteri seçin!");
+                return;
+            }
+
+            int customerId = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
+            string currentName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
+            bool currentEDefter = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["EDefter"].Value);
+            bool IsDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
+
+            object taxIdValue = dgvCustomers.CurrentRow.Cells["TaxID"].Value;
+            object activityCodeValue = dgvCustomers.CurrentRow.Cells["ActivityCode"].Value;
+
+            string currentTaxId = taxIdValue != null && taxIdValue != DBNull.Value ? taxIdValue.ToString() : "";
+            string currentActivityCode = activityCodeValue != null && activityCodeValue != DBNull.Value ? activityCodeValue.ToString() : "";
+
+            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter, currentTaxId, currentActivityCode, IsDeleted))
+            {
+                if (editForm.ShowDialog() == DialogResult.OK)
+                {
+                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter, editForm.UpdatedTaxId, editForm.UpdatedActivityCode, editForm.UpdatedIsDeleted);
+                    if (success)
+                    {
+                        LoadCustomers();
+
+                    }
+                    else
+                    {
+                        MessageBox.Show("Müşteri güncellenirken hata oluştu!");
+                    }
+                }
+            }
+        }
         private void txtDescription_TextChanged(object sender, EventArgs e)
         {
             try
@@ -1917,42 +2025,6 @@ namespace HesapTakip
             public string UpdatedActivityCode => string.IsNullOrEmpty(txtCustomerActivityCode.Text.Trim()) ? null : txtCustomerActivityCode.Text.Trim();
             public bool UpdatedIsDeleted => chkDeleted.Checked;
         }
-        private void btnEditCustomer_Click(object sender, EventArgs e)
-        {
-            if (dgvCustomers.CurrentRow == null)
-            {
-                MessageBox.Show("Lütfen bir müşteri seçin!");
-                return;
-            }
-
-            int customerId = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
-            string currentName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
-            bool currentEDefter = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["EDefter"].Value);
-            bool IsDeleted = Convert.ToBoolean(dgvCustomers.CurrentRow.Cells["IsDeleted"].Value);
-
-            object taxIdValue = dgvCustomers.CurrentRow.Cells["TaxID"].Value;
-            object activityCodeValue = dgvCustomers.CurrentRow.Cells["ActivityCode"].Value;
-
-            string currentTaxId = taxIdValue != null && taxIdValue != DBNull.Value ? taxIdValue.ToString() : "";
-            string currentActivityCode = activityCodeValue != null && activityCodeValue != DBNull.Value ? activityCodeValue.ToString() : "";
-
-            using (EditCustomerForm editForm = new EditCustomerForm(customerId, currentName, currentEDefter, currentTaxId, currentActivityCode, IsDeleted))
-            {
-                if (editForm.ShowDialog() == DialogResult.OK)
-                {
-                    bool success = _db.UpdateCustomer(customerId, editForm.UpdatedName, editForm.UpdatedEDefter, editForm.UpdatedTaxId, editForm.UpdatedActivityCode, editForm.UpdatedIsDeleted);
-                    if (success)
-                    {
-                        LoadCustomers();
-
-                    }
-                    else
-                    {
-                        MessageBox.Show("Müşteri güncellenirken hata oluştu!");
-                    }
-                }
-            }
-        }
         public partial class EditTransactionForm : Form
         {
             public DateTime TransactionDate;
@@ -2101,7 +2173,7 @@ namespace HesapTakip
                             dgvTransactions.DataSource = importedData;
                             MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
                         }
-                        catch (Exception ex)
+                        catch ( Exception ex)
                         {
                             MessageBox.Show("Hata: " + ex.Message);
                         }
@@ -2161,7 +2233,7 @@ namespace HesapTakip
             }
         }
 
-        //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMIÇIN ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
+        //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMIÇ için ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
  private bool ValidateExcelFormat(ExcelWorksheet worksheet)
         {
             // Başlık kontrolü

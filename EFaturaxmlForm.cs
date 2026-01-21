@@ -660,7 +660,7 @@ namespace HesapTakip
                 var lastName = string.IsNullOrEmpty(supplierNameNode) ? supplierFamilyName : "";
                 var firstName = string.IsNullOrEmpty(supplierNameNode) ? supplierFirstName : supplierNameNode;
                 var address = "";
-                var (kdvExemptionTable, kdvExemptionCode, saleType) = (invoiceType == "ISTISNA") ? ("Tablo 8 (TAM İSTİSNA KAPSAMINA GİREN İŞLEMLER)", "301", "Tam İstisna Kapsamına Giren İşlemler") : ("Tablo 1 (TEVKİFAT UYGULANMAYAN İŞLEMLER)", "1100", "Normal Satışlar");
+                var (kdvExemptionTable, kdvExemptionCode, saleType) = (invoiceType == "ISTISNA") ? ("Tablo 8 (TAM İSTİSNA KAPSAMINA GİREN İŞLEMLER)", "301", "Tam İstisna Kapsamına Giren İşlemler") : ("Tablo 1(TEVKİFAT UYGULANMAYAN İŞLEMLER)", "1100", "Normal Satışlar");
                 var culture = new CultureInfo("tr-TR");
                 var formatter2 = new NumberFormatInfo { NumberDecimalDigits = 2, NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
 
