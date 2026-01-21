@@ -1406,11 +1406,12 @@ namespace HesapTakip
             {
                 try
                 {
-                    // Support multiple possible column names (English / Turkish) to avoid "column does not belong to table" errors
+                    // Column name candidates
                     string[] dateCols = new[] { "Date", "Tarih" };
                     string[] descCols = new[] { "Description", "Açıklama" };
-                    string[] amountCols = new[] { "Amount", "Tutar" };
                     string[] typeCols = new[] { "Type", "Tür" };
+                    string[] debitCols = new[] { "Borç", "Debt", "Debit", "AmountDebit", "AmountBorç" };
+                    string[] creditCols = new[] { "Alacak", "Credit", "CreditAmount", "AmountAlacak" };
 
                     // Local helpers
                     string GetString(DataRow row, string[] names)
@@ -1432,15 +1433,11 @@ namespace HesapTakip
                         result = 0m;
                         string s = GetString(row, names);
                         if (string.IsNullOrWhiteSpace(s)) return false;
-
-                        // Remove currency symbols and whitespace
                         s = s.Replace("₺", string.Empty).Trim();
 
-                        // Try parsing with current culture first then invariant
                         if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out result)) return true;
                         if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
 
-                        // Try replacing comma/dot heuristics
                         var alt = s.Replace(',', '.');
                         if (decimal.TryParse(alt, NumberStyles.Any, CultureInfo.InvariantCulture, out result)) return true;
 
@@ -1462,21 +1459,11 @@ namespace HesapTakip
                         return false;
                     }
 
-                    // Compute total safely using available columns
-                    decimal total = 0m;
-                    foreach (DataRow row in transactions.Rows)
-                    {
-                        if (TryGetDecimal(row, amountCols, out decimal amountValue))
-                        {
-                            string type = GetString(row, typeCols);
-                            if (type.Equals("Gelir", StringComparison.OrdinalIgnoreCase))
-                                total += amountValue;
-                            else if (type.Equals("Gider", StringComparison.OrdinalIgnoreCase))
-                                total -= amountValue;
-                            else
-                                total += amountValue; // default
-                        }
-                    }
+                    // Prepare rows snapshot
+                    var rows = transactions.Rows.Cast<DataRow>().ToList();
+
+                    decimal totalDebit = 0m;
+                    decimal totalCredit = 0m;
 
                     Document.Create(document =>
                     {
@@ -1486,102 +1473,133 @@ namespace HesapTakip
                             page.Margin(2, Unit.Centimetre);
                             page.DefaultTextStyle(x => x.FontSize(10));
 
-                            // Header
                             page.Header()
                                 .Column(column =>
                                 {
-                                    column.Item().Text($"{customerName} - Hesap Hareketleri")
-                                        .Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
-
-                                    column.Item().PaddingTop(5).Text(DateTime.Today.ToString("dd.MM.yyyy HH:mm"))
-                                        .FontSize(9).FontColor(Colors.Grey.Medium);
+                                    column.Item().Text($"{customerName} - Hesap Hareketleri").Bold().FontSize(16).FontColor(Colors.Blue.Darken3);
+                                    column.Item().PaddingTop(5).Text(DateTime.Today.ToString("dd.MM.yyyy HH:mm")).FontSize(9).FontColor(Colors.Grey.Medium);
                                 });
 
-                            // Main Content
-                            page.Content()
-                                .PaddingVertical(1, Unit.Centimetre)
-                                .Column(col =>
+                            page.Content().PaddingVertical(1, Unit.Centimetre).Column(col =>
+                            {
+                                col.Item().Table(table =>
                                 {
-                                    col.Item().Table(table =>
+                                    table.ColumnsDefinition(columns =>
                                     {
-                                        // Column Definitions
-                                        table.ColumnsDefinition(columns =>
-                                        {
-                                            columns.RelativeColumn(1.5f); // Tarih
-                                            columns.RelativeColumn(3);    // Açıklama
-                                            columns.RelativeColumn(1.5f); // Tutar
-                                            columns.RelativeColumn(1.2f); // Tür
-                                        });
-
-                                        // Table Header with styling
-                                        table.Header(header =>
-                                        {
-                                            header.Cell().Background(Colors.Grey.Lighten3)
-                                                .Padding(5).Text("Tarih").Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3)
-                                                .Padding(5).Text("Açıklama").Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3)
-                                                .Padding(5).Text("Tutar").Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3)
-                                                .Padding(5).Text("Tür").Bold();
-                                        });
-
-                                        // Handle empty transactions
-                                        if (transactions.Rows.Count == 0)
-                                        {
-                                            table.Cell().ColumnSpan(4)
-                                                .PaddingVertical(10)
-                                                .Text("Hesap hareketi bulunamadı")
-                                                .Italic().AlignCenter();
-                                        }
-
-                                        // Data Rows
-                                        foreach (DataRow row in transactions.Rows)
-                                        {
-                                            // Format date properly from available columns
-                                            DateTime dateValue;
-                                            bool hasDate = TryGetDate(row, dateCols, out dateValue);
-                                            string dateStr = hasDate ? dateValue.ToString("dd.MM.yyyy") : GetString(row, dateCols);
-
-                                            // Get transaction type
-                                            string type = GetString(row, typeCols);
-
-                                            // Set amount color based on type
-                                            Color amountColor = Colors.Black;
-                                            if (type.Equals("Gelir", StringComparison.OrdinalIgnoreCase))
-                                                amountColor = Colors.Green.Darken2;
-                                            else if (type.Equals("Gider", StringComparison.OrdinalIgnoreCase))
-                                                amountColor = Colors.Red.Darken2;
-
-                                            // Format amount
-                                            decimal amountVal = 0m;
-                                            bool hasAmount = TryGetDecimal(row, amountCols, out amountVal);
-                                            string amountStr = hasAmount ? $"{amountVal:N2} ₺" : GetString(row, amountCols);
-
-                                            // Create cells
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .PaddingVertical(5).Text(dateStr);
-
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .PaddingVertical(5).Text(GetString(row, descCols));
-
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .PaddingVertical(5).AlignRight()
-                                                .Text(amountStr).FontColor(amountColor);
-
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .PaddingVertical(5).AlignCenter()
-                                                .Text(type);
-                                        }
+                                        columns.RelativeColumn(1.5f); // Tarih
+                                        columns.RelativeColumn(3f);   // Açıklama
+                                        columns.RelativeColumn(1.5f); // Borç
+                                        columns.RelativeColumn(1.5f); // Alacak
                                     });
 
-                                    // Toplam Bakiye satırı
-                                    col.Item().PaddingTop(20).AlignRight().Text($"Toplam Bakiye: {total:N2} ₺")
-                                        .Bold().FontSize(12)
-                                        .FontColor(total >= 0 ? Colors.Green.Darken2 : Colors.Red.Darken2);
+                                    table.Header(header =>
+                                    {
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Tarih").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Açıklama").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Borç Tutar").Bold();
+                                        header.Cell().Background(Colors.Grey.Lighten3).Padding(5).Text("Alacak Tutar").Bold();
+                                    });
+
+                                    if (!rows.Any())
+                                    {
+                                        table.Cell().ColumnSpan(4).PaddingVertical(10).Text("Hesap hareketi bulunamadı").Italic().AlignCenter();
+                                    }
+
+                                    foreach (var row in rows)
+                                    {
+                                        // Determine date and description
+                                        DateTime dateValue;
+                                        bool hasDate = TryGetDate(row, dateCols, out dateValue);
+                                        string dateStr = hasDate ? dateValue.ToString("dd.MM.yyyy") : GetString(row, dateCols);
+                                        string desc = GetString(row, descCols);
+
+                                        decimal debitVal = 0m;
+                                        decimal creditVal = 0m;
+
+                                        // Check explicit debit/credit columns first
+                                        bool hasDebitCol = TryGetDecimal(row, debitCols, out decimal drow) && drow != 0m;
+                                        bool hasCreditCol = TryGetDecimal(row, creditCols, out decimal crow) && crow != 0m;
+
+                                        if (hasDebitCol && !hasCreditCol)
+                                            debitVal = Math.Abs(drow);
+                                        else if (hasCreditCol && !hasDebitCol)
+                                            creditVal = Math.Abs(crow);
+                                        else if (hasDebitCol && hasCreditCol)
+                                        {
+                                            // If both present, prefer type column
+                                            string type = GetString(row, typeCols);
+                                            if (!string.IsNullOrEmpty(type) && (type.Equals("Gider", StringComparison.OrdinalIgnoreCase) || type.Equals("Borç", StringComparison.OrdinalIgnoreCase) || type.Equals("Debit", StringComparison.OrdinalIgnoreCase)))
+                                                debitVal = Math.Abs(drow);
+                                            else
+                                                creditVal = Math.Abs(crow);
+                                        }
+                                        else
+                                        {
+                                            // Fallback: unified Amount/Tutar + Type
+                                            if (TryGetDecimal(row, new[] { "Amount", "Tutar" }, out decimal amt))
+                                            {
+                                                string type = GetString(row, typeCols);
+                                                if (!string.IsNullOrEmpty(type) && (type.Equals("Gider", StringComparison.OrdinalIgnoreCase) || type.Equals("Borç", StringComparison.OrdinalIgnoreCase) || type.Equals("Debit", StringComparison.OrdinalIgnoreCase)))
+                                                    debitVal = Math.Abs(amt);
+                                                else
+                                                    creditVal = Math.Abs(amt);
+                                            }
+                                        }
+
+                                        // Ensure only one side populated
+                                        if (debitVal != 0m && creditVal != 0m)
+                                        {
+                                            // Choose larger absolute value
+                                            if (Math.Abs(debitVal) >= Math.Abs(creditVal))
+                                                creditVal = 0m;
+                                            else
+                                                debitVal = 0m;
+                                        }
+
+                                        // Prepare strings
+                                        string debitStr = debitVal != 0m ? $"{debitVal:N2} ₺" : string.Empty;
+                                        string creditStr = creditVal != 0m ? $"{creditVal:N2} ₺" : string.Empty;
+
+                                        // Colors
+                                        var debitColor = Colors.Red.Darken2;
+                                        var creditColor = Colors.Green.Darken2;
+
+                                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                            .PaddingVertical(5).Text(dateStr);
+
+                                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                            .PaddingVertical(5).AlignCenter().Text(desc);
+
+                                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                            .PaddingVertical(5).AlignCenter()
+                                            .Text(debitStr).FontColor(debitColor);
+
+                                        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                            .PaddingVertical(5).AlignCenter()
+                                            .Text(creditStr).FontColor(creditColor);
+
+                                        totalDebit += debitVal;
+                                        totalCredit += creditVal;
+                                    }
                                 });
 
-                            // Footer
+                                // Totals
+                                col.Item().PaddingTop(12).AlignRight().Text(tx =>
+                                {
+                                    tx.Span($"Toplam Borç: {totalDebit:N2} ₺").Bold().FontColor(Colors.Red.Darken2);
+                                    tx.Span("   ");
+                                    tx.Span($"Toplam Alacak: {totalCredit:N2} ₺").Bold().FontColor(Colors.Green.Darken2);
+                                    tx.Span("   "); 
+
+                                });
+                                col.Item().PaddingTop(12).AlignRight().Text(tx =>
+                                {
+                                    decimal net = totalCredit - totalDebit;
+                                    var netColor = net >= 0 ? Colors.Green.Darken2 : Colors.Red.Darken2;
+                                    tx.Span($"Net Bakiye: {net:N2} ₺").Bold().FontColor(netColor);
+                                });
+                            });
+
                             page.Footer()
                                 .AlignCenter()
                                 .Text(x =>
@@ -1624,11 +1642,50 @@ namespace HesapTakip
                     string customerName = dgvCustomers.CurrentRow.Cells["Name"].Value.ToString();
                     int customerID = Convert.ToInt32(dgvCustomers.CurrentRow.Cells["CustomerID"].Value);
 
-                    // Get transactions
-                    DataTable transactions = GetTransactionsDataTable(customerID);
+                    // Get raw transactions from DB (do not rename columns) so we can reliably filter by Period/Date
+                    var raw = _db.GetTransactions(customerID);
 
-                    // Generate PDF
-                    PDFGenerator.GeneratePdf(transactions, customerName, sfd.FileName);
+                    // If user selected a year in cbYear, filter transactions accordingly
+                    DataTable filtered;
+                    if (cbYear?.SelectedItem != null && int.TryParse(cbYear.SelectedItem.ToString(), out int selYear))
+                    {
+                        filtered = raw.Clone();
+
+                        foreach (DataRow r in raw.Rows)
+                        {
+                            try
+                            {
+                                // Prefer Period column if present
+                                if (raw.Columns.Contains("Period") && r["Period"] != DBNull.Value)
+                                {
+                                    if (int.TryParse(r["Period"].ToString(), out int p) && p == selYear)
+                                        filtered.ImportRow(r);
+                                }
+                                else if (raw.Columns.Contains("Date") && r["Date"] != DBNull.Value)
+                                {
+                                    if (DateTime.TryParse(r["Date"].ToString(), out DateTime d))
+                                    {
+                                        if (ComputePeriodYear(d) == selYear)
+                                            filtered.ImportRow(r);
+                                    }
+                                }
+                                else
+                                {
+                                    // No Period or Date column: include all as fallback
+                                    filtered.ImportRow(r);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    else
+                    {
+                        // No year filter selected - pass all
+                        filtered = raw.Copy();
+                    }
+
+                    // Generate PDF from filtered table
+                    PDFGenerator.GeneratePdf(filtered, customerName, sfd.FileName);
 
                     // Show success message
                     MessageBox.Show("PDF başarıyla oluşturuldu!", "Başarılı",
@@ -2084,6 +2141,7 @@ namespace HesapTakip
         }
         private DataTable ImportExcelData(string filePath)
         {
+
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             DataTable dt = new DataTable();
             dt.Columns.Add("Tarih", typeof(DateTime));
@@ -2279,7 +2337,7 @@ namespace HesapTakip
                 {
                     switch (typeCell.ToString().ToLower())
                     {
-                        case "gelir":
+                        case "gelir":  
                             e.CellStyle.ForeColor = System.Drawing.Color.Green;
                             break;
                         case "gider":
