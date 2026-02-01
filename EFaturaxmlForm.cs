@@ -764,7 +764,7 @@ namespace HesapTakip
 
                     if (selectedTable == "Luca İşletme Satış")
                     {
-                        saleType = "Normal Satışlar";
+                        saleType = saleType;
                     }
                     else if (selectedTable == "Luca İşletme Alış")
                     {
