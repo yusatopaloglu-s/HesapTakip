@@ -764,7 +764,7 @@ namespace HesapTakip
 
                     if (selectedTable == "Luca İşletme Satış")
                     {
-                        saleType = "Normal Satışlar";
+                        saleType = saleType;
                     }
                     else if (selectedTable == "Luca İşletme Alış")
                     {
@@ -816,7 +816,9 @@ namespace HesapTakip
                                 TaxAmount = taxAmount1.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
+                                
                             });
                         }
 
@@ -840,6 +842,7 @@ namespace HesapTakip
                                 TaxAmount = taxAmount8.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
                             });
                         }
@@ -864,6 +867,7 @@ namespace HesapTakip
                                 TaxAmount = taxAmount10.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
                             });
                         }
@@ -888,6 +892,7 @@ namespace HesapTakip
                                 TaxAmount = taxAmount18.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
                             });
                         }
@@ -912,6 +917,7 @@ namespace HesapTakip
                                 TaxAmount = taxAmount20.ToString("N2", formatter2),
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
                             });
                         }
@@ -936,6 +942,7 @@ namespace HesapTakip
                                 TaxAmount = "0,00",
                                 TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
                                 PaymentMethod = paymentMethod,
+                                Quantity = quantity,
                                 ItemName = customerName  // For AÇIKLAMA
                             });
                         }
@@ -1146,7 +1153,7 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                     {
-                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", "", item.ItemName, "", "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
+                        dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", item.Percent, item.ItemName, item.Quantity, "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
                     }
                     break;
 
