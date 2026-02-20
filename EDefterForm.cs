@@ -67,12 +67,30 @@ namespace HesapTakip
                     edefterRows = dt.Clone();
                 }
 
-                dgvFirmaList.DataSource = edefterRows;
+                // Değişiklik: alfabetik sıralama (Name sütunu varsa)
+                try
+                {
+                    if (edefterRows != null && edefterRows.Columns.Contains("Name"))
+                    {
+                        // DataView üzerinden Türkçe/varsayılan sıralama: Name ASC
+                        var dv = edefterRows.DefaultView;
+                        dv.Sort = "Name ASC";
+                        dgvFirmaList.DataSource = dv;
+                    }
+                    else
+                    {
+                        dgvFirmaList.DataSource = edefterRows;
+                    }
+                }
+                catch
+                {
+                    // Hata olursa doğrudan bağla (fallback)
+                    dgvFirmaList.DataSource = edefterRows;
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Veri yükleme hatası: " + ex.Message);
-                // Tutarsız UI durumunu önlemek için erken çık
                 return;
             }
 
@@ -393,6 +411,11 @@ namespace HesapTakip
             {
                 MessageBox.Show("Toplu işlem sırasında hata oluştu!");
             }
+        }
+
+        private void btnedit_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
