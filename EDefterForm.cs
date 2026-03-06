@@ -223,7 +223,9 @@ namespace HesapTakip
         private void btnekle_Click(object sender, EventArgs e)
         {
             selectedTransactionType = "ekle";
-            if (!decimal.TryParse(txtkontor.Text, out decimal kontor))
+
+            // Kültüre duyarlı ve binlik/para sembollerini kabul eden parse
+            if (!decimal.TryParse(txtkontor.Text, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.CurrentCulture, out decimal kontor))
             {
                 MessageBox.Show("Geçersiz tutar formatı!");
                 return;
@@ -298,7 +300,7 @@ namespace HesapTakip
 
         private void txtAmount_Leave(object sender, EventArgs e)
         {
-            if (decimal.TryParse(txtkontor.Text, out decimal amount))
+            if (decimal.TryParse(txtkontor.Text, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.CurrentCulture, out decimal amount))
             {
                 txtkontor.Text = amount.ToString("N2");
             }
@@ -332,7 +334,9 @@ namespace HesapTakip
         private void btncikar_Click(object sender, EventArgs e)
         {
             selectedTransactionType = "cikar";
-            if (!decimal.TryParse(txtkontor.Text, out decimal kontor))
+
+            // Kültüre duyarlı parse kullan
+            if (!decimal.TryParse(txtkontor.Text, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.CurrentCulture, out decimal kontor))
             {
                 MessageBox.Show("Geçersiz tutar formatı!");
                 return;
@@ -415,7 +419,161 @@ namespace HesapTakip
 
         private void btnedit_Click(object sender, EventArgs e)
         {
+            // Seçili satır ve geçerli firma kontrolü
+            if (dgvKontorList.CurrentRow == null || dgvKontorList.CurrentRow.IsNewRow)
+            {
+                MessageBox.Show("Lütfen düzenlenecek işlemi seçin.");
+                return;
+            }
 
+            if (dgvFirmaList.CurrentRow == null)
+            {
+                MessageBox.Show("Lütfen bir firma seçin.");
+                return;
+            }
+
+            // Mevcut Kontor değerini oku (güvenli)
+            object cellVal = dgvKontorList.CurrentRow.Cells["Kontor"]?.Value;
+            decimal currentKontor = 0m;
+            if (cellVal is decimal decVal)
+            {
+                currentKontor = decVal;
+            }
+            else
+            {
+                string s = cellVal?.ToString() ?? "0";
+                if (!decimal.TryParse(s, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.CurrentCulture, out currentKontor))
+                {
+                    // fallback invariant
+                    decimal.TryParse(s, NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.InvariantCulture, out currentKontor);
+                }
+            }
+
+            // Kullanıcıdan yeni değeri al
+            if (!TryShowEditKontorDialog(currentKontor, out decimal newKontor))
+            {
+                // Kullanıcı iptal etti veya doğrulama başarısız oldu
+                return;
+            }
+
+            // TransactionID oku
+            int transactionID;
+            try
+            {
+                transactionID = Convert.ToInt32(dgvKontorList.CurrentRow.Cells["TransactionID"].Value);
+            }
+            catch
+            {
+                MessageBox.Show("Seçilen kayıttan TransactionID okunamadı.");
+                return;
+            }
+
+            int customerID = Convert.ToInt32(dgvFirmaList.CurrentRow.Cells["CustomerID"].Value);
+
+            try
+            {
+                using (var connection = _db.GetConnection())
+                {
+                    connection.Open();
+
+                    string query = @"UPDATE EDefterTakip 
+                                     SET Kontor = @kontor 
+                                     WHERE TransactionID = @id";
+
+                    using (var cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = query;
+                        AddParameter(cmd, "@kontor", newKontor);
+                        AddParameter(cmd, "@id", transactionID);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                LoadTransactions(customerID);
+                CalculateAndDisplayTotal(customerID);
+                ClearTransactionInputs();
+                MessageBox.Show("Kontör değeri başarıyla güncellendi!");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Güncelleme sırasında hata oluştu: " + ex.Message);
+            }
+        }
+
+        // ADD: Sınıfa ekleyin (private yardımcı metot)
+        private bool TryShowEditKontorDialog(decimal currentValue, out decimal newValue)
+        {
+            newValue = 0m;
+
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Kontör Düzenle";
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.ShowInTaskbar = false;
+                dlg.ClientSize = new System.Drawing.Size(320, 130);
+
+                var lbl = new Label
+                {
+                    Text = "Yeni Kontör değeri:",
+                    AutoSize = false,
+                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                    Left = 10,
+                    Top = 10,
+                    Width = 300,
+                    Height = 20
+                };
+
+                var txt = new TextBox
+                {
+                    Left = 10,
+                    Top = 35,
+                    Width = 300,
+                    Text = currentValue.ToString("N2", CultureInfo.CurrentCulture)
+                };
+
+                var btnSave = new Button
+                {
+                    Text = "Kaydet",
+                    DialogResult = DialogResult.OK,
+                    Left = 140,
+                    Width = 80,
+                    Top = 70
+                };
+
+                var btnCancel = new Button
+                {
+                    Text = "İptal",
+                    DialogResult = DialogResult.Cancel,
+                    Left = 230,
+                    Width = 80,
+                    Top = 70
+                };
+
+                dlg.Controls.Add(lbl);
+                dlg.Controls.Add(txt);
+                dlg.Controls.Add(btnSave);
+                dlg.Controls.Add(btnCancel);
+
+                dlg.AcceptButton = btnSave;
+                dlg.CancelButton = btnCancel;
+
+                var res = dlg.ShowDialog(this);
+                if (res != DialogResult.OK)
+                    return false;
+
+                // Doğrulama: kültüre duyarlı parse
+                if (!decimal.TryParse(txt.Text?.Trim(), NumberStyles.Number | NumberStyles.AllowCurrencySymbol, CultureInfo.CurrentCulture, out decimal parsed) || parsed <= 0m)
+                {
+                    MessageBox.Show("Lütfen geçerli bir pozitif sayı giriniz!", "Geçersiz Giriş", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                newValue = parsed;
+                return true;
+            }
         }
     }
 }
