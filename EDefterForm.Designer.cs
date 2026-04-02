@@ -94,7 +94,7 @@
             btnedit.TabIndex = 4;
             btnedit.Text = "Düzelt";
             btnedit.UseVisualStyleBackColor = true;
-            btnedit.Visible = false;
+            btnedit.Click += btnedit_Click;
             // 
             // btnhepsi1
             // 
