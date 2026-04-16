@@ -4,6 +4,12 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 
 namespace HesapTakip
@@ -51,9 +57,12 @@ namespace HesapTakip
             public string TaxableAmount { get; set; }
             public string TaxAmount { get; set; }
             public string Percent { get; set; }
+            public string KargoMatrah { get; set; }
+            public string KargoKdv { get; set; }
         }
 
         private List<InvoiceData> BilancoSatisData = new List<InvoiceData>();
+        private List<InvoiceData> BilancoSatisKargoData = new List<InvoiceData>();
         private List<InvoiceData> BilancoAlisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeSatisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeAlisData = new List<InvoiceData>();
@@ -75,6 +84,7 @@ namespace HesapTakip
             cmbTableSelector.Items.AddRange(new string[]
             {
                 "Bilanço Satış",
+                "Bilanço Satış+Kargo",
                 "Bilanço Alış",
                 "Luca İşletme Satış",
                 "Luca İşletme Alış",
@@ -490,6 +500,7 @@ namespace HesapTakip
             {
 
                 BilancoSatisData.Clear();
+                BilancoSatisKargoData.Clear();
                 BilancoAlisData.Clear();
                 LucaIsletmeSatisData.Clear();
                 LucaIsletmeAlisData.Clear();
@@ -595,6 +606,8 @@ namespace HesapTakip
                 double taxableAmount20 = 0.0;
                 double taxAmount20 = 0.0;
                 double oiv = 0.0;
+                double totalCargoMatrah = 0.0;
+                double totalCargoKdv = 0.0;
 
                 // Process only invoice-level TaxTotal's TaxSubtotals
                 var invoiceTaxTotal = xml.Root.Elements(cac + "TaxTotal").FirstOrDefault();
@@ -664,8 +677,11 @@ namespace HesapTakip
                 var culture = new CultureInfo("tr-TR");
                 var formatter2 = new NumberFormatInfo { NumberDecimalDigits = 2, NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
 
-                string selectedTable = cmbTableSelector.SelectedItem?.ToString() ?? "";
-                bool isSatis = selectedTable == "Bilanço Satış" || selectedTable == "Luca İşletme Satış";
+                string selectedTable = (cmbTableSelector.SelectedItem?.ToString() ?? "").Trim();
+                bool isSatis =
+                    selectedTable.Equals("Bilanço Satış", StringComparison.OrdinalIgnoreCase)
+                    || selectedTable.Equals("Bilanço Satış+Kargo", StringComparison.OrdinalIgnoreCase)
+                    || selectedTable.Equals("Luca İşletme Satış", StringComparison.OrdinalIgnoreCase);
 
                 var defaultSubRecordType = "Mal Satışı"; // veya "Mal Alışı" için uygun değer
 
@@ -674,7 +690,7 @@ namespace HesapTakip
                 {
                     if (!BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber))
                     {
-                        BilancoSatisData.Add(new InvoiceData
+                        var bilancoEntry = new InvoiceData
                         {
                             InvoiceType = invoiceType,
                             IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
@@ -699,8 +715,46 @@ namespace HesapTakip
                             PaymentMethod = paymentMethod,
                             KdvExemptionTable = kdvExemptionTable,
                             KdvExemptionCode = kdvExemptionCode,
-                            SaleType = saleType
-                        });
+                            SaleType = saleType,
+                            KargoMatrah = "0,00",
+                            KargoKdv = "0,00"
+                        };
+
+                        BilancoSatisData.Add(bilancoEntry);
+
+                        // Aynı kaydı kargo görünümü için de tut
+                        if (!BilancoSatisKargoData.Any(d => d.InvoiceNumber == invoiceNumber))
+                        {
+                            BilancoSatisKargoData.Add(new InvoiceData
+                            {
+                                InvoiceType = bilancoEntry.InvoiceType,
+                                IssueDate = bilancoEntry.IssueDate,
+                                InvoiceNumber = bilancoEntry.InvoiceNumber,
+                                CustomerTaxId = bilancoEntry.CustomerTaxId,
+                                CustomerName = bilancoEntry.CustomerName,
+                                TaxExemptAmount0 = bilancoEntry.TaxExemptAmount0,
+                                TaxableAmount1 = bilancoEntry.TaxableAmount1,
+                                TaxAmount1 = bilancoEntry.TaxAmount1,
+                                TaxableAmount8 = bilancoEntry.TaxableAmount8,
+                                TaxAmount8 = bilancoEntry.TaxAmount8,
+                                TaxableAmount10 = bilancoEntry.TaxableAmount10,
+                                TaxAmount10 = bilancoEntry.TaxAmount10,
+                                TaxableAmount18 = bilancoEntry.TaxableAmount18,
+                                TaxAmount18 = bilancoEntry.TaxAmount18,
+                                TaxableAmount20 = bilancoEntry.TaxableAmount20,
+                                TaxAmount20 = bilancoEntry.TaxAmount20,
+                                DepositAmount = bilancoEntry.DepositAmount,
+                                Oiv = bilancoEntry.Oiv,
+                                TotalPayable = bilancoEntry.TotalPayable,
+                                UUID = bilancoEntry.UUID,
+                                PaymentMethod = bilancoEntry.PaymentMethod,
+                                KdvExemptionTable = bilancoEntry.KdvExemptionTable,
+                                KdvExemptionCode = bilancoEntry.KdvExemptionCode,
+                                SaleType = bilancoEntry.SaleType,
+                                KargoMatrah = bilancoEntry.KargoMatrah,
+                                KargoKdv = bilancoEntry.KargoKdv
+                            });
+                        }
                     }
                 }
                 else
@@ -739,6 +793,72 @@ namespace HesapTakip
 
                 var invoiceLines = xml.Descendants(cac + "InvoiceLine");
                 foreach (var line in invoiceLines)
+                {
+                    var itemName = line.Descendants(cac + "Item").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
+                    var quantity = line.Descendants(cbc + "InvoicedQuantity").FirstOrDefault()?.Value ?? "0";
+                    var unitPrice = line.Descendants(cac + "Price").Descendants(cbc + "PriceAmount").FirstOrDefault()?.Value ?? "0";
+                    var lineTaxableAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxableAmount").FirstOrDefault()?.Value ?? "0";
+                    var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
+                    var lineTaxPercent = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
+
+                    // Kargo kalemi tespiti: "Kargo Bedeli" tam eşleşme veya içinde "kargo" ve "bedel"
+                    bool isCargoLine = false;
+                    if (!string.IsNullOrWhiteSpace(itemName))
+                    {
+                        var trimmed = itemName.Trim();
+                        if (trimmed.Equals("Kargo Bedeli", StringComparison.OrdinalIgnoreCase) ||
+                            (trimmed.IndexOf("kargo", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                             trimmed.IndexOf("bedel", StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            isCargoLine = true;
+                        }
+                    }
+
+                    // isCargoLine bloğu içinde dictionary yerine sadece toplama:
+                    if (isCargoLine)
+                    {
+                        double lp = double.TryParse(lineTaxPercent, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLp) ? tmpLp : 0.0;
+                        double lt = double.TryParse(lineTaxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLt) ? tmpLt : 0.0;
+                        double lta = double.TryParse(lineTaxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLta) ? tmpLta : 0.0;
+
+                        totalCargoMatrah += lt;
+                        totalCargoKdv += lta;
+
+                        // ilgili genel KDV/matrah toplamlarından düş
+                        if (lp == 0.0)
+                        {
+                            taxExemptAmount0 = Math.Max(0, taxExemptAmount0 - lt);
+                        }
+                        else if (lp == 1.0)
+                        {
+                            taxableAmount1 = Math.Max(0, taxableAmount1 - lt);
+                            taxAmount1 = Math.Max(0, taxAmount1 - lta);
+                        }
+                        else if (lp == 8.0)
+                        {
+                            taxableAmount8 = Math.Max(0, taxableAmount8 - lt);
+                            taxAmount8 = Math.Max(0, taxAmount8 - lta);
+                        }
+                        else if (lp == 10.0)
+                        {
+                            taxableAmount10 = Math.Max(0, taxableAmount10 - lt);
+                            taxAmount10 = Math.Max(0, taxAmount10 - lta);
+                        }
+                        else if (lp == 18.0)
+                        {
+                            taxableAmount18 = Math.Max(0, taxableAmount18 - lt);
+                            taxAmount18 = Math.Max(0, taxAmount18 - lta);
+                        }
+                        else if (lp == 20.0)
+                        {
+                            taxableAmount20 = Math.Max(0, taxableAmount20 - lt);
+                            taxAmount20 = Math.Max(0, taxAmount20 - lta);
+                        }
+                    }
+                }
+
+                var invoiceLines2 = xml.Descendants(cac + "InvoiceLine");
+                foreach (var line in invoiceLines2)
                 {
                     var itemName = line.Descendants(cac + "Item").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
                     var quantity = line.Descendants(cbc + "InvoicedQuantity").FirstOrDefault()?.Value ?? "0";
@@ -1113,6 +1233,30 @@ namespace HesapTakip
                         }
                     }
                 }
+
+
+                if (isSatis && (cmbTableSelector.SelectedItem?.ToString() ?? "") == "Bilanço Satış+Kargo")
+                {
+                    var bilEntry = BilancoSatisKargoData.FirstOrDefault(d => d.InvoiceNumber == invoiceNumber);
+                    if (bilEntry != null)
+                    {
+                        bilEntry.KargoMatrah = totalCargoMatrah.ToString("N2", formatter2);
+                        bilEntry.KargoKdv = totalCargoKdv.ToString("N2", formatter2);
+
+                        // Opsiyonel: matrah/vergileri de güncelle
+                        bilEntry.TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2);
+                        bilEntry.TaxableAmount1 = taxableAmount1.ToString("N2", formatter2);
+                        bilEntry.TaxAmount1 = taxAmount1.ToString("N2", formatter2);
+                        bilEntry.TaxableAmount8 = taxableAmount8.ToString("N2", formatter2);
+                        bilEntry.TaxAmount8 = taxAmount8.ToString("N2", formatter2);
+                        bilEntry.TaxableAmount10 = taxableAmount10.ToString("N2", formatter2);
+                        bilEntry.TaxAmount10 = taxAmount10.ToString("N2", formatter2);
+                        bilEntry.TaxableAmount18 = taxableAmount18.ToString("N2", formatter2);
+                        bilEntry.TaxAmount18 = taxAmount18.ToString("N2", formatter2);
+                        bilEntry.TaxableAmount20 = taxableAmount20.ToString("N2", formatter2);
+                        bilEntry.TaxAmount20 = taxAmount20.ToString("N2", formatter2);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -1135,6 +1279,15 @@ namespace HesapTakip
                         dgvData.Columns.Add(column, column);
                     foreach (var item in data)
                         dgvData.Rows.Add(item.InvoiceType, item.IssueDate, item.InvoiceNumber, item.CustomerTaxId, item.CustomerName, item.TaxExemptAmount0, item.TaxableAmount1, item.TaxAmount1, item.TaxableAmount10, item.TaxAmount10, item.TaxableAmount20, item.TaxAmount20, item.DepositAmount, item.TotalPayable, item.PaymentMethod);
+                    break;
+
+                case "Bilanço Satış+Kargo":
+                    data = BilancoSatisKargoData;
+                    columns = new[] { "Fatura Türü", "Tarih", "Evrak No", "Alıcı VKN", "Alıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%","KargoMatrah","KargoKdv", "Depozito", "Cari Toplam", "Ödeme Türü" };
+                    foreach (var column in columns)
+                        dgvData.Columns.Add(column, column);
+                    foreach (var item in data)
+                        dgvData.Rows.Add(item.InvoiceType, item.IssueDate, item.InvoiceNumber, item.CustomerTaxId, item.CustomerName, item.TaxExemptAmount0, item.TaxableAmount1, item.TaxAmount1, item.TaxableAmount10, item.TaxAmount10, item.TaxableAmount20, item.TaxAmount20,item.KargoMatrah,item.KargoKdv, item.DepositAmount, item.TotalPayable, item.PaymentMethod);
                     break;
 
                 case "Bilanço Alış":

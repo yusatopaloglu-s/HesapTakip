@@ -2329,6 +2329,16 @@ namespace HesapTakip
         }
         private void dgvTransactions_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
+            // Tarih kolonunu "gg.aa.yyyy" (dd.MM.yyyy) formatında göster
+            if (dgvTransactions.Columns[e.ColumnIndex].Name == "Date")
+            {
+                if (e.Value != null && DateTime.TryParse(e.Value.ToString(), out DateTime dt))
+                {
+                    e.Value = dt.ToString("dd.MM.yyyy");
+                    e.FormattingApplied = true;
+                }
+            }
+
             if (dgvTransactions.Columns[e.ColumnIndex].Name == "Amount")
             {
                 var row = dgvTransactions.Rows[e.RowIndex];
@@ -2337,7 +2347,7 @@ namespace HesapTakip
                 {
                     switch (typeCell.ToString().ToLower())
                     {
-                        case "gelir":  
+                        case "gelir":
                             e.CellStyle.ForeColor = System.Drawing.Color.Green;
                             break;
                         case "gider":
