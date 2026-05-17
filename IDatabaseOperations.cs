@@ -50,6 +50,21 @@ namespace HesapTakip
         // Periods (fiscal years) management (optional)
         DataTable GetPeriods() { return new DataTable(); }
         bool AddPeriod(int periodYear, string displayName = null) { return false; }
+
+        // Şablon yönetimi
+        DataTable GetTemplates(); // Tüm şablonları döndürür
+        bool AddTemplate(string name, string definitionJson, bool isBuiltIn = false);
+        bool UpdateTemplate(int templateId, string name, string definitionJson);
+        bool DeleteTemplate(int templateId);
+        DataTable GetTemplateColumns(int templateId); // (opsiyonel, eğer kolonlar ayrı tutulacaksa)
+
+        // Filtre yönetimi (FaturaFilters)
+        DataTable GetFiltersForTemplate(int templateId);  
+        bool AddFilter(int templateId, string itemName, decimal taxRate, string outputColumnPrefix, int displayOrder = 0);
+        bool UpdateFilter(int filterId, string itemName, decimal taxRate, string outputColumnPrefix, int displayOrder);
+        bool DeleteFilter(int filterId);
+        bool ToggleFilterActive(int filterId, bool isActive);
+        bool ReorderFilters(int templateId, Dictionary<int, int> filterIdToOrder); 
     }
 
     // E-Defter işlemleri için yardımcı sınıf

@@ -1,5 +1,8 @@
-﻿using System.Data;
+﻿using DocumentFormat.OpenXml.Drawing.Diagrams;
+using MySql.Data.MySqlClient;
+using System.Data;
 using System.Data.SqlClient;
+using System.Data.SQLite;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -196,13 +199,95 @@ namespace HesapTakip
                         { "PeriodYear", "INT PRIMARY KEY" },
                         { "DisplayName", "NVARCHAR(255) NULL" }
                     }, conn);
+
+                    // Templates tablosu
+                    EnsureTableAndColumns("Templates", new Dictionary<string, string>
+                    {
+                        { "TemplateID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "Name", "NVARCHAR(255) NOT NULL" },
+                        { "IsBuiltIn", "BIT DEFAULT 0" },
+                        { "DefinitionJson", "NVARCHAR(MAX) NOT NULL" },
+                        { "CreatedAt", "DATETIME DEFAULT GETDATE()" }
+                    }, conn);
+
+                    // TemplateColumns tablosu (opsiyonel)
+                    EnsureTableAndColumns("TemplateColumns", new Dictionary<string, string>
+                    {
+                        { "TemplateColumnID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "TemplateID", "INT NOT NULL" },
+                        { "ColumnName", "NVARCHAR(255) NOT NULL" },
+                        { "DataKey", "NVARCHAR(255) NOT NULL" },
+                        { "DisplayOrder", "INT DEFAULT 0" }
+                    }, conn);
+
+                    // FaturaFilters tablosu - Özel şablonlar için filtre kuralları
+                    EnsureTableAndColumns("FaturaFilters", new Dictionary<string, string>
+{
+                        { "FilterID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                        { "TemplateID", "INT NOT NULL" },
+                        { "ItemName", "NVARCHAR(255) NOT NULL" },
+                        { "TaxRate", "DECIMAL(5,2) DEFAULT 0" },
+                        { "OutputColumnPrefix", "NVARCHAR(50)" },
+                        { "DisplayOrder", "INT DEFAULT 0" },
+                        { "IsActive", "BIT DEFAULT 1" },
+                        { "CreatedAt", "DATETIME DEFAULT GETDATE()" }
+                    }, conn);
+
+                    // Foreign Key (MSSQL için ayrı ekle)
+                    using (var cmd = new SqlCommand(@"
+                        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS 
+                                       WHERE CONSTRAINT_NAME = 'FK_FaturaFilters_Templates')
+                        BEGIN
+                            ALTER TABLE FaturaFilters 
+                            ADD CONSTRAINT FK_FaturaFilters_Templates 
+                            FOREIGN KEY (TemplateID) REFERENCES Templates(TemplateID) ON DELETE CASCADE
+                        END
+                    ", conn))
+                    {
+                        try { cmd.ExecuteNonQuery(); } catch { }
+                    }
+
+                    // Varsayılan şablonlar
+                    var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
+                    var defaultTemplates = new List<(string Name, string Json)>
+                {
+                    ("Bilanço Satış", "table_bilancosatis.json"),
+                    ("Bilanço Alış", "table_bilancoalis.json"),
+                    ("Luca İşletme Satış", "table_isletmesatis.json"),
+                    ("Luca İşletme Alış", "table_isletmesatis.json"),
+                    ("Fatura Kalemleri Adet", "table_faturakalem.json")
+                };
+
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "SELECT COUNT(*) FROM Templates";
+                        var count = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (count == 0)
+                        {
+                            foreach (var tpl in defaultTemplates)
+                            {
+                                var jsonPath = Path.Combine(templateDir, tpl.Json);
+                                if (!File.Exists(jsonPath))
+                                    throw new FileNotFoundException($"Şablon dosyası bulunamadı: {jsonPath}");
+
+                                var definitionJson = File.ReadAllText(jsonPath);
+
+                                cmd.CommandText = "INSERT INTO Templates (Name, IsBuiltIn, DefinitionJson) VALUES (@name, @isBuiltIn, @definitionJson)";
+                                cmd.Parameters.Clear();
+                                cmd.Parameters.AddWithValue("@name", tpl.Name);
+                                cmd.Parameters.AddWithValue("@isBuiltIn", 1);
+                                cmd.Parameters.AddWithValue("@definitionJson", definitionJson);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
                 }
             }
+
             catch (SqlException ex) when (ex.Number == 4060)
             {
                 // 4060 = Cannot open database requested by the login. The login failed.
-                Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number})");
-
+                Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number}");
                 // If we just created the database but the login cannot open it (common when Windows auth and user mapping not set),
                 // attempt to initialize schema using master connection and fully-qualified object names as a fallback.
                 if (createdNow)
@@ -224,6 +309,9 @@ namespace HesapTakip
 
                 throw; // not created now and cannot open -> rethrow
             }
+
+
+
         }
 
         public IDbConnection GetConnection()
@@ -954,6 +1042,238 @@ namespace HesapTakip
             }
             catch
             {
+                return false;
+            }
+        }
+
+        public DataTable GetTemplates()
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT TemplateID, Name, IsBuiltIn, DefinitionJson, CreatedAt FROM Templates ORDER BY IsBuiltIn DESC, Name ASC", conn))
+            {
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddTemplate(string name, string definitionJson, bool isBuiltIn = false)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand("INSERT INTO Templates (Name, IsBuiltIn, DefinitionJson) VALUES (@name, @isBuiltIn, @definitionJson)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", name);
+                    cmd.Parameters.AddWithValue("@isBuiltIn", isBuiltIn ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@definitionJson", definitionJson);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"SQLite AddTemplate hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool UpdateTemplate(int templateId, string name, string definitionJson)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand("UPDATE Templates SET Name = @name, DefinitionJson = @definitionJson WHERE TemplateID = @id AND IsBuiltIn = 0", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@name", name);
+                    cmd.Parameters.AddWithValue("@definitionJson", definitionJson);
+                    cmd.Parameters.AddWithValue("@id", templateId);
+                    return cmd.ExecuteNonQuery() > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"SQLite UpdateTemplate hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool DeleteTemplate(int templateId)
+        {
+            try
+            {
+                using (var conn = new SQLiteConnection(_connectionString))
+                using (var cmd = new SQLiteCommand("DELETE FROM Templates WHERE TemplateID = @id AND IsBuiltIn = 0", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", templateId);
+                    return cmd.ExecuteNonQuery() > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"SQLite DeleteTemplate hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public DataTable GetTemplateColumns(int templateId)
+        {
+            var dt = new DataTable();
+            using (var conn = new SQLiteConnection(_connectionString))
+            using (var adapter = new SQLiteDataAdapter("SELECT TemplateColumnID, TemplateID, ColumnName, DataKey, DisplayOrder FROM TemplateColumns WHERE TemplateID = @templateId ORDER BY DisplayOrder ASC", conn))
+            {
+                adapter.SelectCommand.Parameters.AddWithValue("@templateId", templateId);
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+        public DataTable GetFiltersForTemplate(int templateId)
+        {
+            var dt = new DataTable();
+            using (var conn = new SqlConnection(_connectionString))
+            using (var adapter = new SqlDataAdapter(
+                "SELECT FilterID, TemplateID, ItemName, TaxRate, OutputColumnPrefix, DisplayOrder, IsActive, CreatedAt " +
+                "FROM FaturaFilters WHERE TemplateID = @templateId AND IsActive = 1 " +
+                "ORDER BY DisplayOrder ASC, FilterID ASC", conn))
+            {
+                adapter.SelectCommand.Parameters.AddWithValue("@templateId", templateId);
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
+
+        public bool AddFilter(int templateId, string itemName, decimal taxRate, string outputColumnPrefix, int displayOrder = 0)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "INSERT INTO FaturaFilters (TemplateID, ItemName, TaxRate, OutputColumnPrefix, DisplayOrder) " +
+                    "VALUES (@templateId, @itemName, @taxRate, @prefix, @displayOrder)", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@templateId", templateId);
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.Parameters.AddWithValue("@taxRate", taxRate);
+                    cmd.Parameters.AddWithValue("@prefix", outputColumnPrefix);
+                    cmd.Parameters.AddWithValue("@displayOrder", displayOrder);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL AddFilter hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool UpdateFilter(int filterId, string itemName, decimal taxRate, string outputColumnPrefix, int displayOrder)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand(
+                    "UPDATE FaturaFilters SET ItemName = @itemName, TaxRate = @taxRate, OutputColumnPrefix = @prefix, DisplayOrder = @displayOrder " +
+                    "WHERE FilterID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@itemName", itemName);
+                    cmd.Parameters.AddWithValue("@taxRate", taxRate);
+                    cmd.Parameters.AddWithValue("@prefix", outputColumnPrefix);
+                    cmd.Parameters.AddWithValue("@displayOrder", displayOrder);
+                    cmd.Parameters.AddWithValue("@id", filterId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL UpdateFilter hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool DeleteFilter(int filterId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand("DELETE FROM FaturaFilters WHERE FilterID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@id", filterId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL DeleteFilter hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool ToggleFilterActive(int filterId, bool isActive)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                using (var cmd = new SqlCommand("UPDATE FaturaFilters SET IsActive = @active WHERE FilterID = @id", conn))
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@active", isActive ? 1 : 0);
+                    cmd.Parameters.AddWithValue("@id", filterId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL ToggleFilterActive hatası: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool ReorderFilters(int templateId, Dictionary<int, int> filterIdToOrder)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    conn.Open();
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            foreach (var kvp in filterIdToOrder)
+                            {
+                                using (var cmd = new SqlCommand(
+                                    "UPDATE FaturaFilters SET DisplayOrder = @displayOrder WHERE FilterID = @filterId AND TemplateID = @templateId", conn, transaction))
+                                {
+                                    cmd.Parameters.AddWithValue("@displayOrder", kvp.Value);
+                                    cmd.Parameters.AddWithValue("@filterId", kvp.Key);
+                                    cmd.Parameters.AddWithValue("@templateId", templateId);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MSSQL ReorderFilters hatası: {ex.Message}");
                 return false;
             }
         }
