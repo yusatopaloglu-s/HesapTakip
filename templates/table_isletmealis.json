@@ -1,0 +1,148 @@
+{
+  "Columns": [
+    {
+      "ColumnName": "İŞLEM",
+      "DataKey": "InvoiceType"
+    },
+    {
+      "ColumnName": "KATEGORİ",
+      "DataKey": "Category"
+    },
+    {
+      "ColumnName": "BELGE TÜRÜ",
+      "DataKey": "DocumentType"
+    },
+    {
+      "ColumnName": "EVRAK TARİHİ",
+      "DataKey": "IssueDate"
+    },
+    {
+      "ColumnName": "KAYIT TARİHİ",
+      "DataKey": "IssueDate"
+    },
+    {
+      "ColumnName": "SERİ NO",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "EVRAK NO",
+      "DataKey": "InvoiceNumber"
+    },
+    {
+      "ColumnName": "TCKN/VKN",
+      "DataKey": "CustomerTaxId"
+    },
+    {
+      "ColumnName": "VERGİ DAİRESİ",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "SOYADI ÜNVAN",
+      "DataKey": "cFamilyName"
+    },
+    {
+      "ColumnName": "ADI DEVAMI",
+      "DataKey": "cFirstName"
+    },
+    {
+      "ColumnName": "ADRES",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "CARİ HESAP",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "KDV İSTİSNASI",
+      "DataKey": "KdvExemptionTable"
+    },
+    {
+      "ColumnName": "KOD",
+      "DataKey": "KdvExemptionCode"
+    },
+    {
+      "ColumnName": "BELGE TÜRÜ(DB)",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "ALIŞ/SATIŞ TÜRÜ",
+      "DataKey": "SaleType"
+    },
+    {
+      "ColumnName": "KAYIT ALT TÜRÜ",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "MAL VE HİZMET KODU",
+      "DataKey": "Percent"
+    },
+    {
+      "ColumnName": "AÇIKLAMA",
+      "DataKey": "ItemName"
+    },
+    {
+      "ColumnName": "MİKTAR",
+      "DataKey": "Quantity"
+    },
+    {
+      "ColumnName": "B.FİYAT",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "TUTAR",
+      "DataKey": "TaxableAmount"
+    },
+    {
+      "ColumnName": "TEVKİFAT",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "KDV ORANI",
+      "DataKey": "Percent"
+    },
+    {
+      "ColumnName": "ÖZEL MATRAH İŞLEM BEDELİ",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "MATRAHTAN DÜŞÜLECEK TUTAR",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "MATRAHA DAHİL OLMAYAN BEDEL",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "KDV TUTARI",
+      "DataKey": "TaxAmount"
+    },
+    {
+      "ColumnName": "TOPLAM TUTAR",
+      "DataKey": "TotalPayable"
+    },
+    {
+      "ColumnName": "KREDİLİ TUTAR",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "STOPAJ KODU",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "STOPAJ TUTARI",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "DÖNEMSELLIK İLKESİ",
+      "DataKey": ""
+    },
+    {
+      "ColumnName": "FAALIYET KODU",
+      "DataKey": "ActivityCode"
+    },
+    {
+      "ColumnName": "ÖDEME TÜRÜ",
+      "DataKey": "PaymentMethod"
+    }
+  ]
+}
