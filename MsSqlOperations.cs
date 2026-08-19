@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using MySql.Data.MySqlClient;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Text.Json;
@@ -760,44 +761,75 @@ namespace HesapTakip
                 EnsureTableAndColumnsMaster("ExpenseCategories", new Dictionary<string, string>
                 {
                     { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
-                    { "Label", "NVARCHAR(255) NOT NULL" },
+                    { "Label", "NVARCHAR(255) NOT NULL UNIQUE" },
                     { "Info", "NVARCHAR(255) NOT NULL" }
                 }, conn, databaseName);
 
                 // Fill ExpenseCategories from JSON if empty
-                if (!TableHasDataMaster("ExpenseCategories", conn, databaseName))
-                {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
+                /*    if (!TableHasDataMaster("ExpenseCategories", conn, databaseName))
                     {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
-
-                        using (var cmd = new SqlCommand())
+                        string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                        if (File.Exists(jsonFilePath))
                         {
-                            cmd.Connection = conn;
-                            foreach (var category in categories)
+                            string jsonContent = File.ReadAllText(jsonFilePath);
+                            var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                            using (var cmd = new SqlCommand())
                             {
-                                cmd.CommandText = $"INSERT INTO [{databaseName}].dbo.ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
+                                cmd.Connection = conn;
+                                foreach (var category in categories)
+                                {
+                                    cmd.CommandText = $"INSERT INTO [{databaseName}].dbo.ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                    cmd.Parameters.Clear();
+                                    cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                    cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                    cmd.ExecuteNonQuery();
+                                }
                             }
                         }
+                        else
+                        {
+                            throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        }
                     }
-                    else
-                    {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
-                    }
+                    */
+                string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                if (!File.Exists(jsonFilePath))
+                {
+                    throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
                 }
 
+                string jsonContent = File.ReadAllText(jsonFilePath);
+                var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                if (categories != null && categories.Count > 0)
+                {
+                    // INSERT ... ON DUPLICATE KEY UPDATE yapısı ile yoksa ekler, varsa günceller
+                    string query = @"INSERT INTO ExpenseCategories (Label, Info) 
+                     VALUES (@label, @info) 
+                     ON DUPLICATE KEY UPDATE Info = VALUES(Info);";
+
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                        cmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
+                        foreach (var category in categories)
+                        {
+                            cmd.Parameters["@label"].Value = category.Label ?? string.Empty;
+                            cmd.Parameters["@info"].Value = category.Info ?? string.Empty;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
                 // ExpenseMatching
                 EnsureTableAndColumnsMaster("ExpenseMatching", new Dictionary<string, string>
                 {
                     { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
                     { "ItemName", "NVARCHAR(255) NOT NULL" },
-                    { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                    { "SubRecordType", "NVARCHAR(255) NOT NULL" },
+                    { "CategoryLabel", "VARCHAR(255) NOT NULL" },
+                   { "FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label)", "ON UPDATE CASCADE ON DELETE CASCADE" }
                 }, conn, databaseName);
             }
         }

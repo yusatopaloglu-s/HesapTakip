@@ -135,43 +135,58 @@ namespace HesapTakip
                 {
                     { "CategoryID", "INT PRIMARY KEY AUTO_INCREMENT" },
                     { "Label", "VARCHAR(255) NOT NULL" },
-                    { "Info", "VARCHAR(255) NOT NULL" }
+                    { "Info", "VARCHAR(255) NOT NULL" },
+                    { "CONSTRAINT_UQ_Label", "CONSTRAINT CONSTRAINT_UQ_Label UNIQUE (Label)" }
                 }, conn);
-                // ExpenseCategories tablosunu JSON dosyasından doldur
-                if (!TableHasData("ExpenseCategories", conn))
-                {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
 
-                        using (var cmd = new MySqlCommand())
-                        {
-                            cmd.Connection = conn;
-                            foreach (var category in categories)
-                            {
-                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
-                            }
-                        }
-                    }
-                    else
+                // ExpenseCategories tablosunu JSON dosyasından doldur
+                 string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                if (!File.Exists(jsonFilePath))
+                {
+                    throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                }
+
+                string jsonContent = File.ReadAllText(jsonFilePath);
+                var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                if (categories != null && categories.Count > 0)
+                {
+                    // INSERT ... ON DUPLICATE KEY UPDATE yapısı ile yoksa ekler, varsa günceller
+                    string query = @"INSERT INTO ExpenseCategories (Label, Info) 
+                     VALUES (@label, @info) 
+                     ON DUPLICATE KEY UPDATE Info = VALUES(Info);";
+
+                    using (var cmd = new MySqlCommand(query, conn))
                     {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        cmd.Parameters.Add("@label", MySqlDbType.VarChar);
+                        cmd.Parameters.Add("@info", MySqlDbType.VarChar);
+
+                        foreach (var category in categories)
+                        {
+                            cmd.Parameters["@label"].Value = category.Label ?? string.Empty;
+                            cmd.Parameters["@info"].Value = category.Info ?? string.Empty;
+                            cmd.ExecuteNonQuery();
+                        }
                     }
                 }
 
+                string varsayilanKategori = "NoCat";
                 // ExpenseMatching tablosu
                 EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
                  {
                    { "MatchingID", "INT PRIMARY KEY AUTO_INCREMENT" },
                    { "ItemName", "VARCHAR(255) NOT NULL" },
-                   { "SubRecordType", "VARCHAR(255) NOT NULL" }
+                   { "SubRecordType", "VARCHAR(255) NOT NULL" },
+                   { "CategoryLabel", $"VARCHAR(255) NOT NULL DEFAULT '{varsayilanKategori}'" }
                    }, conn);
+                using (var updateCmd = new MySqlCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
+                {
+                    updateCmd.ExecuteNonQuery();
+                }
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+{
+                   { "CONSTRAINT_FK_Matching_Category", "CONSTRAINT CONSTRAINT_FK_Matching_Category FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) ON UPDATE CASCADE ON DELETE CASCADE" }
+                    }, conn);
 
                 // Periods table
                 EnsureTableAndColumns("Periods", new Dictionary<string, string>
@@ -452,6 +467,47 @@ namespace HesapTakip
             }
         }
 
+        /* private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns, MySqlConnection conn)
+         {
+             using (var cmd = new MySqlCommand())
+             {
+                 cmd.Connection = conn;
+
+                 // Tablo var mı kontrolü
+                 cmd.CommandText = $"SHOW TABLES LIKE '{tableName}'";
+                 var exists = cmd.ExecuteScalar() != null;
+
+                 if (!exists)
+                 {
+                     var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
+                     cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef}) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci";
+                     cmd.ExecuteNonQuery();
+                 }
+                 else
+                 {
+                     // Kolon kontrolü
+                     cmd.CommandText = $"SHOW COLUMNS FROM {tableName}";
+                     var reader = cmd.ExecuteReader();
+                     var existingColumns = new HashSet<string>();
+                     while (reader.Read())
+                     {
+                         existingColumns.Add(reader["Field"].ToString());
+                     }
+                     reader.Close();
+
+                     foreach (var kv in columns)
+                     {
+                         if (!existingColumns.Contains(kv.Key))
+                         {
+                             cmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {kv.Key} {kv.Value}";
+                             cmd.ExecuteNonQuery();
+                         }
+
+                     }
+                 }
+             }
+         }
+ */
         private void EnsureTableAndColumns(string tableName, Dictionary<string, string> columns, MySqlConnection conn)
         {
             using (var cmd = new MySqlCommand())
@@ -464,25 +520,49 @@ namespace HesapTakip
 
                 if (!exists)
                 {
-                    var columnsDef = string.Join(", ", columns.Select(kv => $"{kv.Key} {kv.Value}"));
+                    // İlk kurulumda CONSTRAINT_ ön eklerini temizleyerek CREATE sorgusu oluşturuyoruz
+                    var cleanColumns = columns.Select(kv => kv.Key.StartsWith("CONSTRAINT_", StringComparison.OrdinalIgnoreCase)
+                        ? kv.Value
+                        : $"{kv.Key} {kv.Value}");
+
+                    var columnsDef = string.Join(", ", cleanColumns);
                     cmd.CommandText = $"CREATE TABLE {tableName} ({columnsDef}) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci";
                     cmd.ExecuteNonQuery();
                 }
                 else
                 {
-                    // Kolon kontrolü
+                    // 1. Mevcut Kolonları Listele
                     cmd.CommandText = $"SHOW COLUMNS FROM {tableName}";
-                    var reader = cmd.ExecuteReader();
-                    var existingColumns = new HashSet<string>();
-                    while (reader.Read())
+                    var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        existingColumns.Add(reader["Field"].ToString());
+                        while (reader.Read()) existingColumns.Add(reader["Field"].ToString());
                     }
-                    reader.Close();
 
+                    // 2. Mevcut Kısıtlamaları (Foreign Key / Unique) Listele
+                    cmd.CommandText = $"SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}'";
+                    var existingConstraints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read()) existingConstraints.Add(reader["CONSTRAINT_NAME"].ToString());
+                    }
+
+                    // 3. Döngü ile eksik olanları ekle
                     foreach (var kv in columns)
                     {
-                        if (!existingColumns.Contains(kv.Key))
+                        // Eğer bir kısıtlama (Constraint) tanımıysa
+                        if (kv.Key.StartsWith("CONSTRAINT_", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string constraintName = kv.Key; // Örn: CONSTRAINT_FK_Matching_Category
+                            if (!existingConstraints.Contains(constraintName))
+                            {
+                                // Tabloya kısıtlamayı ekle (ALTER TABLE ADD CONSTRAINT ...)
+                                cmd.CommandText = $"ALTER TABLE {tableName} ADD {kv.Value}";
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        // Eğer normal bir kolonsa ve tabloda yoksa
+                        else if (!existingColumns.Contains(kv.Key))
                         {
                             cmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {kv.Key} {kv.Value}";
                             cmd.ExecuteNonQuery();
@@ -639,23 +719,25 @@ namespace HesapTakip
             }
             return dt;
         }
-        public bool AddExpenseMatching(string itemName, string subRecordType)
+        public bool AddExpenseMatching(string itemName, string subRecordType, string categoryLabel)
         {
             try
             {
                 using (var conn = new MySqlConnection(_connectionString))
                 using (var cmd = new MySqlCommand(
-                    "INSERT INTO ExpenseMatching (ItemName, SubRecordType) VALUES (@itemName, @subRecordType)", conn))
+                    "INSERT INTO ExpenseMatching (ItemName, SubRecordType, CategoryLabel) VALUES (@itemName, @subRecordType, @categorylabel)", conn))
                 {
                     conn.Open();
                     cmd.Parameters.AddWithValue("@itemName", itemName);
                     cmd.Parameters.AddWithValue("@subRecordType", subRecordType);
+                    cmd.Parameters.AddWithValue("@categoryLabel", categoryLabel);
                     cmd.ExecuteNonQuery();
                     return true;
                 }
             }
-            catch
+            catch(Exception ex)
             {
+                ex.Message.ToString(); 
                 return false;
             }
         }

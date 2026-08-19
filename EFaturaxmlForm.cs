@@ -2351,7 +2351,7 @@ namespace HesapTakip
             // lblSplitStatus
             // 
             lblSplitStatus.AutoSize = true;
-            lblSplitStatus.Location = new Point(341, 77);
+            lblSplitStatus.Location = new Point(133, 90);
             lblSplitStatus.Name = "lblSplitStatus";
             lblSplitStatus.Size = new Size(0, 15);
             lblSplitStatus.TabIndex = 13;

@@ -76,6 +76,10 @@ namespace HesapTakip
                     dvg_matchlist.Columns["SubRecordType"].HeaderText = "Kayıt Alt Türü";
                     dvg_matchlist.Columns["SubRecordType"].Width = 150;
                 }
+                if (dvg_matchlist.Columns.Contains("CategoryLabel"))
+                {
+                    dvg_matchlist.Columns["CategoryLabel"].Visible = false;
+                }
 
             }
             catch (Exception ex)
@@ -83,44 +87,61 @@ namespace HesapTakip
                 MessageBox.Show($"Eşleştirmeler yüklenirken hata oluştu: {ex.Message}");
             }
         }
-        private void BtnAdd_Click(object sender, EventArgs e)
+         private void BtnAdd_Click(object sender, EventArgs e)
         {
             string itemName = textBox1.Text.Trim();
-
             if (string.IsNullOrWhiteSpace(itemName))
             {
-                MessageBox.Show("Lütfen geçerli bir fatura kalemi girin!");
+                MessageBox.Show("Lütfen geçerli bir fatura kalemi girin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            
             if (dgv_expensecatlist.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Lütfen bir kategori seçin!");
+                MessageBox.Show("Lütfen bir kategori seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string subRecordType = dgv_expensecatlist.SelectedRows[0].Cells["Label"].Value.ToString();
+           
+            string categoryLabel = dgv_expensecatlist.SelectedRows[0].Cells["Label"].Value.ToString();
+            string subRecordType = categoryLabel; 
+
+           
             string normalizedItemName = itemName.ToLower().Trim();
             if (_matchList.AsEnumerable().Any(row => row.Field<string>("ItemName").ToLower().Trim() == normalizedItemName))
             {
-                MessageBox.Show("Bu fatura adı zaten eşleştirilmiş!");
+                MessageBox.Show("Bu fatura adı zaten eşleştirilmiş!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (_db.AddExpenseMatching(itemName, subRecordType))
+            try
             {
+                
+                bool sonuc = _db.AddExpenseMatching(itemName, subRecordType, categoryLabel);
 
-                _matchList.Rows.Add(itemName, subRecordType);
-                textBox1.Text = ""; // TextBox'ı temizle
+                if (sonuc)
+                {
 
-                LoadMatchings();
-                // MessageBox.Show("Eşleşme başarıyla eklendi!");
+                    textBox1.Text = ""; 
+
+                    
+                    LoadMatchings();
+
+                    MessageBox.Show("Eşleşme başarıyla eklendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Eşleşme eklenirken veritabanı seviyesinde bir hata oluştu!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Eşleşme eklenirken hata oluştu!");
+                MessageBox.Show($"Sistemsel Hata: {ex.Message}", "Hata Detayı", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
         private void BtnRmv_Click(object sender, EventArgs e)
         {
             if (dvg_matchlist.SelectedRows.Count > 0)
@@ -129,7 +150,7 @@ namespace HesapTakip
                 if (_db.DeleteExpenseMatching(itemName))
                 {
                     dvg_matchlist.Rows.RemoveAt(dvg_matchlist.SelectedRows[0].Index);
-                    // MessageBox.Show("Eşleşme başarıyla silindi!");
+                  
                 }
                 else
                 {

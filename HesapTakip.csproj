@@ -88,7 +88,7 @@
 
   <ItemGroup>
     <None Update="expense_categories.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Properties\Settings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>
