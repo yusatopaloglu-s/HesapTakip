@@ -1,10 +1,11 @@
-﻿using QuestPDF.Fluent;
+﻿using System;
+using System.Diagnostics;
+using System.Windows.Forms;
+using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
 using System.Globalization;
-
-
 
 namespace HesapTakip
 
@@ -14,7 +15,6 @@ namespace HesapTakip
     using OfficeOpenXml.Style;
     using QuestPDF.Infrastructure;
     using System.Data.SQLite;
-    using System.Diagnostics;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
@@ -72,6 +72,9 @@ namespace HesapTakip
             // Configure debounce timer
             searchTimer.Interval = 350; // ms
             searchTimer.Tick += SearchTimer_Tick;
+            pbx_ins.Cursor = Cursors.Hand;
+            pbx_fb.Cursor = Cursors.Hand;
+            pbx_github.Cursor = Cursors.Hand;
         }
 
         private async Task InitializeApplicationAsync()
@@ -3105,7 +3108,7 @@ namespace HesapTakip
         private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
 
-            string url = "https://github.com/yusatopaloglu-s/HesapTakip";
+            string url = "https://www.instagram.com/yusatopaloglu/";
 
             Process.Start(new ProcessStartInfo
             {
@@ -3405,6 +3408,66 @@ namespace HesapTakip
                     }
                 }
             }
+        }
+
+        private void pbx_ins_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://www.instagram.com/yusatopaloglu/";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+        }
+
+        private void pbx_github_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://github.com/yusatopaloglu-s";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+        }
+
+        private void pbx_fb_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://www.facebook.com/YusaTopaloglu/";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
         }
     }
 }

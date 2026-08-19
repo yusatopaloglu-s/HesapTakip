@@ -41,6 +41,9 @@
             dgvCustomers = new DataGridView();
             btnClearCustomerSearch = new Button();
             gbTransactions = new GroupBox();
+            pbx_github = new PictureBox();
+            pbx_ins = new PictureBox();
+            pbx_fb = new PictureBox();
             cbYear = new ComboBox();
             btnAddPeriod = new Button();
             label6 = new Label();
@@ -94,6 +97,9 @@
             customerPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).BeginInit();
             gbTransactions.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pbx_github).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pbx_ins).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pbx_fb).BeginInit();
             tableLayoutPanel2.SuspendLayout();
             totalPanel.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
@@ -233,6 +239,9 @@
             // 
             gbTransactions.AutoSize = true;
             gbTransactions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            gbTransactions.Controls.Add(pbx_github);
+            gbTransactions.Controls.Add(pbx_ins);
+            gbTransactions.Controls.Add(pbx_fb);
             gbTransactions.Controls.Add(cbYear);
             gbTransactions.Controls.Add(btnAddPeriod);
             gbTransactions.Controls.Add(label6);
@@ -260,6 +269,36 @@
             gbTransactions.TabIndex = 0;
             gbTransactions.TabStop = false;
             gbTransactions.Text = "Hesap Hareketleri";
+            // 
+            // pbx_github
+            // 
+            pbx_github.Image = (Image)resources.GetObject("pbx_github.Image");
+            pbx_github.Location = new Point(536, 523);
+            pbx_github.Name = "pbx_github";
+            pbx_github.Size = new Size(16, 16);
+            pbx_github.TabIndex = 26;
+            pbx_github.TabStop = false;
+            pbx_github.Click += pbx_github_Click;
+            // 
+            // pbx_ins
+            // 
+            pbx_ins.Image = (Image)resources.GetObject("pbx_ins.Image");
+            pbx_ins.Location = new Point(558, 523);
+            pbx_ins.Name = "pbx_ins";
+            pbx_ins.Size = new Size(16, 16);
+            pbx_ins.TabIndex = 25;
+            pbx_ins.TabStop = false;
+            pbx_ins.Click += pbx_ins_Click;
+            // 
+            // pbx_fb
+            // 
+            pbx_fb.Image = (Image)resources.GetObject("pbx_fb.Image");
+            pbx_fb.Location = new Point(580, 523);
+            pbx_fb.Name = "pbx_fb";
+            pbx_fb.Size = new Size(16, 16);
+            pbx_fb.TabIndex = 24;
+            pbx_fb.TabStop = false;
+            pbx_fb.Click += pbx_fb_Click;
             // 
             // cbYear
             // 
@@ -758,6 +797,9 @@
             ((System.ComponentModel.ISupportInitialize)dgvCustomers).EndInit();
             gbTransactions.ResumeLayout(false);
             gbTransactions.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pbx_github).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pbx_ins).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pbx_fb).EndInit();
             tableLayoutPanel2.ResumeLayout(false);
             tableLayoutPanel2.PerformLayout();
             totalPanel.ResumeLayout(false);
@@ -832,5 +874,8 @@
         private ToolStripStatusLabel StatustLabel_info;
         private Label label5;
         private Label label6;
+        private PictureBox pbx_github;
+        private PictureBox pbx_ins;
+        private PictureBox pbx_fb;
     }
 }
