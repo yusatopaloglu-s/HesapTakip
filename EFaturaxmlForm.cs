@@ -4,13 +4,6 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
 
 namespace HesapTakip
 {
@@ -57,12 +50,11 @@ namespace HesapTakip
             public string TaxableAmount { get; set; }
             public string TaxAmount { get; set; }
             public string Percent { get; set; }
-            //public string KargoMatrah { get; set; }
-            //public string KargoKdv { get; set; }
+            public Dictionary<string, string> FilterValues { get; } =
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         private List<InvoiceData> BilancoSatisData = new List<InvoiceData>();
-        private List<InvoiceData> BilancoSatisKargoData = new List<InvoiceData>();
         private List<InvoiceData> BilancoAlisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeSatisData = new List<InvoiceData>();
         private List<InvoiceData> LucaIsletmeAlisData = new List<InvoiceData>();
@@ -79,57 +71,29 @@ namespace HesapTakip
 
 
         }
-        private void InitializeComboBox() 
+        private void InitializeComboBox()
         {
-            /* cmbTableSelector.Items.AddRange(new string[]
-            {      //Yapılacak: Bu değerler veritabanından dinamik olarak çekilmeli, şu anda örnek olarak sabit değerler ekleniyor.
-                   //Veritabanında bu tablo isimlerini ve ilişkili bilgileri tutacak bir yapı oluşturulabilir.
-                   //kullanıcı kendi ihtiyaçlarına göre tablo ekleyip çıkarabilmeli, bu nedenle tablo isimleri ve ilişkili bilgileri veritabanında yönetilmeli.
-                   //Alış,satış ve fatura kalem adetleri senaryosu sabit , satış+kargo gibi senaryolar kullanıcı tarafından satış senaryosu şablon olarak kullanıp üzerine kargo kalemi gibi faturadaki kalem içeriğine bağlı olarak ekleme yapabilir.
-                   //Kullanıcı kendi ihtiyaçlarına göre tablo şablonu oluşturabilmeli, bu nedenle tablo isimleri ve ilişkili bilgileri veritabanında yönetilmeli.
-                 // Burasını veritabanından dinamik olarak doldurmak daha sağlıklı olurdu, ancak şu anda sabit değerler ekleniyor.
-               "Bilanço Satış",
-                "Bilanço Satış+Kargo",
-                "Bilanço Alış",
-                "Luca İşletme Satış",
-                "Luca İşletme Alış",
-                "Fatura Kalemleri Adet" 
-
-
-            });
-            cmbTableSelector.SelectedIndex = 0;
-            */
-            ///tablo boxu burası
             cmbTableSelector.Items.Clear();
-            var dt = _db.GetTemplates();
-            foreach (DataRow row in dt.Rows)
+
+
+            var builtin = LoadBuiltinTemplatesFromFiles();
+            foreach (var t in builtin)
             {
-                cmbTableSelector.Items.Add(new
-                {
-                    TemplateID = row["TemplateID"],
-                    Name = row["Name"].ToString(),
-                    DefinitionJson = row["DefinitionJson"].ToString(),
-                    IsBuiltIn = Convert.ToBoolean(row["IsBuiltIn"])
-                });
+                cmbTableSelector.Items.Add(t);
             }
             cmbTableSelector.DisplayMember = "Name";
             cmbTableSelector.ValueMember = "TemplateID";
             if (cmbTableSelector.Items.Count > 0)
                 cmbTableSelector.SelectedIndex = 0;
 
-            //////////////////////////////////////////////////////////
-            UpdateDataGridView();
+            cmbTableSelector.SelectedIndexChanged += CmbTableSelector_SelectedIndexChanged;
 
             if (_db != null)
             {
                 if (_db.GetCustomers() is DataTable customers)
                 {
-                    // ComboBox'ı temizle
                     cbx_customerlist.Items.Clear();
-
-                    // Boş seçenek ekle (null değer için)
                     cbx_customerlist.Items.Add(new { ID = -1, Name = "Seçiniz", ActivityCode = (string)null });
-
                     foreach (DataRow row in customers.Rows)
                     {
                         var activityCode = row["ActivityCode"] == DBNull.Value ? null : row["ActivityCode"].ToString();
@@ -140,17 +104,12 @@ namespace HesapTakip
                             ActivityCode = activityCode
                         });
                     }
-
                     cbx_customerlist.DisplayMember = "Name";
                     cbx_customerlist.ValueMember = "ActivityCode";
                     cbx_customerlist.SelectedIndex = 0;
-
-                }
-                else
-                {
-                    MessageBox.Show($"Müşteri verileri alınamadı:", "Hata");
                 }
             }
+
             UpdateDataGridView();
         }
         private async void UploadButton_Click(object sender, EventArgs e)
@@ -487,18 +446,10 @@ namespace HesapTakip
 
             return field;
         }
-
-
         private void CmbTableSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
-
-            var selectedItem = cbx_customerlist.SelectedItem;
-
-
             UpdateDataGridView();
         }
-
-
         private void CbxCustomerList_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cbx_customerlist.SelectedItem != null)
@@ -525,17 +476,12 @@ namespace HesapTakip
             {
 
                 BilancoSatisData.Clear();
-                BilancoSatisKargoData.Clear();
                 BilancoAlisData.Clear();
                 LucaIsletmeSatisData.Clear();
                 LucaIsletmeAlisData.Clear();
                 InvoiceItemsQuantityData.Clear();
                 UpdateDataGridView();
-
-
             }
-
-
         }
 
         public class TextCleaner
@@ -631,10 +577,7 @@ namespace HesapTakip
                 double taxableAmount20 = 0.0;
                 double taxAmount20 = 0.0;
                 double oiv = 0.0;
-               // double totalCargoMatrah = 0.0;
-               // double totalCargoKdv = 0.0;
 
-                // Process only invoice-level TaxTotal's TaxSubtotals
                 var invoiceTaxTotal = xml.Root.Elements(cac + "TaxTotal").FirstOrDefault();
                 var taxSubtotals = invoiceTaxTotal?.Elements(cac + "TaxSubtotal") ?? Enumerable.Empty<XElement>();
                 foreach (var taxSubtotal in taxSubtotals)
@@ -684,7 +627,6 @@ namespace HesapTakip
                     activityCode = selectedItem.ActivityCode ?? "";
                 }
 
-                // TextBox'ı güncelle (görsel doğrulama için)
                 txtbox_act.Text = activityCode;
 
                 var totalTaxAmount = invoiceType == "TEVKIFAT" ? xml.Descendants(cac + "TaxTotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0.00" : (taxAmount20 != 0.0 ? taxAmount20.ToString("F2", CultureInfo.InvariantCulture) : taxAmount18.ToString("F2", CultureInfo.InvariantCulture));
@@ -702,20 +644,35 @@ namespace HesapTakip
                 var culture = new CultureInfo("tr-TR");
                 var formatter2 = new NumberFormatInfo { NumberDecimalDigits = 2, NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
 
-                string selectedTable = (cmbTableSelector.SelectedItem?.ToString() ?? "").Trim();
-                bool isSatis =
-                    selectedTable.Equals("Bilanço Satış", StringComparison.OrdinalIgnoreCase)
-                    || selectedTable.Equals("Bilanço Satış+Kargo", StringComparison.OrdinalIgnoreCase)
-                    || selectedTable.Equals("Luca İşletme Satış", StringComparison.OrdinalIgnoreCase);
+                var selectedTemplate = cmbTableSelector.SelectedItem as TemplateItem;
+                string selectedTable = selectedTemplate?.Name ?? "";
+                bool isSatis = IsSalesTemplate(selectedTemplate, selectedTable);
+                var templateDefinition = string.IsNullOrWhiteSpace(selectedTemplate?.DefinitionJson)
+                    ? null
+                    : System.Text.Json.JsonSerializer.Deserialize<TemplateDefinition>(
+                      selectedTemplate.DefinitionJson,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                var filterRules = templateDefinition?.FilterRules
+                    ?? new List<FilterRule>();
+
+                var filterValues = new Dictionary<string, double>(
+                    StringComparer.OrdinalIgnoreCase);
+
 
                 var defaultSubRecordType = "Mal Satışı"; // veya "Mal Alışı" için uygun değer
 
 
                 if (isSatis)
                 {
+
                     if (!BilancoSatisData.Any(d => d.InvoiceNumber == invoiceNumber))
                     {
-                        var bilancoEntry = new InvoiceData
+
+                        var bilancoEntry2 = new InvoiceData
                         {
                             InvoiceType = invoiceType,
                             IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
@@ -741,55 +698,336 @@ namespace HesapTakip
                             KdvExemptionTable = kdvExemptionTable,
                             KdvExemptionCode = kdvExemptionCode,
                             SaleType = saleType,
-                           // KargoMatrah = "0,00",
-                           // KargoKdv = "0,00"
+
                         };
 
-                        BilancoSatisData.Add(bilancoEntry);
-
-                        /*// Aynı kaydı kargo görünümü için de tut
-                        if (!BilancoSatisKargoData.Any(d => d.InvoiceNumber == invoiceNumber))
+                        foreach (var line in xml.Descendants(cac + "InvoiceLine"))
                         {
-                            BilancoSatisKargoData.Add(new InvoiceData
+                            var itemName = line
+                                .Descendants(cac + "Item")
+                                .Descendants(cbc + "Name")
+                                .FirstOrDefault()?.Value ?? "";
+
+                            var lineTaxableText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "TaxableAmount")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            var lineTaxText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "TaxAmount")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            var linePercentText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "Percent")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            if (!double.TryParse(
+                                    lineTaxableText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var lineTaxable))
                             {
-                                InvoiceType = bilancoEntry.InvoiceType,
-                                IssueDate = bilancoEntry.IssueDate,
-                                InvoiceNumber = bilancoEntry.InvoiceNumber,
-                                CustomerTaxId = bilancoEntry.CustomerTaxId,
-                                CustomerName = bilancoEntry.CustomerName,
-                                TaxExemptAmount0 = bilancoEntry.TaxExemptAmount0,
-                                TaxableAmount1 = bilancoEntry.TaxableAmount1,
-                                TaxAmount1 = bilancoEntry.TaxAmount1,
-                                TaxableAmount8 = bilancoEntry.TaxableAmount8,
-                                TaxAmount8 = bilancoEntry.TaxAmount8,
-                                TaxableAmount10 = bilancoEntry.TaxableAmount10,
-                                TaxAmount10 = bilancoEntry.TaxAmount10,
-                                TaxableAmount18 = bilancoEntry.TaxableAmount18,
-                                TaxAmount18 = bilancoEntry.TaxAmount18,
-                                TaxableAmount20 = bilancoEntry.TaxableAmount20,
-                                TaxAmount20 = bilancoEntry.TaxAmount20,
-                                DepositAmount = bilancoEntry.DepositAmount,
-                                Oiv = bilancoEntry.Oiv,
-                                TotalPayable = bilancoEntry.TotalPayable,
-                                UUID = bilancoEntry.UUID,
-                                PaymentMethod = bilancoEntry.PaymentMethod,
-                                KdvExemptionTable = bilancoEntry.KdvExemptionTable,
-                                KdvExemptionCode = bilancoEntry.KdvExemptionCode,
-                                SaleType = bilancoEntry.SaleType,
-                                KargoMatrah = bilancoEntry.KargoMatrah,
-                                KargoKdv = bilancoEntry.KargoKdv
-                            });
-                        } */
+                                continue;
+                            }
+
+                            if (!double.TryParse(
+                                    lineTaxText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var lineTax))
+                            {
+                                continue;
+                            }
+
+                            if (!decimal.TryParse(
+                                    linePercentText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var linePercent))
+                            {
+                                linePercent = 0;
+                            }
+
+                            foreach (var rule in filterRules)
+                            {
+                                if (!IsFilterMatch(itemName, rule))
+                                {
+                                    continue;
+                                }
+
+                                var prefix = string.IsNullOrWhiteSpace(rule.ColumnPrefix)
+                                    ? "Filtre"
+                                    : rule.ColumnPrefix;
+
+                                var matrahKey = $"{prefix}:Matrah";
+                                var kdvKey = $"{prefix}:Kdv";
+
+                                filterValues[matrahKey] =
+                                    filterValues.GetValueOrDefault(matrahKey) + lineTaxable;
+
+                                filterValues[kdvKey] =
+                                    filterValues.GetValueOrDefault(kdvKey) + lineTax;
+
+                                if (!rule.TaxRate.HasValue ||
+                                    linePercent != rule.TaxRate.Value)
+                                {
+                                    continue;
+                                }
+
+                                switch (linePercent)
+                                {
+                                    case 0:
+                                        taxExemptAmount0 = Math.Max(
+                                            0,
+                                            taxExemptAmount0 - lineTaxable);
+                                        break;
+
+                                    case 1:
+                                        taxableAmount1 = Math.Max(
+                                            0,
+                                            taxableAmount1 - lineTaxable);
+                                        taxAmount1 = Math.Max(
+                                            0,
+                                            taxAmount1 - lineTax);
+                                        break;
+
+                                    case 8:
+                                        taxableAmount8 = Math.Max(
+                                            0,
+                                            taxableAmount8 - lineTaxable);
+                                        taxAmount8 = Math.Max(
+                                            0,
+                                            taxAmount8 - lineTax);
+                                        break;
+
+                                    case 10:
+                                        taxableAmount10 = Math.Max(
+                                            0,
+                                            taxableAmount10 - lineTaxable);
+                                        taxAmount10 = Math.Max(
+                                            0,
+                                            taxAmount10 - lineTax);
+                                        break;
+
+                                    case 18:
+                                        taxableAmount18 = Math.Max(
+                                            0,
+                                            taxableAmount18 - lineTaxable);
+                                        taxAmount18 = Math.Max(
+                                            0,
+                                            taxAmount18 - lineTax);
+                                        break;
+
+                                    case 20:
+                                        taxableAmount20 = Math.Max(
+                                            0,
+                                            taxableAmount20 - lineTaxable);
+                                        taxAmount20 = Math.Max(
+                                            0,
+                                            taxAmount20 - lineTax);
+                                        break;
+                                }
+                            }
+                        }
+
+                        bilancoEntry2.TaxExemptAmount0 =
+                        taxExemptAmount0.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxableAmount1 =
+                            taxableAmount1.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxAmount1 =
+                            taxAmount1.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxableAmount8 =
+                            taxableAmount8.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxAmount8 =
+                            taxAmount8.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxableAmount10 =
+                            taxableAmount10.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxAmount10 =
+                            taxAmount10.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxableAmount18 =
+                            taxableAmount18.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxAmount18 =
+                            taxAmount18.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxableAmount20 =
+                            taxableAmount20.ToString("N2", formatter2);
+
+                        bilancoEntry2.TaxAmount20 =
+                            taxAmount20.ToString("N2", formatter2);
+
+                        BilancoSatisData.Add(bilancoEntry2);
+
+                        bilancoEntry2.FilterValues.Clear();
+
+                        foreach (var filterValue in filterValues)
+                        {
+                            bilancoEntry2.FilterValues[filterValue.Key] =
+                                filterValue.Value.ToString("N2", formatter2);
+                        }
+
+
                     }
                 }
                 else
+
                 {
+
                     if (!BilancoAlisData.Any(d => d.InvoiceNumber == invoiceNumber))
                     {
-                        BilancoAlisData.Add(new InvoiceData
+                        foreach (var line in xml.Descendants(cac + "InvoiceLine"))
                         {
-                            InvoiceType = invoiceType,
-                            IssueDate = DateTime.TryParse(issueDate, out var date) ? date.ToString("dd.MM.yyyy", culture) : "",
+                            var itemName = line
+                                .Descendants(cac + "Item")
+                                .Descendants(cbc + "Name")
+                                .FirstOrDefault()?.Value ?? "";
+
+                            var lineTaxableText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "TaxableAmount")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            var lineTaxText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "TaxAmount")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            var linePercentText = line
+                                .Descendants(cac + "TaxTotal")
+                                .Descendants(cac + "TaxSubtotal")
+                                .Descendants(cbc + "Percent")
+                                .FirstOrDefault()?.Value ?? "0";
+
+                            if (!double.TryParse(
+                                    lineTaxableText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var lineTaxable))
+                            {
+                                continue;
+                            }
+
+                            if (!double.TryParse(
+                                    lineTaxText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var lineTax))
+                            {
+                                continue;
+                            }
+
+                            if (!decimal.TryParse(
+                                    linePercentText,
+                                    NumberStyles.Any,
+                                    CultureInfo.InvariantCulture,
+                                    out var linePercent))
+                            {
+                                linePercent = 0;
+                            }
+
+                            foreach (var rule in filterRules)
+                            {
+                                if (!IsFilterMatch(itemName, rule))
+                                {
+                                    continue;
+                                }
+
+                                var prefix = string.IsNullOrWhiteSpace(rule.ColumnPrefix)
+                                    ? "Filtre"
+                                    : rule.ColumnPrefix;
+                                var matrahKey = $"{prefix}:Matrah";
+                                var kdvKey = $"{prefix}:Kdv";
+
+                                filterValues[matrahKey] =
+                                    filterValues.GetValueOrDefault(matrahKey) + lineTaxable;
+
+                                filterValues[kdvKey] =
+                                    filterValues.GetValueOrDefault(kdvKey) + lineTax;
+
+                                if (!rule.TaxRate.HasValue ||
+                                    linePercent != rule.TaxRate.Value)
+                                {
+                                    continue;
+                                }
+
+                                switch (linePercent)
+                                {
+                                    case 0:
+                                        taxExemptAmount0 = Math.Max(
+                                            0,
+                                            taxExemptAmount0 - lineTaxable);
+                                        break;
+
+                                    case 1:
+                                        taxableAmount1 = Math.Max(
+                                            0,
+                                            taxableAmount1 - lineTaxable);
+                                        taxAmount1 = Math.Max(
+                                            0,
+                                            taxAmount1 - lineTax);
+                                        break;
+
+                                    case 8:
+                                        taxableAmount8 = Math.Max(
+                                            0,
+                                            taxableAmount8 - lineTaxable);
+                                        taxAmount8 = Math.Max(
+                                            0,
+                                            taxAmount8 - lineTax);
+                                        break;
+
+                                    case 10:
+                                        taxableAmount10 = Math.Max(
+                                            0,
+                                            taxableAmount10 - lineTaxable);
+                                        taxAmount10 = Math.Max(
+                                            0,
+                                            taxAmount10 - lineTax);
+                                        break;
+
+                                    case 18:
+                                        taxableAmount18 = Math.Max(
+                                            0,
+                                            taxableAmount18 - lineTaxable);
+                                        taxAmount18 = Math.Max(
+                                            0,
+                                            taxAmount18 - lineTax);
+                                        break;
+
+                                    case 20:
+                                        taxableAmount20 = Math.Max(
+                                            0,
+                                            taxableAmount20 - lineTaxable);
+                                        taxAmount20 = Math.Max(
+                                            0,
+                                            taxAmount20 - lineTax);
+                                        break;
+                                }
+                            }
+                        }
+
+                        var bilancoAlisEntry = new InvoiceData
+                        {
+                                            InvoiceType = invoiceType,
+                                            IssueDate = DateTime.TryParse(
+                          issueDate,
+                          out var date)
+                              ? date.ToString("dd.MM.yyyy", culture)
+                              : "",
                             InvoiceNumber = invoiceNumber,
                             SupplierTaxId = supplierTaxId,
                             SupplierName = supplierName,
@@ -802,93 +1040,40 @@ namespace HesapTakip
                             TaxAmount10 = taxAmount10.ToString("N2", formatter2),
                             TaxableAmount18 = taxableAmount18.ToString("N2", formatter2),
                             TaxAmount18 = taxAmount18.ToString("N2", formatter2),
-                            TaxableAmount20 = taxableAmount20.ToString("N2", formatter2),
+                            TaxableAmount20 = taxAmount20.ToString("N2", formatter2),
                             TaxAmount20 = taxAmount20.ToString("N2", formatter2),
-                            DepositAmount = double.TryParse(depositAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var dep) ? dep.ToString("N2", formatter2) : "0,00",
-                            Oiv = oiv.ToString("N2", formatter2),
-                            TotalPayable = double.TryParse(payableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var pay) ? pay.ToString("N2", formatter2) : "0,00",
+                            DepositAmount = double.TryParse(
+                              depositAmount,
+                              NumberStyles.Any,
+                              CultureInfo.InvariantCulture,
+                              out var dep)
+                                  ? dep.ToString("N2", formatter2)
+                                  : "0,00",
+                                                Oiv = oiv.ToString("N2", formatter2),
+                                                TotalPayable = double.TryParse(
+                              payableAmount,
+                              NumberStyles.Any,
+                              CultureInfo.InvariantCulture,
+                              out var pay)
+                                  ? pay.ToString("N2", formatter2)
+                                  : "0,00",
                             UUID = uuid,
                             PaymentMethod = paymentMethod,
                             KdvExemptionTable = kdvExemptionTable,
                             KdvExemptionCode = kdvExemptionCode,
                             SaleType = saleType
-                        });
-                    }
-                }
+                        };
 
-                var invoiceLines = xml.Descendants(cac + "InvoiceLine");
-                foreach (var line in invoiceLines)
-                {
-                    var itemName = line.Descendants(cac + "Item").Descendants(cbc + "Name").FirstOrDefault()?.Value ?? "";
-                    var quantity = line.Descendants(cbc + "InvoicedQuantity").FirstOrDefault()?.Value ?? "0";
-                    var unitPrice = line.Descendants(cac + "Price").Descendants(cbc + "PriceAmount").FirstOrDefault()?.Value ?? "0";
-                    var lineTaxableAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxableAmount").FirstOrDefault()?.Value ?? "0";
-                    var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
-                    var lineTaxPercent = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "Percent").FirstOrDefault()?.Value ?? "0";
-
-
-                    /////////////////////////////////////////////////////
-                    ///bu kısım şuanda sadece kargo bedeli açıklamasının tespi için yapıldı, yapılacak güncelleme ile kullanıcı kendi tablosunu eklemek istediğinde baz alınan tablo üzerindeki sütünlara ilave olarak açıklama sütunu da eklenip, kullanıcı tanımlı kalemler için de bu açıklama sütunu kullanılarak tespit yapılabilecek şekilde güncellenecek,
-                    ///bu sebeple kalem tespiti için daha esnek bir yapı kurulacak, ileride sadece kargo bedeli değil kullanıcı tanımlı diğer kalemler de bu şekilde tespit edilip toplamdan düşülebilecek şekilde gene veri tabanı kullanarak güncellenecek, bu sebeple kalem tespiti için esnek bir yapı kurululacak
-                    ///
-
-                    // Kargo kalemi tespiti: "Kargo Bedeli" tam eşleşme veya içinde "kargo" ve "bedel"
-                    bool isCargoLine = false;
-                    if (!string.IsNullOrWhiteSpace(itemName))
-                    {
-                        var trimmed = itemName.Trim();
-                        if (trimmed.Equals("Kargo Bedeli", StringComparison.OrdinalIgnoreCase) ||
-                            (trimmed.IndexOf("kargo", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                             trimmed.IndexOf("bedel", StringComparison.OrdinalIgnoreCase) >= 0))
+                        foreach (var filterValue in filterValues)
                         {
-                            isCargoLine = true;
+                            bilancoAlisEntry.FilterValues[filterValue.Key] =
+                                filterValue.Value.ToString("N2", formatter2);
                         }
+
+                        BilancoAlisData.Add(bilancoAlisEntry);
                     }
 
-                    /* // isCargoLine bloğu içinde dictionary yerine sadece toplama:
-                    if (isCargoLine)
-                    {
-                        double lp = double.TryParse(lineTaxPercent, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLp) ? tmpLp : 0.0;
-                        double lt = double.TryParse(lineTaxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLt) ? tmpLt : 0.0;
-                        double lta = double.TryParse(lineTaxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var tmpLta) ? tmpLta : 0.0;
-
-                        totalCargoMatrah += lt;
-                        totalCargoKdv += lta;
-
-                        // ilgili genel KDV/matrah toplamlarından düş
-                        if (lp == 0.0)
-                        {
-                            taxExemptAmount0 = Math.Max(0, taxExemptAmount0 - lt);
-                        }
-                        else if (lp == 1.0)
-                        {
-                            taxableAmount1 = Math.Max(0, taxableAmount1 - lt);
-                            taxAmount1 = Math.Max(0, taxAmount1 - lta);
-                        }
-                        else if (lp == 8.0)
-                        {
-                            taxableAmount8 = Math.Max(0, taxableAmount8 - lt);
-                            taxAmount8 = Math.Max(0, taxAmount8 - lta);
-                        }
-                        else if (lp == 10.0)
-                        {
-                            taxableAmount10 = Math.Max(0, taxableAmount10 - lt);
-                            taxAmount10 = Math.Max(0, taxAmount10 - lta);
-                        }
-                        else if (lp == 18.0)
-                        {
-                            taxableAmount18 = Math.Max(0, taxableAmount18 - lt);
-                            taxAmount18 = Math.Max(0, taxAmount18 - lta);
-                        }
-                        else if (lp == 20.0)
-                        {
-                            taxableAmount20 = Math.Max(0, taxableAmount20 - lt);
-                            taxAmount20 = Math.Max(0, taxAmount20 - lta);
-                        }
-                    } */
                 }
-                    
-                ////////////////////////////////////////////////////////////////////////////////
 
                 var invoiceLines2 = xml.Descendants(cac + "InvoiceLine");
                 foreach (var line in invoiceLines2)
@@ -924,10 +1109,10 @@ namespace HesapTakip
                         saleType = "Normal Alım";
                     }
 
-                    // If user selected the "Fatura Kalemleri Adet" view, add each invoice line as its own entry
+
                     if (selectedTable == "Fatura Kalemleri Adet")
                     {
-                        // format numeric fields
+
                         string formattedUnitPrice = double.TryParse(unitPrice, NumberStyles.Any, CultureInfo.InvariantCulture, out var upVal) ? upVal.ToString("N2", formatter2) : unitPrice;
                         string formattedLineTaxable = double.TryParse(lineTaxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var ltVal) ? ltVal.ToString("N2", formatter2) : lineTaxableAmount;
                         string formattedLineTax = double.TryParse(lineTaxAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var laVal) ? laVal.ToString("N2", formatter2) : lineTaxAmount;
@@ -945,6 +1130,7 @@ namespace HesapTakip
                             SupplierTaxId = supplierTaxId
                         });
                     }
+
 
                     if (isSatis)
                     {
@@ -1268,51 +1454,14 @@ namespace HesapTakip
                 }
 
 
-                /* if (isSatis && (cmbTableSelector.SelectedItem?.ToString() ?? "") == "Bilanço Satış+Kargo")
-                 {
-                     var bilEntry = BilancoSatisKargoData.FirstOrDefault(d => d.InvoiceNumber == invoiceNumber);
-                     if (bilEntry != null)
-                     {
-                         bilEntry.KargoMatrah = totalCargoMatrah.ToString("N2", formatter2);
-                         bilEntry.KargoKdv = totalCargoKdv.ToString("N2", formatter2);
-
-                         // Opsiyonel: matrah/vergileri de güncelle
-                         bilEntry.TaxExemptAmount0 = taxExemptAmount0.ToString("N2", formatter2);
-                         bilEntry.TaxableAmount1 = taxableAmount1.ToString("N2", formatter2);
-                         bilEntry.TaxAmount1 = taxAmount1.ToString("N2", formatter2);
-                         bilEntry.TaxableAmount8 = taxableAmount8.ToString("N2", formatter2);
-                         bilEntry.TaxAmount8 = taxAmount8.ToString("N2", formatter2);
-                         bilEntry.TaxableAmount10 = taxableAmount10.ToString("N2", formatter2);
-                         bilEntry.TaxAmount10 = taxAmount10.ToString("N2", formatter2);
-                         bilEntry.TaxableAmount18 = taxableAmount18.ToString("N2", formatter2);
-                         bilEntry.TaxAmount18 = taxAmount18.ToString("N2", formatter2);
-                         bilEntry.TaxableAmount20 = taxableAmount20.ToString("N2", formatter2);
-                         bilEntry.TaxAmount20 = taxAmount20.ToString("N2", formatter2);
-                     }
-                 } */
-
                 // Seçili şablonun ID'sini al
                 int selectedTemplateId = 0;
-                var selectedTemplate = cmbTableSelector.SelectedItem as dynamic;
+
                 if (selectedTemplate != null)
                 {
                     selectedTemplateId = selectedTemplate.TemplateID;
                 }
 
-                // DB'den bu şablon için filtreleri al
-                var filtersTable = _db.GetFiltersForTemplate(selectedTemplateId);
-                var filters = new List<(string ItemName, decimal TaxRate, string ColumnPrefix)>();
-
-                foreach (DataRow filterRow in filtersTable.Rows)
-                {
-                    filters.Add((
-                        ItemName: filterRow["ItemName"].ToString(),
-                        TaxRate: Convert.ToDecimal(filterRow["TaxRate"]),
-                        ColumnPrefix: filterRow["OutputColumnPrefix"].ToString()
-                    ));
-                }
-
-                // Dinamik filtre sütunlarını InvoiceData'ya 
                 var dynamicinvoiceLines = xml.Descendants(cac + "InvoiceLine");
 
                 foreach (var line in dynamicinvoiceLines)
@@ -1321,237 +1470,243 @@ namespace HesapTakip
                     var lineTaxableAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxableAmount").FirstOrDefault()?.Value ?? "0";
                     var lineTaxAmount = line.Descendants(cac + "TaxTotal").Descendants(cac + "TaxSubtotal").Descendants(cbc + "TaxAmount").FirstOrDefault()?.Value ?? "0";
 
-                    // ===== BİRDEN FAZLA FİLTRE KONTROLÜ =====
-                    foreach (var filter in filters)
-                    {
-                        if (itemName.Equals(filter.ItemName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            double taxable = double.Parse(lineTaxableAmount, NumberStyles.Any, CultureInfo.InvariantCulture);
-                            double tax = double.Parse(lineTaxAmount, NumberStyles.Any, CultureInfo.InvariantCulture);
-
-                            // Dinamik property set etme (reflection)
-                            var prop = typeof(InvoiceData).GetProperty(
-                                filter.ColumnPrefix + "Matrah",
-                                System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public
-                            );
-
-                            if (prop != null)
-                            {
-                                prop.SetValue(bilancoEntry, taxable.ToString("N2", formatter2));
-                            }
-
-                            // KDV sütunu
-                            var propTax = typeof(InvoiceData).GetProperty(
-                                filter.ColumnPrefix + "Kdv",
-                                System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public
-                            );
-
-                            if (propTax != null)
-                            {
-                                propTax.SetValue(bilancoEntry, tax.ToString("N2", formatter2));
-                            }
-
-                            // Ana toplamlardan çıkar
-                            if ((decimal)filter.TaxRate == 20)
-                            {
-                                taxableAmount20 -= taxable;
-                                taxAmount20 -= tax;
-                            }
-
-                            if ((decimal)filter.TaxRate == 10)
-                            {
-                                taxableAmount10 -= taxable;
-                                taxAmount10 -= tax;
-                            }
-
-                            if ((decimal)filter.TaxRate == 1)
-                            {
-                                taxableAmount1 -= taxable;
-                                taxAmount1 -= tax;
-                            }
-
-                            /* if ((decimal)filter.TaxRate == 0)
-                            {
-                                taxableAmount0 -= taxable;
-                                taxAmount0 -= tax;
-                            }
-                            */
-                        }
-                    }
                 }
-
             }
+
             catch (Exception ex)
             {
                 MessageBox.Show($"XML işleme hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        private bool IsSalesTemplate(TemplateItem? template, string templateName)
+        {
+            if (template != null && !string.IsNullOrWhiteSpace(template.DefinitionJson))
+            {
+                try
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
 
+                    var definition =
+                        System.Text.Json.JsonSerializer.Deserialize<TemplateDefinition>(
+                            template.DefinitionJson,
+                            options);
 
-        /* private void UpdateDataGridView() // tablo içerikleri
-         {
-             dgvData.Columns.Clear();
-             dgvData.Rows.Clear();
-             List<InvoiceData> data;
-             string[] columns;
+                    if (definition?.Target == "BilancoSatisData"
+                        || definition?.Target == "LucaIsletmeSatisData")
+                    {
+                        return true;
+                    }
 
-             switch (cmbTableSelector.SelectedItem?.ToString())
-             {   //Yapılacak    
-                 //buradaki senaryoları da veritabanına aktarmamız gerekiyor. combobox taki veriyi db ye aktarılacağından bağlantılı senaryosu da db de olmalı ve 4 sabit artından kullanıcının bunların birini baz alarak sütün eklebileceği hale getirmeliyiz. örnek olarak aşağıdaki kargo senaryosu gibi , kelimeye bağlı sütün ve oranı eklendi.
-                 //Bilanço Satış , Bilanço Alış ,Luca İşletme Satış , Luca İşletme Alış ve Fatura Kalemleri Adet ana şablon tablolar ,veri tabanı kurulurken oluşturulacaklar.
-                 //Bilanço Satış+Kargo , özel tablo , kullanıcı bu ve bunun gibi tabloları kendi oluşturacak.
-                 //eklenecek alanlar vergi 20% ve depozito sütünları arasında çoğaltılacak 
+                    if (definition?.Target == "BilancoAlisData"
+                        || definition?.Target == "LucaIsletmeAlisData")
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"Şablon hedefi okunamadı: {ex.Message}");
+                }
+            }
 
-                 case "Bilanço Satış":
-                     data = BilancoSatisData;
-                     columns = new[] { "Fatura Türü", "Tarih", "Evrak No", "Alıcı VKN", "Alıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%", "Depozito", "Cari Toplam", "Ödeme Türü" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                         dgvData.Rows.Add(item.InvoiceType, item.IssueDate, item.InvoiceNumber, item.CustomerTaxId, item.CustomerName, item.TaxExemptAmount0, item.TaxableAmount1, item.TaxAmount1, item.TaxableAmount10, item.TaxAmount10, item.TaxableAmount20, item.TaxAmount20, item.DepositAmount, item.TotalPayable, item.PaymentMethod);
-                     break;
-
-                 //özel filtre örneği , bunu migration a dahil etmeyeceğiz . bunu kullanıcı kendi ekleyecek, buradaki kargomatrah, kargokdv  ; filtre1matrah, filtre1kdv şeklinde ve peş peşe çoğaltılabilir olacak, kullanıcı istediği kadar filtre ekleyebilecek ve bu filtreler için de toplam matrah ve toplam kdv hesaplanacak, bu örnekte sadece kargo bedeli için yapılmış bir filtreleme var, kullanıcı istediği kadar filtre ekleyebilecek şekilde güncellenecek, bu sebeple filtreleme yapısı esnek olacak şekilde kurulacak, örnekteki kargo bedeli tespiti ise açıklama sütununda "kargo" ve "bedel" kelimelerinin geçip geçmemesine göre yapılıyor, kullanıcı kendi tanımlayacağı kalemler için de açıklama sütunu baz alınarak benzer tespitler yapılabilecek şekilde güncellenecek
-                 case "Bilanço Satış+Kargo":
-                     data = BilancoSatisKargoData;
-                     columns = new[] { "Fatura Türü", "Tarih", "Evrak No", "Alıcı VKN", "Alıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%", "KargoMatrah", "KargoKdv", "Depozito", "Cari Toplam", "Ödeme Türü" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                         dgvData.Rows.Add(item.InvoiceType, item.IssueDate, item.InvoiceNumber, item.CustomerTaxId, item.CustomerName, item.TaxExemptAmount0, item.TaxableAmount1, item.TaxAmount1, item.TaxableAmount10, item.TaxAmount10, item.TaxableAmount20, item.TaxAmount20, item.KargoMatrah, item.KargoKdv, item.DepositAmount, item.TotalPayable, item.PaymentMethod);
-                     break;
-
-                     ///
-
-                 case "Bilanço Alış":
-                     data = BilancoAlisData;
-                     columns = new[] { "Fatura Türü", "Tarih", "Evrak No", "Satıcı VKN", "Satıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%", "Depozito", "Cari Toplam", "Ödeme Türü" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                         dgvData.Rows.Add(item.InvoiceType, item.IssueDate, item.InvoiceNumber, item.SupplierTaxId, item.SupplierName, item.TaxExemptAmount0, item.TaxableAmount1, item.TaxAmount1, item.TaxableAmount10, item.TaxAmount10, item.TaxableAmount20, item.TaxAmount20, item.DepositAmount, item.TotalPayable, item.PaymentMethod);
-                     break;
-
-                 case "Luca İşletme Satış":
-                     data = LucaIsletmeSatisData;
-                     columns = new[] { "İŞLEM", "KATEGORİ", "BELGE TÜRÜ", "EVRAK TARİHİ", "KAYIT TARİHİ", "SERİ NO", "EVRAK NO", "TCKN/VKN", "VERGİ DAİRESİ", "SOYADI ÜNVAN", "ADI DEVAMI", "ADRES", "CARİ HESAP", "KDV İSTİSNASI", "KOD", "BELGE TÜRÜ(DB)", "ALIŞ/SATIŞ TÜRÜ", "KAYIT ALT TÜRÜ", "MAL VE HİZMET KODU", "AÇIKLAMA", "MİKTAR", "B.FİYAT", "TUTAR", "TEVKİFAT", "KDV ORANI", "ÖZEL MATRAH İŞLEM BEDELİ", "MATRAHTAN DÜŞÜLECEK TUTAR", "MATRAHA DAHİL OLMAYAN BEDEL", "KDV TUTARI", "TOPLAM TUTAR", "KREDİLİ TUTAR", "STOPAJ KODU", "STOPAJ TUTARI", "DÖNEMSELLIK İLKESİ", "FAALIYET KODU", "ÖDEME TÜRÜ" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                     {
-                         dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Satış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.CustomerTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Arşiv Fatura", item.SaleType, "Mal Satışı", item.Percent, item.ItemName, item.Quantity, "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode, "");
-                     }
-                     break;
-
-
-                 case "Luca İşletme Alış":
-                     data = LucaIsletmeAlisData;
-                     columns = new[] { "İŞLEM", "KATEGORİ", "BELGE TÜRÜ", "EVRAK TARİHİ", "KAYIT TARİHİ", "SERİ NO", "EVRAK NO", "TCKN/VKN", "VERGİ DAİRESİ", "SOYADI ÜNVAN", "ADI DEVAMI", "ADRES", "CARİ HESAP", "KDV İSTİSNASI", "KOD", "BELGE TÜRÜ(DB)", "ALIŞ/SATIŞ TÜRÜ", "KAYIT ALT TÜRÜ", "MAL VE HİZMET KODU", "AÇIKLAMA", "MİKTAR", "B.FİYAT", "TUTAR", "TEVKİFAT", "KDV ORANI", "ÖZEL MATRAH İŞLEM BEDELİ", "MATRAHTAN DÜŞÜLECEK TUTAR", "MATRAHA DAHİL OLMAYAN BEDEL", "KDV TUTARI", "TOPLAM TUTAR", "KREDİLİ TUTAR", "STOPAJ KODU", "STOPAJ TUTARI", "DÖNEMSELLIK İLKESİ", "FAALIYET KODU", "ÖDEME TÜRÜ" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                     {
-                         dgvData.Rows.Add(item.InvoiceType, "Defter Fişleri", "Alış", item.IssueDate, item.IssueDate, "", item.InvoiceNumber, item.SupplierTaxId, "", item.cFamilyName, item.cFirstName, "", "", item.KdvExemptionTable, item.KdvExemptionCode, "e-Fatura", item.SaleType, item.SubRecordType, item.Percent, item.ItemName, item.Quantity, "", item.TaxableAmount, "", item.Percent, "", "", "", item.TaxAmount, item.TotalPayable, "", "", "", "", item.ActivityCode ?? "");
-                     }
-                     break;
-
-                 case "Fatura Kalemleri Adet":
-                     data = InvoiceItemsQuantityData;
-                     columns = new[] { "Evrak No", "Tarih", "TCKN/VKN", "Kalem Açıklama", "Miktar", "Birim Fiyat", "Tutar", "KDV Tutarı" };
-                     foreach (var column in columns)
-                         dgvData.Columns.Add(column, column);
-                     foreach (var item in data)
-                     {
-                         var party = string.IsNullOrEmpty(item.CustomerTaxId) ? item.SupplierTaxId : item.CustomerTaxId;
-                         dgvData.Rows.Add(item.InvoiceNumber, item.IssueDate, party, item.ItemName, item.Quantity, item.UnitPrice, item.TaxableAmount, item.TaxAmount);
-                     }
-                     break;
-
-             }
-
-             foreach (DataGridViewColumn column in dgvData.Columns)
-             {
-                 if (column.Name.Contains("Vergisiz") || column.Name.Contains("Vergi") || column.Name.Contains("Tutar") || column.Name.Contains("Miktar") || column.Name.Contains("Birim Fiyat") || column.Name.Contains("Depozito") || column.Name.Contains("OIV"))
-                 {
-                     column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                 }
-             }
-         }
-         */
-
+            return templateName.Equals("Bilanço Satış", StringComparison.OrdinalIgnoreCase)
+                || templateName.Equals("Luca İşletme Satış", StringComparison.OrdinalIgnoreCase);
+        }
         private void UpdateDataGridView()
         {
+            var selectedTemplate = cmbTableSelector.SelectedItem as TemplateItem;
+
+            if (selectedTemplate == null)
+                return;
+
+            string templateName = selectedTemplate.Name;
+
             dgvData.Columns.Clear();
             dgvData.Rows.Clear();
-
-            string templateName = (cmbTableSelector.SelectedItem as dynamic)?.Name ?? "";
-            List<InvoiceData> data;
 
             switch (templateName)
             {
                 case "Bilanço Satış":
-                    data = BilancoSatisData;
-                    AddColumnsAndRows(data, new[] { "Fatura Türü", "Tarih", "Evrak No", "Alıcı VKN", "Alıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%", "Depozito", "Cari Toplam", "Ödeme Türü" },
-                        new[] { nameof(InvoiceData.InvoiceType), nameof(InvoiceData.IssueDate), nameof(InvoiceData.InvoiceNumber), nameof(InvoiceData.CustomerTaxId), nameof(InvoiceData.CustomerName), nameof(InvoiceData.TaxExemptAmount0), nameof(InvoiceData.TaxableAmount1), nameof(InvoiceData.TaxAmount1), nameof(InvoiceData.TaxableAmount10), nameof(InvoiceData.TaxAmount10), nameof(InvoiceData.TaxableAmount20), nameof(InvoiceData.TaxAmount20), nameof(InvoiceData.DepositAmount), nameof(InvoiceData.TotalPayable), nameof(InvoiceData.PaymentMethod) });
+                    AddColumnsAndRows(
+                        BilancoSatisData,
+                        new[]
+                        {
+                    "Fatura Türü",
+                    "Tarih",
+                    "Evrak No",
+                    "Alıcı VKN",
+                    "Alıcı Unvan",
+                    "Vergisiz 0%",
+                    "Vergisiz 1%",
+                    "Vergi 1%",
+                    "Vergisiz 10%",
+                    "Vergi 10%",
+                    "Vergisiz 20%",
+                    "Vergi 20%",
+                    "Depozito",
+                    "Cari Toplam",
+                    "Ödeme Türü"
+                        },
+                        new[]
+                        {
+                    nameof(InvoiceData.InvoiceType),
+                    nameof(InvoiceData.IssueDate),
+                    nameof(InvoiceData.InvoiceNumber),
+                    nameof(InvoiceData.CustomerTaxId),
+                    nameof(InvoiceData.CustomerName),
+                    nameof(InvoiceData.TaxExemptAmount0),
+                    nameof(InvoiceData.TaxableAmount1),
+                    nameof(InvoiceData.TaxAmount1),
+                    nameof(InvoiceData.TaxableAmount10),
+                    nameof(InvoiceData.TaxAmount10),
+                    nameof(InvoiceData.TaxableAmount20),
+                    nameof(InvoiceData.TaxAmount20),
+                    nameof(InvoiceData.DepositAmount),
+                    nameof(InvoiceData.TotalPayable),
+                    nameof(InvoiceData.PaymentMethod)
+                        });
                     break;
 
                 case "Bilanço Alış":
-                    data = BilancoAlisData;
-                    AddColumnsAndRows(data, new[] { "Fatura Türü", "Tarih", "Evrak No", "Satıcı VKN", "Satıcı Unvan", "Vergisiz 0%", "Vergisiz 1%", "Vergi 1%", "Vergisiz 10%", "Vergi 10%", "Vergisiz 20%", "Vergi 20%", "Depozito", "Cari Toplam", "Ödeme Türü" },
-                        new[] { nameof(InvoiceData.InvoiceType), nameof(InvoiceData.IssueDate), nameof(InvoiceData.InvoiceNumber), nameof(InvoiceData.SupplierTaxId), nameof(InvoiceData.SupplierName), nameof(InvoiceData.TaxExemptAmount0), nameof(InvoiceData.TaxableAmount1), nameof(InvoiceData.TaxAmount1), nameof(InvoiceData.TaxableAmount10), nameof(InvoiceData.TaxAmount10), nameof(InvoiceData.TaxableAmount20), nameof(InvoiceData.TaxAmount20), nameof(InvoiceData.DepositAmount), nameof(InvoiceData.TotalPayable), nameof(InvoiceData.PaymentMethod) });
+                    AddColumnsAndRows(
+                        BilancoAlisData,
+                        new[]
+                        {
+                    "Fatura Türü",
+                    "Tarih",
+                    "Evrak No",
+                    "Satıcı VKN",
+                    "Satıcı Unvan",
+                    "Vergisiz 0%",
+                    "Vergisiz 1%",
+                    "Vergi 1%",
+                    "Vergisiz 10%",
+                    "Vergi 10%",
+                    "Vergisiz 20%",
+                    "Vergi 20%",
+                    "Depozito",
+                    "Cari Toplam",
+                    "Ödeme Türü" },
+                        new[]
+                        {
+                    nameof(InvoiceData.InvoiceType),
+                    nameof(InvoiceData.IssueDate),
+                    nameof(InvoiceData.InvoiceNumber),
+                    nameof(InvoiceData.SupplierTaxId),
+                    nameof(InvoiceData.SupplierName),
+                    nameof(InvoiceData.TaxExemptAmount0),
+                    nameof(InvoiceData.TaxableAmount1),
+                    nameof(InvoiceData.TaxAmount1),
+                    nameof(InvoiceData.TaxableAmount10),
+                    nameof(InvoiceData.TaxAmount10),
+                    nameof(InvoiceData.TaxableAmount20),
+                    nameof(InvoiceData.TaxAmount20),
+                    nameof(InvoiceData.DepositAmount),
+                    nameof(InvoiceData.TotalPayable),
+                    nameof(InvoiceData.PaymentMethod) });
                     break;
 
                 case "Luca İşletme Satış":
-                    data = LucaIsletmeSatisData;
-                    // Luca satış için özel işleme
-                    AddLucaRows(data, isAlis: false);
+                    AddLucaRows(LucaIsletmeSatisData, isAlis: false);
                     break;
 
                 case "Luca İşletme Alış":
-                    data = LucaIsletmeAlisData;
-                    AddLucaRows(data, isAlis: true);
+                    AddLucaRows(LucaIsletmeAlisData, isAlis: true);
                     break;
 
                 case "Fatura Kalemleri Adet":
-                    data = InvoiceItemsQuantityData;
-                    AddColumnsAndRows(data, new[] { "Evrak No", "Tarih", "TCKN/VKN", "Kalem Açıklama", "Miktar", "Birim Fiyat", "Tutar", "KDV Tutarı" },
-                        new[] { nameof(InvoiceData.InvoiceNumber), nameof(InvoiceData.IssueDate), null, nameof(InvoiceData.ItemName), nameof(InvoiceData.Quantity), nameof(InvoiceData.UnitPrice), nameof(InvoiceData.TaxableAmount), nameof(InvoiceData.TaxAmount) });
+                    AddColumnsAndRows(
+                        InvoiceItemsQuantityData,
+                        new[]
+                        {
+                    "Evrak No",
+                    "Tarih",
+                    "TCKN/VKN",
+                    "Kalem Açıklama",
+                    "Miktar",
+                    "Birim Fiyat",
+                    "Tutar",
+                    "KDV Tutarı" },
+                        new[]
+                        {
+                    nameof(InvoiceData.InvoiceNumber),
+                    nameof(InvoiceData.IssueDate),
+                    null,
+                    nameof(InvoiceData.ItemName),
+                    nameof(InvoiceData.Quantity),
+                    nameof(InvoiceData.UnitPrice),
+                    nameof(InvoiceData.TaxableAmount),
+                    nameof(InvoiceData.TaxAmount) });
                     break;
 
                 default:
-                    // Özel şablon ise DB'den yükle ve işle
                     LoadCustomTemplate(templateName);
                     return;
             }
 
             ApplyColumnAlignment();
         }
-
-        private void AddColumnsAndRows(List<InvoiceData> data, string[] columnHeaders, string[] propertyNames)
+        private void AddColumnsAndRows(List<InvoiceData> data, string[] columnHeaders, string?[] propertyNames)
         {
-            foreach (var header in columnHeaders)
-                dgvData.Columns.Add(header, header);
+            for (int i = 0; i < columnHeaders.Length; i++)
+            {
+                dgvData.Columns.Add(
+                    columnHeaders[i],
+                    columnHeaders[i]);
+            }
 
             foreach (var item in data)
             {
                 var rowValues = new List<object>();
+
                 for (int i = 0; i < columnHeaders.Length; i++)
                 {
-                    var propName = propertyNames[i];
-                    if (propName == null)
+                    var propertyName = propertyNames[i];
+
+                    if (string.IsNullOrWhiteSpace(propertyName))
                     {
-                        // Special handling (e.g., computed column for TCKN/VKN)
-                        rowValues.Add(string.IsNullOrEmpty(item.CustomerTaxId) ? item.SupplierTaxId : item.CustomerTaxId);
+                        rowValues.Add(
+                            string.IsNullOrEmpty(item.CustomerTaxId)
+                                ? item.SupplierTaxId ?? ""
+                                : item.CustomerTaxId);
+
+                        continue;
                     }
-                    else
+
+                    if (propertyName.StartsWith(
+                            "Filter:",
+                            StringComparison.OrdinalIgnoreCase))
                     {
-                        var prop = typeof(InvoiceData).GetProperty(propName, System.Reflection.BindingFlags.IgnoreCase | System.Reflection.BindingFlags.Public);
-                        rowValues.Add(prop?.GetValue(item) ?? "");
+                        var filterKey = propertyName["Filter:".Length..];
+
+                        rowValues.Add(
+                            item.FilterValues.TryGetValue(
+                                filterKey,
+                                out var filterValue)
+                                    ? filterValue
+                                    : "");
+
+                        continue;
                     }
+
+                    var property = typeof(InvoiceData).GetProperty(
+                        propertyName,
+                        System.Reflection.BindingFlags.IgnoreCase |
+                        System.Reflection.BindingFlags.Public |
+                        System.Reflection.BindingFlags.Instance);
+
+                    rowValues.Add(
+                        property?.GetValue(item) ?? "");
                 }
+
                 dgvData.Rows.Add(rowValues.ToArray());
             }
         }
+
+
 
         private void AddLucaRows(List<InvoiceData> data, bool isAlis)
         {
@@ -1602,17 +1757,96 @@ namespace HesapTakip
                 );
             }
         }
-
         private void LoadCustomTemplate(string templateName)
         {
-            // DB'den özel şablonu yükle
-            var templateRow = _db.GetTemplates().Rows.Cast<DataRow>().FirstOrDefault(r => r["Name"].ToString() == templateName);
-            if (templateRow == null) return;
+            // Seçili öğeyi al
+            var sel = cmbTableSelector.SelectedItem as TemplateItem;
 
-            // Burada özel şablon için filtreleri ve sütunları yükle
-            var filters = _db.GetFiltersForTemplate(int.Parse(templateRow["TemplateID"].ToString()));
+            string defJson = null;
 
-            // TODO: Özel şablon UI işlemesi
+            if (sel != null)
+            {
+                defJson = sel.DefinitionJson;
+            }
+
+            if (string.IsNullOrWhiteSpace(defJson))
+            {
+                Logger.Log($"LoadCustomTemplate: Şablon JSON bulunamadı: {templateName}");
+                return;
+            }
+
+            // Deserialize
+            TemplateDefinition? tpl;
+            try
+            {
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                tpl = System.Text.Json.JsonSerializer.Deserialize<TemplateDefinition>(defJson, opts);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Şablon JSON parse edilemedi: {ex.Message}", "Şablon Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (tpl?.Columns == null || tpl.Columns.Count == 0)
+            {
+                Logger.Log("LoadCustomTemplate: Şablonda sütun tanımı yok.");
+                return;
+            }
+
+            // Headers ve propertyName dizilerini oluştur
+            var headers = new List<string>();
+            var props = new List<string?>();
+
+            foreach (var col in tpl.Columns)
+            {
+                var header = col.ColumnName ?? col.Header ?? "";
+                headers.Add(header);
+
+                var dataKey = col.DataKey ?? col.Property;
+
+                if (string.IsNullOrWhiteSpace(dataKey))
+                {
+                    props.Add(null);
+                    continue;
+                }
+
+                if (dataKey.StartsWith(
+                        "Filter:",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    props.Add(dataKey);
+                    continue;
+                }
+
+                var propInfo = typeof(InvoiceData).GetProperty(
+                    dataKey,
+                    System.Reflection.BindingFlags.IgnoreCase |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Instance);
+
+                if (propInfo == null)
+                {
+                    Logger.Log(
+                        $"LoadCustomTemplate: InvoiceData içinde property bulunamadı: {dataKey}");
+
+                    props.Add(null);
+                }
+                else
+                {
+                    props.Add(propInfo.Name);
+                }
+            }
+
+            // Hedef data listesi
+            List<InvoiceData>? dataList = GetDataListForTemplate(sel);
+            if (dataList == null) dataList = BilancoSatisData;
+
+            // DataGrid temizle ve doldur
+            dgvData.Columns.Clear();
+            dgvData.Rows.Clear();
+            AddColumnsAndRows(dataList, headers.ToArray(), props.ToArray());
+            ApplyColumnAlignment();
         }
 
         private void ApplyColumnAlignment()
@@ -1871,6 +2105,149 @@ namespace HesapTakip
             BtnSplitAndSave_Click(this, EventArgs.Empty);
         }
 
+        private class TemplateItem
+        {
+            public int TemplateID { get; set; }
+            public string Name { get; set; } = "";
+            public string DefinitionJson { get; set; } = "";
+            public bool IsBuiltIn { get; set; }
+            public override string ToString()
+            {
+                return Name;
+            }
+        }
+
+        // templates klasöründen yerleşik şablonları yükler
+        private List<TemplateItem> LoadBuiltinTemplatesFromFiles()
+        {
+            var list = new List<TemplateItem>();
+            var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
+            if (!Directory.Exists(templateDir)) return list;
+
+            /* var files = Directory.GetFiles(templateDir, "*.json"); */
+
+            var files = Directory.GetFiles(
+            templateDir,
+            "*.json",
+            SearchOption.AllDirectories);
+
+            foreach (var f in files)
+            {
+                try
+                {
+                    var json = File.ReadAllText(f);
+                    // JSON içinden varsa Name al, yoksa dosya adına göre anlamlı bir isim üret
+                    string name = GetNameFromJsonOrFileName(json, Path.GetFileName(f));
+                    list.Add(new TemplateItem
+                    {
+                        TemplateID = -1,
+                        Name = name,
+                        DefinitionJson = json,
+                        IsBuiltIn = true
+                    });
+                }
+                catch
+                {
+
+                }
+            }
+            return list;
+        }
+
+        private class TemplateDefinition
+        {
+            public List<EFaturaxmlForm.TemplateColumn>? Columns { get; set; }
+            public List<EFaturaxmlForm.FilterRule>? FilterRules { get; set; }
+            public string? Target { get; set; }
+        }
+
+        private class FilterRule
+        {
+            public string PropertyName { get; set; } = "";
+            public string? FilterValue { get; set; }
+            public string ComparisonType { get; set; } = "Equals";
+            public string? ColumnPrefix { get; set; }
+            public decimal? TaxRate { get; set; }
+            public bool IncludeInResult { get; set; } = true;
+        }
+        private class TemplateColumn
+        {
+            // Şablon dosyalarınızda "ColumnName"/"DataKey" veya "Header"/"Property" gibi farklı adlar olabilir.
+            public string? ColumnName { get; set; }
+            public string? DataKey { get; set; }
+            public string? Header { get; set; }
+            public string? Property { get; set; }
+        }
+
+        private string GetNameFromJsonOrFileName(string json, string fileName)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("Name", out var nameProp) && nameProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return nameProp.GetString() ?? fileName;
+            }
+            catch { }
+
+            // fallback: dosya adına göre okunaklı isim (örn. table_bilancosatis.json -> Bilanço Satış)
+            var n = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
+            if (n.Contains("bilancosatis") || n.Contains("bilanco_satis") || n.Contains("bilanco-satis")) return "Bilanço Satış";
+            if (n.Contains("bilancoalis") || n.Contains("bilanco_alis") || n.Contains("bilanco-alis")) return "Bilanço Alış";
+            if (n.Contains("isletmesatis") || n.Contains("isletme_satis")) return "Luca İşletme Satış";
+            if (n.Contains("isletmealis") || n.Contains("isletme_alis")) return "Luca İşletme Alış";
+            if (n.Contains("faturakalem")) return "Fatura Kalemleri Adet";
+            // default: dosya adı
+            return Path.GetFileNameWithoutExtension(fileName);
+        }
+        private List<InvoiceData>? GetDataListForTemplate(TemplateItem template)
+        {
+            if (template == null)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(template.DefinitionJson))
+            {
+                try
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+
+                    var definition =
+                        System.Text.Json.JsonSerializer.Deserialize<TemplateDefinition>(
+                            template.DefinitionJson,
+                            options);
+
+                    if (!string.IsNullOrWhiteSpace(definition?.Target))
+                    {
+                        return definition.Target switch
+                        {
+                            "BilancoSatisData" => BilancoSatisData,
+                            "BilancoAlisData" => BilancoAlisData,
+                            "LucaIsletmeSatisData" => LucaIsletmeSatisData,
+                            "LucaIsletmeAlisData" => LucaIsletmeAlisData,
+                            "InvoiceItemsQuantityData" => InvoiceItemsQuantityData,
+                            _ => BilancoSatisData
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"Şablon hedefi okunamadı: {ex.Message}");
+                }
+            }
+
+            return template.Name switch
+            {
+                "Bilanço Satış" => BilancoSatisData,
+                "Bilanço Alış" => BilancoAlisData,
+                "Luca İşletme Satış" => LucaIsletmeSatisData,
+                "Luca İşletme Alış" => LucaIsletmeAlisData,
+                "Fatura Kalemleri Adet" => InvoiceItemsQuantityData,
+                _ => BilancoSatisData
+            };
+        }
+
         private Button btnUpload;
         private ComboBox cmbTableSelector;
         private GroupBox groupBox1;
@@ -2086,10 +2463,10 @@ namespace HesapTakip
             dgvData.BackgroundColor = SystemColors.Control;
             dgvData.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvData.EditMode = DataGridViewEditMode.EditOnF2;
-            dgvData.Location = new Point(0, 150);
+            dgvData.Location = new Point(3, 177);
             dgvData.Name = "dgvData";
             dgvData.ReadOnly = true;
-            dgvData.Size = new Size(1326, 281);
+            dgvData.Size = new Size(1326, 254);
             dgvData.TabIndex = 2;
             // 
             // EFaturaxmlForm
@@ -2128,12 +2505,44 @@ namespace HesapTakip
 
         private void btn_add_custom_table_Click(object sender, EventArgs e)
         {
-            //EfaturaFiltre.cs formunu açacak         
+            try
+            {
+                var baseTemplates = LoadBuiltinTemplatesFromFiles().Select(t => t.Name).ToList();
+                using var dlg = new CustomTemplateForm(_db, baseTemplates);
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
 
-           // varsayılan şablonları seçimi için  bir combobox eklenecek altına , özel tablonun adını gireceği bir textbox , altına ayıklanmasını istediği fatura kalem adını yazabilmesi için bir textbox ve o textbox un yanına kdv oranını seçebilmesi için bir combobox , birden fazla kalem ekleyebilmesi için bu ikisinin altına bir artı butonu ve butona basıldığında aynı şekilde bir textbox ve combobox daha eklenmesi ve en altına da kaydet butonu koyarak kullanıcının istediği kadar özel tablo oluşturabilmesini sağlayacağız. Kaydet butonuna basıldığında ise bu bilgileri bir veri yapısında tutarak xml işleme sırasında bu özel tablolara göre de kalemleri ayıklayacağız. Bu sayede kullanıcı istediği kadar özel tablo oluşturup istediği kalemleri bu tablolara göre ayıklayabilecek ve excel çıktısında bu tablolara göre ayrı ayrı sütunlarda görebilecek.
-            //ayrıca bu ekleme formu açıldığında eğer seçilmiş bir tabl
-            //o varsa o tablonun verilerini dolacak bir şekilde açılmalı ki kullanıcı daha sonra isterse eklediği kalemleri silebilir , değiştirebilir veya oluşturduğu tabloyu silebilecek şekilde düzenlenebilir olmalı. Böylece kullanıcı sadece ekleme değil aynı zamanda oluşturduğu özel tabloları yönetme imkanına da sahip olacak.
+                    InitializeComboBox();
+                    MessageBox.Show("Şablon kaydedildi.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Şablon oluşturma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
         }
+
+        private bool IsFilterMatch(string itemName, FilterRule rule)
+        {
+            if (string.IsNullOrWhiteSpace(rule.FilterValue))
+            {
+                return false;
+            }
+
+            var culture = new CultureInfo("tr-TR");
+
+            var source = itemName.ToUpper(culture);
+            var filter = rule.FilterValue.ToUpper(culture);
+
+            return rule.ComparisonType switch
+            {
+                "Equals" => source == filter,
+                "StartsWith" => source.StartsWith(filter),
+                "EndsWith" => source.EndsWith(filter),
+                "Contains" => source.Contains(filter),
+                _ => source == filter
+            };
+        }
     }
-}/////yapılacaklar , eklenen notlar dışında , mysql , mssql ve sqlite için kodlar her db nin kendi operations formuna eklenecek, ana form gibi db ile bağlantılı çalışacak şekilde ayarlanacak, 
+}
