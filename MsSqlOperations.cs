@@ -154,162 +154,272 @@ namespace HesapTakip
                         { "Info", "NVARCHAR(255) NOT NULL" }
                     }, conn);
 
+                    // ExpenseCategories tablosunu JSON dosyasından doldur
+
+                    /*  string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                      if (!File.Exists(jsonFilePath))
+                      {
+                          throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                      }
+
+
+                      string jsonContent = File.ReadAllText(jsonFilePath);
+                      var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                      if (categories != null && categories.Count > 0)
+                      {
+
+                          using (var dropCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                          {
+                              dropCmd.ExecuteNonQuery();
+                          }
+
+                          string createTempQuery = @"
+                                  CREATE TABLE #ExpenseCategories_Temp (
+                                      CategoryID INT PRIMARY KEY,
+                                      Label NVARCHAR(255) NOT NULL,
+                                      Info NVARCHAR(255) NOT NULL
+                                  );";
+
+                          using (var createCmd = new SqlCommand(createTempQuery, conn))
+                          {
+                              createCmd.ExecuteNonQuery();
+                          }
+
+
+                          string insertTempQuery = "INSERT INTO #ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                          using (var insertCmd = new SqlCommand(insertTempQuery, conn))
+                          {
+                              insertCmd.Parameters.Add("@id", SqlDbType.Int);
+                              insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                              insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
+                              foreach (var category in categories)
+                              {
+                                  if (category.ID <= 0) continue;
+
+                                  insertCmd.Parameters["@id"].Value = category.ID;
+                                  insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                  insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                  insertCmd.ExecuteNonQuery();
+                              }
+                          }
+
+                          try
+                          {
+
+                              string bulkNormalizeQuery = @"
+                                      UPDATE ec
+                                      SET ec.Label = ec.Label + '_TEMP_SYNC'
+                                      FROM ExpenseCategories ec
+                                      INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                              using (var normalizeCmd = new SqlCommand(bulkNormalizeQuery, conn))
+                              {
+                                  normalizeCmd.ExecuteNonQuery();
+                              }
+
+                              // Aşama B: Gerçek metinleri güvenle güncelliyoruz.
+                              string bulkUpdateQuery = @"
+                                  UPDATE ec
+                                  SET ec.Label = ect.Label, ec.Info = ect.Info
+                                  FROM ExpenseCategories ec
+                                  INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                              using (var updateCmd = new SqlCommand(bulkUpdateQuery, conn))
+                              {
+                                  updateCmd.ExecuteNonQuery();
+                              }
+
+
+                              using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
+                              {
+                                  identityOnCmd.ExecuteNonQuery();
+                              }
+
+                              string bulkInsertQuery = @"
+                                      INSERT INTO ExpenseCategories (CategoryID, Label, Info)
+                                      SELECT ect.CategoryID, ect.Label, ect.Info
+                                      FROM #ExpenseCategories_Temp ect
+                                      LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
+                                      LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
+                                      WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+
+                              using (var insertCmd = new SqlCommand(bulkInsertQuery, conn))
+                              {
+                                  insertCmd.ExecuteNonQuery();
+                              }
+
+                              using (var identityOffCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories OFF;", conn))
+                              {
+                                  identityOffCmd.ExecuteNonQuery();
+                              }
+                          }
+                          finally
+                          {
+
+                              using (var cleanCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                              {
+                                  cleanCmd.ExecuteNonQuery();
+                              }
+                          }
+                      }
+
+                      // ExpenseMatching tablosu
+                      EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                      {
+                          { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                          { "ItemName", "NVARCHAR(255) NOT NULL" },
+                          { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                      }, conn);
+
+                      // Periods table
+                      EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                      {
+                          { "PeriodYear", "INT PRIMARY KEY" },
+                          { "DisplayName", "NVARCHAR(255) NULL" }
+                      }, conn); */
+
+                    // =========================================================================
+                    // 1. AŞAMA: TABLO YENİDEN İNŞA VE TERTEMİZ JSON SENKRONIZASYONU (MS SQL)
+                    // =========================================================================
+                    string varsayilanKategori = "NoCat";
                     string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
                     if (!File.Exists(jsonFilePath))
                     {
                         throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
                     }
 
-                    // ExpenseCategories tablosunu JSON dosyasından doldur
                     string jsonContent = File.ReadAllText(jsonFilePath);
                     var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
 
                     if (categories != null && categories.Count > 0)
                     {
 
-                        using (var dropCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
-                        {
-                            dropCmd.ExecuteNonQuery();
-                        }
+                        string dropFkSafeQuery = @"
+                            IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'CONSTRAINT_FK_Matching_Category')
+                            BEGIN
+                                ALTER TABLE ExpenseMatching DROP CONSTRAINT CONSTRAINT_FK_Matching_Category;
+                            END";
 
-                        string createTempQuery = @"
-                                CREATE TABLE #ExpenseCategories_Temp (
-                                    CategoryID INT PRIMARY KEY,
-                                    Label NVARCHAR(255) NOT NULL,
-                                    Info NVARCHAR(255) NOT NULL
-                                );";
-
-                        using (var createCmd = new SqlCommand(createTempQuery, conn))
+                        using (var dropFkCmd = new SqlCommand(dropFkSafeQuery, conn))
                         {
-                            createCmd.ExecuteNonQuery();
+                            dropFkCmd.ExecuteNonQuery();
                         }
 
 
-                        string insertTempQuery = "INSERT INTO #ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
-                        using (var insertCmd = new SqlCommand(insertTempQuery, conn))
+                        using (var dropTableCmd = new SqlCommand("IF OBJECT_ID('ExpenseCategories', 'U') IS NOT NULL DROP TABLE ExpenseCategories;", conn))
                         {
-                            insertCmd.Parameters.Add("@id", SqlDbType.Int);
-                            insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
-                            insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
+                            dropTableCmd.ExecuteNonQuery();
+                        }
 
-                            foreach (var category in categories)
-                            {
-                                if (category.ID <= 0) continue;
 
-                                insertCmd.Parameters["@id"].Value = category.ID;
-                                insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
-                                insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
-                                insertCmd.ExecuteNonQuery();
-                            }
+                        string createRealTableQuery = @"
+                            CREATE TABLE ExpenseCategories (
+                                CategoryID INT PRIMARY KEY IDENTITY(1,1),
+                                Label NVARCHAR(255) NOT NULL,
+                                Info NVARCHAR(255) NOT NULL,
+                                CONSTRAINT CONSTRAINT_UQ_Label_Info UNIQUE (Label, Info)
+                            );";
+
+                        using (var createTableCmd = new SqlCommand(createRealTableQuery, conn))
+                        {
+                            createTableCmd.ExecuteNonQuery();
+                        }
+
+                        using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
+                        {
+                            identityOnCmd.ExecuteNonQuery();
                         }
 
                         try
                         {
-
-                            string bulkNormalizeQuery = @"
-                                    UPDATE ec
-                                    SET ec.Label = ec.Label + '_TEMP_SYNC'
-                                    FROM ExpenseCategories ec
-                                    INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
-
-                            using (var normalizeCmd = new SqlCommand(bulkNormalizeQuery, conn))
+                            string insertQuery = "INSERT INTO ExpenseCategories (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                            using (var insertCmd = new SqlCommand(insertQuery, conn))
                             {
-                                normalizeCmd.ExecuteNonQuery();
-                            }
+                                insertCmd.Parameters.Add("@id", SqlDbType.Int);
+                                insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                                insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
 
-                            // Aşama B: Gerçek metinleri güvenle güncelliyoruz.
-                            string bulkUpdateQuery = @"
-                                UPDATE ec
-                                SET ec.Label = ect.Label, ec.Info = ect.Info
-                                FROM ExpenseCategories ec
-                                INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+                                foreach (var category in categories)
+                                {
+                                    if (category.ID > 0)
+                                    {
+                                        insertCmd.Parameters["@id"].Value = category.ID;
+                                        insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                        insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                        insertCmd.ExecuteNonQuery();
+                                    }
 
-                            using (var updateCmd = new SqlCommand(bulkUpdateQuery, conn))
-                            {
-                                updateCmd.ExecuteNonQuery();
-                            }
+                                    using (var updateCmd = new SqlCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
+                                    {
+                                        updateCmd.ExecuteNonQuery();
+                                    }
 
 
-                            using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
-                            {
-                                identityOnCmd.ExecuteNonQuery();
-                            }
+                                    string addFkSafeQuery = @"
+                                    IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'CONSTRAINT_FK_Matching_Category')
+                                    BEGIN
+                                        ALTER TABLE ExpenseMatching 
+                                        ADD CONSTRAINT CONSTRAINT_FK_Matching_Category 
+                                        FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) 
+                                        ON UPDATE CASCADE ON DELETE CASCADE;
+                                    END";
 
-                            string bulkInsertQuery = @"
-                                    INSERT INTO ExpenseCategories (CategoryID, Label, Info)
-                                    SELECT ect.CategoryID, ect.Label, ect.Info
-                                    FROM #ExpenseCategories_Temp ect
-                                    LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
-                                    LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
-                                    WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+                                    using (var addFkCmd = new SqlCommand(addFkSafeQuery, conn))
+                                    {
+                                        addFkCmd.ExecuteNonQuery();
+                                    }
 
-                            using (var insertCmd = new SqlCommand(bulkInsertQuery, conn))
-                            {
-                                insertCmd.ExecuteNonQuery();
-                            }
+                                    EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                                    {
+                                        { "PeriodYear", "INT PRIMARY KEY" },
+                                        { "DisplayName", "NVARCHAR(255) NULL" }
+                                    }, conn);
 
-                            using (var identityOffCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories OFF;", conn))
-                            {
-                                identityOffCmd.ExecuteNonQuery();
+
+                                }
                             }
                         }
-                        finally
+
+
+                        catch (SqlException ex) when (ex.Number == 4060)
                         {
 
-                            using (var cleanCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                            Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number}");
+
+                            if (createdNow)
                             {
-                                cleanCmd.ExecuteNonQuery();
+                                try
+                                {
+                                    var builder = new SqlConnectionStringBuilder(_connectionString);
+                                    string databaseName = builder.InitialCatalog;
+                                    Logger.Log($"MsSql InitializeDatabase: attempting master-connection fallback initialization for DB '{databaseName}'");
+                                    InitializeDatabaseUsingMaster(databaseName);
+                                    return;
+                                }
+                                catch (Exception inner)
+                                {
+                                    Logger.Log($"MsSql InitializeDatabase (fallback) failed: {inner.Message}");
+                                    throw;
+                                }
                             }
+
+                            throw;
                         }
                     }
-
-                    // ExpenseMatching tablosu
-                    EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-                    {
-                        { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                        { "ItemName", "NVARCHAR(255) NOT NULL" },
-                        { "SubRecordType", "NVARCHAR(255) NOT NULL" }
-                    }, conn);
-
-                    // Periods table
-                    EnsureTableAndColumns("Periods", new Dictionary<string, string>
-                    {
-                        { "PeriodYear", "INT PRIMARY KEY" },
-                        { "DisplayName", "NVARCHAR(255) NULL" }
-                    }, conn);
-
                 }
             }
-
-            catch (SqlException ex) when (ex.Number == 4060)
+            catch (Exception ex)
             {
-                // 4060 = Cannot open database requested by the login. The login failed.
-                Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number}");
-                // If we just created the database but the login cannot open it (common when Windows auth and user mapping not set),
-                // attempt to initialize schema using master connection and fully-qualified object names as a fallback.
-                if (createdNow)
-                {
-                    try
-                    {
-                        var builder = new SqlConnectionStringBuilder(_connectionString);
-                        string databaseName = builder.InitialCatalog;
-                        Logger.Log($"MsSql InitializeDatabase: attempting master-connection fallback initialization for DB '{databaseName}'");
-                        InitializeDatabaseUsingMaster(databaseName);
-                        return;
-                    }
-                    catch (Exception inner)
-                    {
-                        Logger.Log($"MsSql InitializeDatabase (fallback) failed: {inner.Message}");
-                        throw; // rethrow so caller sees failure
-                    }
-                }
-
-                throw; // not created now and cannot open -> rethrow
-            }
+                Logger.Log($"MsSql InitializeDatabase failed: {ex.Message}");
+                throw;
+            } }
 
 
 
-        }
+
+
 
         public IDbConnection GetConnection()
         {

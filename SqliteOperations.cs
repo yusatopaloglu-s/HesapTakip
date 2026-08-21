@@ -167,6 +167,7 @@ namespace HesapTakip
                 }, conn);
 
                 // ExpenseCategories tablosunu JSON dosyasından doldur
+
                 string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
                 if (!File.Exists(jsonFilePath))
                 {
@@ -178,172 +179,90 @@ namespace HesapTakip
 
                 if (categories != null && categories.Count > 0)
                 {
-          
-                    using (var dropCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+
+                    using (var disableFkCmd = new SQLiteCommand("PRAGMA foreign_keys = OFF;", conn))
                     {
-                        dropCmd.ExecuteNonQuery();
-                    }
-
-                    string createTempQuery = @"
-        CREATE TABLE ExpenseCategories_Temp (
-            CategoryID INTEGER PRIMARY KEY,
-            Label TEXT NOT NULL,
-            Info TEXT NOT NULL
-        );";
-
-                    using (var createCmd = new SQLiteCommand(createTempQuery, conn))
-                    {
-                        createCmd.ExecuteNonQuery();
-                    }
-
-           
-                    string insertTempQuery = "INSERT INTO ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
-                    using (var insertCmd = new SQLiteCommand(insertTempQuery, conn))
-                    {
-                        insertCmd.Parameters.Add("@id", DbType.Int32);
-                        insertCmd.Parameters.Add("@label", DbType.String);
-                        insertCmd.Parameters.Add("@info", DbType.String);
-
-                        foreach (var category in categories)
-                        {
-                            if (category.ID <= 0) continue;
-
-                            insertCmd.Parameters["@id"].Value = category.ID;
-                            insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
-                            insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
-                            insertCmd.ExecuteNonQuery();
-                        }
+                        disableFkCmd.ExecuteNonQuery();
                     }
 
                     try
                     {
-
-                        string bulkNormalizeQuery = @"
-            UPDATE ExpenseCategories
-            SET Label = Label || '_TEMP_SYNC'
-            WHERE CategoryID IN (SELECT CategoryID FROM ExpenseCategories_Temp);";
-
-                        using (var normalizeCmd = new SQLiteCommand(bulkNormalizeQuery, conn))
+                        
+                        using (var dropTableCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories;", conn))
                         {
-                            normalizeCmd.ExecuteNonQuery();
+                            dropTableCmd.ExecuteNonQuery();
                         }
 
-                      
-                        string bulkUpdateQuery = @"
-            UPDATE ExpenseCategories
-            SET Label = ect.Label, Info = ect.Info
-            FROM ExpenseCategories_Temp ect
-            WHERE ExpenseCategories.CategoryID = ect.CategoryID;";
+        
+                        string createRealTableQuery = @"
+                            CREATE TABLE ExpenseCategories (
+                                CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Label TEXT NOT NULL,
+                                Info TEXT NOT NULL,
+                                UNIQUE (Label, Info)
+                            );";
 
-                        using (var updateCmd = new SQLiteCommand(bulkUpdateQuery, conn))
+                        using (var createTableCmd = new SQLiteCommand(createRealTableQuery, conn))
                         {
-                            updateCmd.ExecuteNonQuery();
+                            createTableCmd.ExecuteNonQuery();
                         }
 
-                        string bulkInsertQuery = @"
-            INSERT INTO ExpenseCategories (CategoryID, Label, Info)
-            SELECT ect.CategoryID, ect.Label, ect.Info
-            FROM ExpenseCategories_Temp ect
-            LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
-            LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
-            WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
-
-                        using (var insertCmd = new SQLiteCommand(bulkInsertQuery, conn))
+                       
+                        string insertQuery = "INSERT INTO ExpenseCategories (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                        using (var insertCmd = new SQLiteCommand(insertQuery, conn))
                         {
-                            insertCmd.ExecuteNonQuery();
+                            insertCmd.Parameters.Add("@id", DbType.Int32);
+                            insertCmd.Parameters.Add("@label", DbType.String);
+                            insertCmd.Parameters.Add("@info", DbType.String);
+
+                            foreach (var category in categories)
+                            {
+                                if (category.ID <= 0) continue;
+
+                                insertCmd.Parameters["@id"].Value = category.ID;
+                                insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                insertCmd.ExecuteNonQuery();
+                            }
                         }
                     }
                     finally
                     {
-                   
-                        using (var cleanCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+                        
+                        using (var enableFkCmd = new SQLiteCommand("PRAGMA foreign_keys = ON;", conn))
                         {
-                            cleanCmd.ExecuteNonQuery();
+                            enableFkCmd.ExecuteNonQuery();
                         }
                     }
                 }
 
-                // ExpenseMatching tablosu
+
+                string varsayilanKategori = "NoCat";
+
                 EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-        {
-            { "MatchingID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
-            { "ItemName", "TEXT NOT NULL" },
-            { "SubRecordType", "TEXT NOT NULL" }
-        }, conn);
-
-                // Periods tablosu - dönem yıllarını saklar
-                EnsureTableAndColumns("Periods", new Dictionary<string, string>
-                {
-                    { "PeriodYear", "INTEGER PRIMARY KEY" },
-                    { "DisplayName", "TEXT NULL" }
-                }, conn);
-
-                /*    // Templates tablosu
-                    EnsureTableAndColumns("Templates", new Dictionary<string, string>
-                    {
-                        { "TemplateID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
-                        { "Name", "TEXT NOT NULL" },
-                        { "IsBuiltIn", "INTEGER DEFAULT 0" },
-                        { "DefinitionJson", "TEXT NOT NULL" },
-                        { "CreatedAt", "DATETIME DEFAULT CURRENT_TIMESTAMP" }
-                    }, conn);
-
-                    // TemplateColumns tablosu (opsiyonel)
-                    EnsureTableAndColumns("TemplateColumns", new Dictionary<string, string>
-                    {
-                        { "TemplateColumnID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
-                        { "TemplateID", "INTEGER NOT NULL" },
-                        { "ColumnName", "TEXT NOT NULL" },
-                        { "DataKey", "TEXT NOT NULL" },
-                        { "DisplayOrder", "INTEGER DEFAULT 0" }
-                    }, conn);
-
-                    // FaturaFilters tablosu - Özel şablonlar için filtre kuralları
-                    EnsureTableAndColumns("FaturaFilters", new Dictionary<string, string>
-    {
-                        { "FilterID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
-                        { "TemplateID", "INTEGER NOT NULL" },
-                        { "ItemName", "TEXT NOT NULL" },
-                        { "TaxRate", "DECIMAL(5,2) DEFAULT 0" },
-                        { "OutputColumnPrefix", "TEXT NOT NULL" },
-                        { "DisplayOrder", "INTEGER DEFAULT 0" },
-                        { "IsActive", "INTEGER DEFAULT 1" },
-                        { "CreatedAt", "DATETIME DEFAULT CURRENT_TIMESTAMP" }
-                    }, conn);
-
-                    var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
-                    var defaultTemplates = new List<(string Name, string Json)>
-                    {
-                        ("Bilanço Satış", "table_bilancosatis.json"),
-                        ("Bilanço Alış", "table_bilancoalis.json"),
-                        ("Luca İşletme Satış", "table_isletmesatis.json"),
-                        ("Luca İşletme Alış", "table_isletmesatis.json"),
-                        ("Fatura Kalemleri Adet", "table_faturakalem.json")
-                    };
-
-                    using (var cmd = conn.CreateCommand())
-                    {
-                        cmd.CommandText = "SELECT COUNT(*) FROM Templates";
-                        var count = Convert.ToInt32(cmd.ExecuteScalar());
-                        if (count == 0)
                         {
-                            foreach (var tpl in defaultTemplates)
-                            {
-                                var jsonPath = Path.Combine(templateDir, tpl.Json);
-                                if (!File.Exists(jsonPath))
-                                    throw new FileNotFoundException($"Şablon dosyası bulunamadı: {jsonPath}");
+                            { "MatchingID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                            { "ItemName", "TEXT NOT NULL" },
+                            { "SubRecordType", "TEXT NOT NULL" },
+                            { "CategoryLabel", $"TEXT NOT NULL DEFAULT '{varsayilanKategori}'" }
+                        }, conn);
 
-                                var definitionJson = File.ReadAllText(jsonPath);
+                using (var updateCmd = new SQLiteCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
+                {
+                    updateCmd.ExecuteNonQuery();
+                }
 
-                                cmd.CommandText = "INSERT INTO Templates (Name, IsBuiltIn, DefinitionJson) VALUES (@name, @isBuiltIn, @definitionJson)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@name", tpl.Name);
-                                cmd.Parameters.AddWithValue("@isBuiltIn", 1);
-                                cmd.Parameters.AddWithValue("@definitionJson", definitionJson);
-                                cmd.ExecuteNonQuery();
-                            }
-                        }
-                    }*/
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                    {
+                        { "CONSTRAINT_FK_Matching_Category", "FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) ON UPDATE CASCADE ON DELETE CASCADE" }
+                    }, conn);
+
+                EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                        {
+                            { "PeriodYear", "INTEGER PRIMARY KEY" },
+                            { "DisplayName", "TEXT NULL" }
+                        }, conn);
+                                             
 
             }
 

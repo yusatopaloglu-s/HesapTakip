@@ -152,26 +152,38 @@ namespace HesapTakip
                 if (categories != null && categories.Count > 0)
                 {
 
-                    using (var dropCmd = new MySqlCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+                    try
                     {
-                        dropCmd.ExecuteNonQuery();
+                        using (var dropFkCmd = new MySqlCommand("ALTER TABLE ExpenseMatching DROP FOREIGN KEY CONSTRAINT_FK_Matching_Category;", conn))
+                        {
+                            dropFkCmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch { /* FK zaten yoksa hata vermesin */ }
+
+
+                    using (var dropTableCmd = new MySqlCommand("DROP TABLE IF EXISTS ExpenseCategories;", conn))
+                    {
+                        dropTableCmd.ExecuteNonQuery();
                     }
 
-                    string createTempQuery = @"
-                                    CREATE TABLE ExpenseCategories_Temp (
-                                        CategoryID INT PRIMARY KEY,
-                                        Label VARCHAR(255) NOT NULL,
-                                        Info VARCHAR(255) NOT NULL
-                                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci;";
 
-                    using (var createCmd = new MySqlCommand(createTempQuery, conn))
+                    string createRealTableQuery = @"
+                        CREATE TABLE ExpenseCategories (
+                            CategoryID INT PRIMARY KEY AUTO_INCREMENT,
+                            Label VARCHAR(255) NOT NULL,
+                            Info VARCHAR(255) NOT NULL,
+                            CONSTRAINT CONSTRAINT_UQ_Label_Info UNIQUE (Label, Info)
+                        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci;";
+
+                    using (var createTableCmd = new MySqlCommand(createRealTableQuery, conn))
                     {
-                        createCmd.ExecuteNonQuery();
+                        createTableCmd.ExecuteNonQuery();
                     }
 
 
-                    string insertTempQuery = "INSERT INTO ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
-                    using (var insertCmd = new MySqlCommand(insertTempQuery, conn))
+                    string insertQuery = "INSERT INTO ExpenseCategories (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                    using (var insertCmd = new MySqlCommand(insertQuery, conn))
                     {
                         insertCmd.Parameters.Add("@id", MySqlDbType.Int32);
                         insertCmd.Parameters.Add("@label", MySqlDbType.VarChar);
@@ -187,80 +199,29 @@ namespace HesapTakip
                             insertCmd.ExecuteNonQuery();
                         }
                     }
-
-
-                    using (var disableCmd = new MySqlCommand("SET UNIQUE_CHECKS = 0; SET FOREIGN_KEY_CHECKS = 0;", conn))
-                    {
-                        disableCmd.ExecuteNonQuery();
-                    }
-
-                    try
-                    {
-
-                        string bulkNormalizeQuery = @"
-                            UPDATE ExpenseCategories ec
-                            INNER JOIN ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID
-                            SET ec.Label = CONCAT(ec.Label, '_TEMP_SYNC');";
-
-                        using (var normalizeCmd = new MySqlCommand(bulkNormalizeQuery, conn))
-                        {
-                            normalizeCmd.ExecuteNonQuery();
-                        }
-
-                        string bulkUpdateQuery = @"
-                            UPDATE ExpenseCategories ec
-                            INNER JOIN ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID
-                            SET ec.Label = ect.Label, ec.Info = ect.Info;";
-
-                        using (var updateCmd = new MySqlCommand(bulkUpdateQuery, conn))
-                        {
-                            updateCmd.ExecuteNonQuery();
-                        }
-
-
-                        string bulkInsertQuery = @"
-                            INSERT INTO ExpenseCategories (CategoryID, Label, Info)
-                            SELECT ect.CategoryID, ect.Label, ect.Info
-                            FROM ExpenseCategories_Temp ect
-                            LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
-                            LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
-                            WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
-
-                        using (var insertCmd = new MySqlCommand(bulkInsertQuery, conn))
-                        {
-                            insertCmd.ExecuteNonQuery();
-                        }
-                    }
-                    finally
-                    {
-
-                        using (var cleanCmd = new MySqlCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
-                        {
-                            cleanCmd.ExecuteNonQuery();
-                        }
-                    }
                 }
 
-
-                // ExpenseMatching tablosu
                 string varsayilanKategori = "NoCat";
+
                 EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-                 {
-                   { "MatchingID", "INT PRIMARY KEY AUTO_INCREMENT" },
-                   { "ItemName", "VARCHAR(255) NOT NULL" },
-                   { "SubRecordType", "VARCHAR(255) NOT NULL" },
-                   { "CategoryLabel", $"VARCHAR(255) NOT NULL DEFAULT '{varsayilanKategori}'" }
-                   }, conn);
+                {
+                    { "MatchingID", "INT PRIMARY KEY AUTO_INCREMENT" },
+                    { "ItemName", "VARCHAR(255) NOT NULL" },
+                    { "SubRecordType", "VARCHAR(255) NOT NULL" },
+                    { "CategoryLabel", $"VARCHAR(255) NOT NULL DEFAULT '{varsayilanKategori}'" }
+                }, conn);
+
                 using (var updateCmd = new MySqlCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
                 {
                     updateCmd.ExecuteNonQuery();
                 }
-                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-{
-                   { "CONSTRAINT_FK_Matching_Category", "CONSTRAINT CONSTRAINT_FK_Matching_Category FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) ON UPDATE CASCADE ON DELETE CASCADE" }
-                    }, conn);
 
-                // Periods table
+
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                {
+                    { "CONSTRAINT_FK_Matching_Category", "CONSTRAINT CONSTRAINT_FK_Matching_Category FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) ON UPDATE CASCADE ON DELETE CASCADE" }
+                }, conn);
+
                 EnsureTableAndColumns("Periods", new Dictionary<string, string>
                 {
                     { "PeriodYear", "INT PRIMARY KEY" },
@@ -269,6 +230,8 @@ namespace HesapTakip
 
             }
         }
+
+
 
         public IDbConnection GetConnection()
         {
