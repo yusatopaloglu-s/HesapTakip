@@ -2,9 +2,8 @@
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
-
-
 
 namespace HesapTakip
 
@@ -14,7 +13,6 @@ namespace HesapTakip
     using OfficeOpenXml.Style;
     using QuestPDF.Infrastructure;
     using System.Data.SQLite;
-    using System.Diagnostics;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
@@ -72,6 +70,9 @@ namespace HesapTakip
             // Configure debounce timer
             searchTimer.Interval = 350; // ms
             searchTimer.Tick += SearchTimer_Tick;
+            pbx_ins.Cursor = Cursors.Hand;
+            pbx_fb.Cursor = Cursors.Hand;
+            pbx_github.Cursor = Cursors.Hand;
         }
 
         private async Task InitializeApplicationAsync()
@@ -346,7 +347,7 @@ namespace HesapTakip
                     dgvCustomers.Columns["Taxid"].Visible = false;
                     dgvCustomers.Columns["ActivityCode"].Visible = false;
                     dgvCustomers.Columns["IsDeleted"].Visible = false;
-               
+
                 }
 
                 // Ensure no automatic selection happens and transaction UI stays disabled until user acts
@@ -533,9 +534,12 @@ namespace HesapTakip
 
                 if (!enabled)
                 {
-                    try { StatustLabel_info.Text = "Lütfen bir müşteri seçin.";
-                       StatustLabel_info.ForeColor = System.Drawing.Color.OrangeRed;
-                                                                                                } catch { }
+                    try
+                    {
+                        StatustLabel_info.Text = "Lütfen bir müşteri seçin.";
+                        StatustLabel_info.ForeColor = System.Drawing.Color.OrangeRed;
+                    }
+                    catch { }
                 }
                 else
                 {
@@ -1589,7 +1593,7 @@ namespace HesapTakip
                                     tx.Span($"Toplam Borç: {totalDebit:N2} ₺").Bold().FontColor(Colors.Red.Darken2);
                                     tx.Span("   ");
                                     tx.Span($"Toplam Alacak: {totalCredit:N2} ₺").Bold().FontColor(Colors.Green.Darken2);
-                                    tx.Span("   "); 
+                                    tx.Span("   ");
 
                                 });
                                 col.Item().PaddingTop(12).AlignRight().Text(tx =>
@@ -2231,7 +2235,7 @@ namespace HesapTakip
                             dgvTransactions.DataSource = importedData;
                             MessageBox.Show($"{importedData.Rows.Count} kayıt başarıyla yüklendi!");
                         }
-                        catch ( Exception ex)
+                        catch (Exception ex)
                         {
                             MessageBox.Show("Hata: " + ex.Message);
                         }
@@ -2272,7 +2276,7 @@ namespace HesapTakip
 
                     bool success = _db.AddTransaction(customerID, date, description, amount, type, period);
                     if (success) successCount++;
-                 }
+                }
 
                 // Listeyi yenile
                 int currentCust = (dgvCustomers.CurrentRow != null && dgvCustomers.CurrentRow.Cells["CustomerID"]?.Value != null)
@@ -2292,7 +2296,7 @@ namespace HesapTakip
         }
 
         //BURAYI MODÜLER HALE GETİRECEZ - TARİH AÇIKLAMA AYNI KALSIN , BORÇ ALACAK TANNIMIÇ için ESKİ KODDAN AYIRMA FONKSİYONUNU GETİR.
- private bool ValidateExcelFormat(ExcelWorksheet worksheet)
+        private bool ValidateExcelFormat(ExcelWorksheet worksheet)
         {
             // Başlık kontrolü
             if (worksheet.Cells[1, 1].Text != "Tarih" ||
@@ -2557,7 +2561,7 @@ namespace HesapTakip
                                 if (canReportProgress)
                                 {
                                     var progressPercentage = (int)((double)totalBytesRead / totalBytes * 100);
-                                    var overallProgress =  40 + (int)(progressPercentage * 0.5);
+                                    var overallProgress = 40 + (int)(progressPercentage * 0.5);
                                     progress?.Report(overallProgress);
                                     statusProgress?.Report($"İndiriliyor: {progressPercentage}%");
                                 }
@@ -3102,7 +3106,7 @@ namespace HesapTakip
         private void link_yusa_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
 
-            string url = "https://github.com/yusatopaloglu-s/HesapTakip";
+            string url = "https://www.instagram.com/yusatopaloglu/";
 
             Process.Start(new ProcessStartInfo
             {
@@ -3292,8 +3296,8 @@ namespace HesapTakip
             }
         }
 
-         private void BtnAddPeriod_Click(object sender, EventArgs e)
-         {
+        private void BtnAddPeriod_Click(object sender, EventArgs e)
+        {
             using (var input = new InputForm("Yeni dönem yılı (örn: 2025):"))
             {
                 if (input.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(input.InputText))
@@ -3333,7 +3337,7 @@ namespace HesapTakip
                     }
                 }
             }
-         }
+        }
 
         // Designer wires to lowercase name; provide wrapper to call actual handler
         private void btnAddPeriod_Click(object sender, EventArgs e) => BtnAddPeriod_Click(sender, e);
@@ -3402,6 +3406,66 @@ namespace HesapTakip
                     }
                 }
             }
+        }
+
+        private void pbx_ins_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://www.instagram.com/yusatopaloglu/";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+        }
+
+        private void pbx_github_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://github.com/yusatopaloglu-s";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+        }
+
+        private void pbx_fb_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string url = "https://www.facebook.com/YusaTopaloglu/";
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
         }
     }
 }

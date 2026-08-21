@@ -1,0 +1,64 @@
+{
+  "Columns": [
+    {
+      "ColumnName": "Fatura Türü",
+      "DataKey": "InvoiceType"
+    },
+    {
+      "ColumnName": "Tarih",
+      "DataKey": "IssueDate"
+    },
+    {
+      "ColumnName": "Evrak No",
+      "DataKey": "InvoiceNumber"
+    },
+    {
+      "ColumnName": "Satıcı VKN",
+      "DataKey": "SupplierTaxId"
+    },
+    {
+      "ColumnName": "Satıcı Unvan",
+      "DataKey": "SupplierName"
+    },
+    {
+      "ColumnName": "Vergisiz 0%",
+      "DataKey": "TaxExemptAmount0"
+    },
+    {
+      "ColumnName": "Vergisiz 1%",
+      "DataKey": "TaxableAmount1"
+    },
+    {
+      "ColumnName": "Vergi 1%",
+      "DataKey": "TaxAmount1"
+    },
+    {
+      "ColumnName": "Vergisiz 10%",
+      "DataKey": "TaxableAmount10"
+    },
+    {
+      "ColumnName": "Vergi 10%",
+      "DataKey": "TaxAmount10"
+    },
+    {
+      "ColumnName": "Vergisiz 20%",
+      "DataKey": "TaxableAmount20"
+    },
+    {
+      "ColumnName": "Vergi 20%",
+      "DataKey": "TaxAmount20"
+    },
+    {
+      "ColumnName": "Depozito",
+      "DataKey": "DepositAmount"
+    },
+    {
+      "ColumnName": "Cari Toplam",
+      "DataKey": "TotalPayable"
+    },
+    {
+      "ColumnName": "Ödeme Türü",
+      "DataKey": "PaymentMethod"
+    }
+  ]
+}

@@ -167,47 +167,105 @@ namespace HesapTakip
                 }, conn);
 
                 // ExpenseCategories tablosunu JSON dosyasından doldur
-                if (!TableHasData("ExpenseCategories", conn))
-                {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
 
-                        using (var cmd = new SQLiteCommand())
+                string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                if (!File.Exists(jsonFilePath))
+                {
+                    throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                }
+
+                string jsonContent = File.ReadAllText(jsonFilePath);
+                var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                if (categories != null && categories.Count > 0)
+                {
+
+                    using (var disableFkCmd = new SQLiteCommand("PRAGMA foreign_keys = OFF;", conn))
+                    {
+                        disableFkCmd.ExecuteNonQuery();
+                    }
+
+                    try
+                    {
+                        
+                        using (var dropTableCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories;", conn))
                         {
-                            cmd.Connection = conn;
+                            dropTableCmd.ExecuteNonQuery();
+                        }
+
+        
+                        string createRealTableQuery = @"
+                            CREATE TABLE ExpenseCategories (
+                                CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
+                                Label TEXT NOT NULL,
+                                Info TEXT NOT NULL,
+                                UNIQUE (Label, Info)
+                            );";
+
+                        using (var createTableCmd = new SQLiteCommand(createRealTableQuery, conn))
+                        {
+                            createTableCmd.ExecuteNonQuery();
+                        }
+
+                       
+                        string insertQuery = "INSERT INTO ExpenseCategories (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                        using (var insertCmd = new SQLiteCommand(insertQuery, conn))
+                        {
+                            insertCmd.Parameters.Add("@id", DbType.Int32);
+                            insertCmd.Parameters.Add("@label", DbType.String);
+                            insertCmd.Parameters.Add("@info", DbType.String);
+
                             foreach (var category in categories)
                             {
-                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
+                                if (category.ID <= 0) continue;
+
+                                insertCmd.Parameters["@id"].Value = category.ID;
+                                insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                insertCmd.ExecuteNonQuery();
                             }
                         }
                     }
-                    else
+                    finally
                     {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        
+                        using (var enableFkCmd = new SQLiteCommand("PRAGMA foreign_keys = ON;", conn))
+                        {
+                            enableFkCmd.ExecuteNonQuery();
+                        }
                     }
                 }
-                // ExpenseMatching tablosu
-                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-        {
-            { "MatchingID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
-            { "ItemName", "TEXT NOT NULL" },
-            { "SubRecordType", "TEXT NOT NULL" }
-        }, conn);
 
-                // Periods tablosu - dönem yıllarını saklar
-                EnsureTableAndColumns("Periods", new Dictionary<string, string>
+
+                string varsayilanKategori = "NoCat";
+
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                        {
+                            { "MatchingID", "INTEGER PRIMARY KEY AUTOINCREMENT" },
+                            { "ItemName", "TEXT NOT NULL" },
+                            { "SubRecordType", "TEXT NOT NULL" },
+                            { "CategoryLabel", $"TEXT NOT NULL DEFAULT '{varsayilanKategori}'" }
+                        }, conn);
+
+                using (var updateCmd = new SQLiteCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
                 {
-                    { "PeriodYear", "INTEGER PRIMARY KEY" },
-                    { "DisplayName", "TEXT NULL" }
-                }, conn);
+                    updateCmd.ExecuteNonQuery();
+                }
+
+                EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                    {
+                        { "CONSTRAINT_FK_Matching_Category", "FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) ON UPDATE CASCADE ON DELETE CASCADE" }
+                    }, conn);
+
+                EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                        {
+                            { "PeriodYear", "INTEGER PRIMARY KEY" },
+                            { "DisplayName", "TEXT NULL" }
+                        }, conn);
+                                             
+
             }
+
         }
 
         public IDbConnection GetConnection()
@@ -695,6 +753,7 @@ namespace HesapTakip
 
         private class ExpenseCategory
         {
+            public int ID { get; set; }
             public string Label { get; set; }
             public string Info { get; set; }
         }

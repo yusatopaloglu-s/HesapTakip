@@ -117,6 +117,42 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+  <data name="pbx_github.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
+        cAAAAHABznhikwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAEkSURBVDhPjdNL
+        K0VRGMbxjZGBqdtIJAMlEzMT5WtQylyZu3wEKUxMKJ9AMZEyoGTE3KWYECmXmPH/79ardbKP7alf7fWs
+        d+3T3uecoiIdmMY2jpItTMG9PzOLB3w1cY8ZVGYVVYeqrKAh83DjGpt4TevcC9xzxvUcyvTiHZbrFqQH
+        k+hPvLYzG3DWD+m2WE6FfHF1cSbmFy3OsmLMoibOxPypxVNa+IwtFjVxxlnPPFp8poXP9N+8wTMfLm7S
+        QiMWNRlFzF9Z7GTFAdrRLO4dIubLl+5X5GINF7jFAgYRGcIS7hCHNYEy+/BljuMcz+hDxBvkB7WHn3TB
+        57EcxgDytCE/fIlONMRf5AliyEOR/AbHiF/lr7TCv/Juuo54bede1hfFN6OebVR0PWmnAAAAAElFTkSu
+        QmCC
+</value>
+  </data>
+  <data name="pbx_ins.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
+        cAAAAHABznhikwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAEzSURBVDhPpZNb
+        LgVBEIbrgQQP2IRlOFgAG3ENCQkb4O28WYvLCjjnBWvAAoQ4icv39fRMRmdkJP7ky1R1V1VP1UxH1jTs
+        whU8wgt8FbjmnjE7YE6ShosfcAGncPQL7hljrDmpyF5eWNfp0RwsgbHmbENcg1W7tAgLlZk0BBMtcgkp
+        7xnONFpagzHU/Y9gBVbhHGbBnCeINzjWyDJ5AnfgsOQ+rw2g1gm8arhxqJHlySbPJK+StkVuk1fJob5r
+        fMK+BrJfX9lTS/mZ3ZtPXsQBOI//FyhbcGC+brsFh/YAN8mr1LRQDtFpW9Qiniomu7YMtZohdn1Gp+3A
+        fGXx5Hayaj6jv6Q/RZfst+65VJPnwBzGhs4fZaw5Wzrty+Sz7zJ5qrE+f9xIL4aLfdfZmE2Yioj4BoVg
+        au9OkZRDAAAAAElFTkSuQmCC
+</value>
+  </data>
+  <data name="pbx_fb.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAA
+        cAAAAHABznhikwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAEKSURBVDhPhdKx
+        SgNBEMbxKdKphc8giFVstBWLkBeysjcgBO1EFDQkkCcQCy1E1MbOEBBbEewVLVRQ/99xc8yde94HP9ib
+        nV12l7NEFtDDLZ5zGm9Bc7VpoY9P/NT4wDbUW4oKp0gtSjlBaZNdpBpfsIl1dDGEz+m0WZbwhbjQdRCz
+        AZ/TVRdhO3mh6hGeNYxxh9iTnWIaCtEVPOdI9Uxgr6EQXcKjcapHb2TvoSAXmMccPBqrNkLsfYM9hIKc
+        oS66Vuy9h+2HgjzhAHpxj8aqVa+7B1vGd16Imt5Aa9rIcoRqQ9MGhygygxvEhv82uIbWlDKLAZo20Gn/
+        LI5ZhTbSn+fR+Bgr2VcRs1+yN5rQvb64OwAAAABJRU5ErkJggg==
+</value>
+  </data>
   <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>247, 17</value>
   </metadata>
@@ -129,7 +165,6 @@
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>48</value>
   </metadata>
-  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   <data name="$this.Icon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         AAABAAEAAAAAAAEAIACNKgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAEAAAABAAgGAAAAXHKoZgAAAAFv

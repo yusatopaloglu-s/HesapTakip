@@ -1,0 +1,36 @@
+{
+  "Columns": [
+    {
+      "ColumnName": "Evrak No",
+      "DataKey": "InvoiceNumber"
+    },
+    {
+      "ColumnName": "Tarih",
+      "DataKey": "IssueDate"
+    },
+    {
+      "ColumnName": "TCKN/VKN",
+      "DataKey": "CustomerTaxId"
+    },
+    {
+      "ColumnName": "Kalem Açıklama",
+      "DataKey": "ItemName"
+    },
+    {
+      "ColumnName": "Miktar",
+      "DataKey": "Quantity"
+    },
+    {
+      "ColumnName": "Birim Fiyat",
+      "DataKey": "UnitPrice"
+    },
+    {
+      "ColumnName": "Tutar",
+      "DataKey": "TaxableAmount"
+    },
+    {
+      "ColumnName": "KDV Tutarı",
+      "DataKey": "TaxAmount"
+    }
+  ]
+}

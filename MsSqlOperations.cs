@@ -155,76 +155,271 @@ namespace HesapTakip
                     }, conn);
 
                     // ExpenseCategories tablosunu JSON dosyasından doldur
-                    if (!TableHasData("ExpenseCategories", conn))
-                    {
-                        string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                        if (File.Exists(jsonFilePath))
-                        {
-                            string jsonContent = File.ReadAllText(jsonFilePath);
-                            var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
 
-                            using (var cmd = new SqlCommand())
+                    /*  string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                      if (!File.Exists(jsonFilePath))
+                      {
+                          throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                      }
+
+
+                      string jsonContent = File.ReadAllText(jsonFilePath);
+                      var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                      if (categories != null && categories.Count > 0)
+                      {
+
+                          using (var dropCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                          {
+                              dropCmd.ExecuteNonQuery();
+                          }
+
+                          string createTempQuery = @"
+                                  CREATE TABLE #ExpenseCategories_Temp (
+                                      CategoryID INT PRIMARY KEY,
+                                      Label NVARCHAR(255) NOT NULL,
+                                      Info NVARCHAR(255) NOT NULL
+                                  );";
+
+                          using (var createCmd = new SqlCommand(createTempQuery, conn))
+                          {
+                              createCmd.ExecuteNonQuery();
+                          }
+
+
+                          string insertTempQuery = "INSERT INTO #ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                          using (var insertCmd = new SqlCommand(insertTempQuery, conn))
+                          {
+                              insertCmd.Parameters.Add("@id", SqlDbType.Int);
+                              insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                              insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
+                              foreach (var category in categories)
+                              {
+                                  if (category.ID <= 0) continue;
+
+                                  insertCmd.Parameters["@id"].Value = category.ID;
+                                  insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                  insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                  insertCmd.ExecuteNonQuery();
+                              }
+                          }
+
+                          try
+                          {
+
+                              string bulkNormalizeQuery = @"
+                                      UPDATE ec
+                                      SET ec.Label = ec.Label + '_TEMP_SYNC'
+                                      FROM ExpenseCategories ec
+                                      INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                              using (var normalizeCmd = new SqlCommand(bulkNormalizeQuery, conn))
+                              {
+                                  normalizeCmd.ExecuteNonQuery();
+                              }
+
+                              // Aşama B: Gerçek metinleri güvenle güncelliyoruz.
+                              string bulkUpdateQuery = @"
+                                  UPDATE ec
+                                  SET ec.Label = ect.Label, ec.Info = ect.Info
+                                  FROM ExpenseCategories ec
+                                  INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                              using (var updateCmd = new SqlCommand(bulkUpdateQuery, conn))
+                              {
+                                  updateCmd.ExecuteNonQuery();
+                              }
+
+
+                              using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
+                              {
+                                  identityOnCmd.ExecuteNonQuery();
+                              }
+
+                              string bulkInsertQuery = @"
+                                      INSERT INTO ExpenseCategories (CategoryID, Label, Info)
+                                      SELECT ect.CategoryID, ect.Label, ect.Info
+                                      FROM #ExpenseCategories_Temp ect
+                                      LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
+                                      LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
+                                      WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+
+                              using (var insertCmd = new SqlCommand(bulkInsertQuery, conn))
+                              {
+                                  insertCmd.ExecuteNonQuery();
+                              }
+
+                              using (var identityOffCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories OFF;", conn))
+                              {
+                                  identityOffCmd.ExecuteNonQuery();
+                              }
+                          }
+                          finally
+                          {
+
+                              using (var cleanCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                              {
+                                  cleanCmd.ExecuteNonQuery();
+                              }
+                          }
+                      }
+
+                      // ExpenseMatching tablosu
+                      EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
+                      {
+                          { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
+                          { "ItemName", "NVARCHAR(255) NOT NULL" },
+                          { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                      }, conn);
+
+                      // Periods table
+                      EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                      {
+                          { "PeriodYear", "INT PRIMARY KEY" },
+                          { "DisplayName", "NVARCHAR(255) NULL" }
+                      }, conn); */
+
+                    // =========================================================================
+                    // 1. AŞAMA: TABLO YENİDEN İNŞA VE TERTEMİZ JSON SENKRONIZASYONU (MS SQL)
+                    // =========================================================================
+                    string varsayilanKategori = "NoCat";
+                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                    if (!File.Exists(jsonFilePath))
+                    {
+                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                    }
+
+                    string jsonContent = File.ReadAllText(jsonFilePath);
+                    var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                    if (categories != null && categories.Count > 0)
+                    {
+
+                        string dropFkSafeQuery = @"
+                            IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'CONSTRAINT_FK_Matching_Category')
+                            BEGIN
+                                ALTER TABLE ExpenseMatching DROP CONSTRAINT CONSTRAINT_FK_Matching_Category;
+                            END";
+
+                        using (var dropFkCmd = new SqlCommand(dropFkSafeQuery, conn))
+                        {
+                            dropFkCmd.ExecuteNonQuery();
+                        }
+
+
+                        using (var dropTableCmd = new SqlCommand("IF OBJECT_ID('ExpenseCategories', 'U') IS NOT NULL DROP TABLE ExpenseCategories;", conn))
+                        {
+                            dropTableCmd.ExecuteNonQuery();
+                        }
+
+
+                        string createRealTableQuery = @"
+                            CREATE TABLE ExpenseCategories (
+                                CategoryID INT PRIMARY KEY IDENTITY(1,1),
+                                Label NVARCHAR(255) NOT NULL,
+                                Info NVARCHAR(255) NOT NULL,
+                                CONSTRAINT CONSTRAINT_UQ_Label_Info UNIQUE (Label, Info)
+                            );";
+
+                        using (var createTableCmd = new SqlCommand(createRealTableQuery, conn))
+                        {
+                            createTableCmd.ExecuteNonQuery();
+                        }
+
+                        using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
+                        {
+                            identityOnCmd.ExecuteNonQuery();
+                        }
+
+                        try
+                        {
+                            string insertQuery = "INSERT INTO ExpenseCategories (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                            using (var insertCmd = new SqlCommand(insertQuery, conn))
                             {
-                                cmd.Connection = conn;
+                                insertCmd.Parameters.Add("@id", SqlDbType.Int);
+                                insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                                insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
                                 foreach (var category in categories)
                                 {
-                                    cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                    cmd.Parameters.Clear();
-                                    cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                    cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                    cmd.ExecuteNonQuery();
+                                    if (category.ID > 0)
+                                    {
+                                        insertCmd.Parameters["@id"].Value = category.ID;
+                                        insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                        insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                        insertCmd.ExecuteNonQuery();
+                                    }
+
+                                    using (var updateCmd = new SqlCommand($"UPDATE ExpenseMatching SET CategoryLabel = '{varsayilanKategori}' WHERE CategoryLabel = '' OR CategoryLabel IS NULL", conn))
+                                    {
+                                        updateCmd.ExecuteNonQuery();
+                                    }
+
+
+                                    string addFkSafeQuery = @"
+                                    IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'CONSTRAINT_FK_Matching_Category')
+                                    BEGIN
+                                        ALTER TABLE ExpenseMatching 
+                                        ADD CONSTRAINT CONSTRAINT_FK_Matching_Category 
+                                        FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label) 
+                                        ON UPDATE CASCADE ON DELETE CASCADE;
+                                    END";
+
+                                    using (var addFkCmd = new SqlCommand(addFkSafeQuery, conn))
+                                    {
+                                        addFkCmd.ExecuteNonQuery();
+                                    }
+
+                                    EnsureTableAndColumns("Periods", new Dictionary<string, string>
+                                    {
+                                        { "PeriodYear", "INT PRIMARY KEY" },
+                                        { "DisplayName", "NVARCHAR(255) NULL" }
+                                    }, conn);
+
+
                                 }
                             }
                         }
-                        else
+
+
+                        catch (SqlException ex) when (ex.Number == 4060)
                         {
-                            throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+
+                            Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number}");
+
+                            if (createdNow)
+                            {
+                                try
+                                {
+                                    var builder = new SqlConnectionStringBuilder(_connectionString);
+                                    string databaseName = builder.InitialCatalog;
+                                    Logger.Log($"MsSql InitializeDatabase: attempting master-connection fallback initialization for DB '{databaseName}'");
+                                    InitializeDatabaseUsingMaster(databaseName);
+                                    return;
+                                }
+                                catch (Exception inner)
+                                {
+                                    Logger.Log($"MsSql InitializeDatabase (fallback) failed: {inner.Message}");
+                                    throw;
+                                }
+                            }
+
+                            throw;
                         }
                     }
-
-                    // ExpenseMatching tablosu
-                    EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
-                    {
-                        { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
-                        { "ItemName", "NVARCHAR(255) NOT NULL" },
-                        { "SubRecordType", "NVARCHAR(255) NOT NULL" }
-                    }, conn);
-
-                    // Periods table
-                    EnsureTableAndColumns("Periods", new Dictionary<string, string>
-                    {
-                        { "PeriodYear", "INT PRIMARY KEY" },
-                        { "DisplayName", "NVARCHAR(255) NULL" }
-                    }, conn);
                 }
             }
-            catch (SqlException ex) when (ex.Number == 4060)
+            catch (Exception ex)
             {
-                // 4060 = Cannot open database requested by the login. The login failed.
-                Logger.Log($"MsSql InitializeDatabase: Cannot open database after creation/open attempt: {ex.Message} (Number {ex.Number})");
+                Logger.Log($"MsSql InitializeDatabase failed: {ex.Message}");
+                throw;
+            } }
 
-                // If we just created the database but the login cannot open it (common when Windows auth and user mapping not set),
-                // attempt to initialize schema using master connection and fully-qualified object names as a fallback.
-                if (createdNow)
-                {
-                    try
-                    {
-                        var builder = new SqlConnectionStringBuilder(_connectionString);
-                        string databaseName = builder.InitialCatalog;
-                        Logger.Log($"MsSql InitializeDatabase: attempting master-connection fallback initialization for DB '{databaseName}'");
-                        InitializeDatabaseUsingMaster(databaseName);
-                        return;
-                    }
-                    catch (Exception inner)
-                    {
-                        Logger.Log($"MsSql InitializeDatabase (fallback) failed: {inner.Message}");
-                        throw; // rethrow so caller sees failure
-                    }
-                }
 
-                throw; // not created now and cannot open -> rethrow
-            }
-        }
+
+
+
 
         public IDbConnection GetConnection()
         {
@@ -332,12 +527,12 @@ namespace HesapTakip
             using (var adapter = new SqlDataAdapter(
                 "SELECT TransactionID, Date, Description, Amount, Type, Period FROM Transactions WHERE CUSTOMERID = @customerID AND IsDeleted = 0 ORDER BY Date ASC",
                 conn))
-             {
-                 adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerId);
-                 adapter.Fill(dt);
-             }
-             return dt;
-         }
+            {
+                adapter.SelectCommand.Parameters.AddWithValue("@customerID", customerId);
+                adapter.Fill(dt);
+            }
+            return dt;
+        }
 
         public bool AddTransaction(int customerId, DateTime date, string description, decimal amount, string type, int? period = null)
         {
@@ -347,24 +542,24 @@ namespace HesapTakip
                 using (var cmd = new SqlCommand(
                     @"INSERT INTO Transactions (CustomerID, Date, Description, Amount, Type, Period) 
                       VALUES (@cid, @date, @desc, @amount, @type, @period)", conn))
-                 {
-                     conn.Open();
-                     cmd.Parameters.AddWithValue("@cid", customerId);
-                     cmd.Parameters.AddWithValue("@date", date);
-                     cmd.Parameters.AddWithValue("@desc", description);
-                     cmd.Parameters.AddWithValue("@amount", amount);
-                     cmd.Parameters.AddWithValue("@type", type);
-                     cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
-                     cmd.ExecuteNonQuery();
-                     return true;
-                 }
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@cid", customerId);
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    cmd.Parameters.AddWithValue("@amount", amount);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"MSSQL AddTransaction hatası: {ex.Message}");
                 return false;
             }
-         }
+        }
 
         public bool UpdateTransaction(int transactionId, DateTime date, string description, decimal amount, string type, int? period = null)
         {
@@ -374,24 +569,24 @@ namespace HesapTakip
                 using (var cmd = new SqlCommand(
                     @"UPDATE Transactions SET Date = @date, Description = @desc, 
                       Amount = @amount, Type = @type, Period = @period WHERE TransactionID = @id", conn))
-                 {
-                     conn.Open();
-                     cmd.Parameters.AddWithValue("@date", date);
-                     cmd.Parameters.AddWithValue("@desc", description);
-                     cmd.Parameters.AddWithValue("@amount", amount);
-                     cmd.Parameters.AddWithValue("@type", type);
-                     cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
-                     cmd.Parameters.AddWithValue("@id", transactionId);
-                     cmd.ExecuteNonQuery();
-                     return true;
-                 }
+                {
+                    conn.Open();
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    cmd.Parameters.AddWithValue("@amount", amount);
+                    cmd.Parameters.AddWithValue("@type", type);
+                    cmd.Parameters.AddWithValue("@period", period.HasValue ? (object)period.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@id", transactionId);
+                    cmd.ExecuteNonQuery();
+                    return true;
+                }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"MSSQL UpdateTransaction hatası: {ex.Message}");
                 return false;
             }
-         }
+        }
 
         public bool DeleteTransaction(int transactionId)
         {
@@ -756,44 +951,75 @@ namespace HesapTakip
                 EnsureTableAndColumnsMaster("ExpenseCategories", new Dictionary<string, string>
                 {
                     { "CategoryID", "INT PRIMARY KEY IDENTITY(1,1)" },
-                    { "Label", "NVARCHAR(255) NOT NULL" },
+                    { "Label", "NVARCHAR(255) NOT NULL UNIQUE" },
                     { "Info", "NVARCHAR(255) NOT NULL" }
                 }, conn, databaseName);
 
                 // Fill ExpenseCategories from JSON if empty
-                if (!TableHasDataMaster("ExpenseCategories", conn, databaseName))
-                {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
+                /*    if (!TableHasDataMaster("ExpenseCategories", conn, databaseName))
                     {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
-
-                        using (var cmd = new SqlCommand())
+                        string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                        if (File.Exists(jsonFilePath))
                         {
-                            cmd.Connection = conn;
-                            foreach (var category in categories)
+                            string jsonContent = File.ReadAllText(jsonFilePath);
+                            var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                            using (var cmd = new SqlCommand())
                             {
-                                cmd.CommandText = $"INSERT INTO [{databaseName}].dbo.ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
+                                cmd.Connection = conn;
+                                foreach (var category in categories)
+                                {
+                                    cmd.CommandText = $"INSERT INTO [{databaseName}].dbo.ExpenseCategories (Label, Info) VALUES (@label, @info)";
+                                    cmd.Parameters.Clear();
+                                    cmd.Parameters.AddWithValue("@label", category.Label ?? "");
+                                    cmd.Parameters.AddWithValue("@info", category.Info ?? "");
+                                    cmd.ExecuteNonQuery();
+                                }
                             }
                         }
+                        else
+                        {
+                            throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                        }
                     }
-                    else
-                    {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
-                    }
+                    */
+                string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                if (!File.Exists(jsonFilePath))
+                {
+                    throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
                 }
 
+                string jsonContent = File.ReadAllText(jsonFilePath);
+                var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                if (categories != null && categories.Count > 0)
+                {
+                    // INSERT ... ON DUPLICATE KEY UPDATE yapısı ile yoksa ekler, varsa günceller
+                    string query = @"INSERT INTO ExpenseCategories (Label, Info) 
+                     VALUES (@label, @info) 
+                     ON DUPLICATE KEY UPDATE Info = VALUES(Info);";
+
+                    using (var cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                        cmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
+                        foreach (var category in categories)
+                        {
+                            cmd.Parameters["@label"].Value = category.Label ?? string.Empty;
+                            cmd.Parameters["@info"].Value = category.Info ?? string.Empty;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
                 // ExpenseMatching
                 EnsureTableAndColumnsMaster("ExpenseMatching", new Dictionary<string, string>
                 {
                     { "MatchingID", "INT IDENTITY(1,1) PRIMARY KEY" },
                     { "ItemName", "NVARCHAR(255) NOT NULL" },
-                    { "SubRecordType", "NVARCHAR(255) NOT NULL" }
+                    { "SubRecordType", "NVARCHAR(255) NOT NULL" },
+                    { "CategoryLabel", "VARCHAR(255) NOT NULL" },
+                   { "FOREIGN KEY (CategoryLabel) REFERENCES ExpenseCategories(Label)", "ON UPDATE CASCADE ON DELETE CASCADE" }
                 }, conn, databaseName);
             }
         }
@@ -862,6 +1088,7 @@ namespace HesapTakip
 
         private class ExpenseCategory
         {
+            public int ID { get; set; }
             public string Label { get; set; }
             public string Info { get; set; }
         }

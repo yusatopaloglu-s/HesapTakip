@@ -1,0 +1,33 @@
+{
+  "Name": "Bilanço Satýþ + Kargo",
+  "Target": "BilancoSatisData",
+  "Columns": [
+    { "Header": "Fatura Türü", "Property": "InvoiceType" },
+    { "Header": "Tarih", "Property": "IssueDate" },
+    { "Header": "Evrak No", "Property": "InvoiceNumber" },
+    { "Header": "Alýcý VKN", "Property": "CustomerTaxId" },
+    { "Header": "Alýcý Unvan", "Property": "CustomerName" },
+    { "Header": "Vergisiz 0%", "Property": "TaxExemptAmount0" },
+    { "Header": "Vergisiz 1%", "Property": "TaxableAmount1" },
+    { "Header": "Vergi 1%", "Property": "TaxAmount1" },
+    { "Header": "Vergisiz 10%", "Property": "TaxableAmount10" },
+    { "Header": "Vergi 10%", "Property": "TaxAmount10" },
+    { "Header": "Vergisiz 20%", "Property": "TaxableAmount20" },
+    { "Header": "Vergi 20%", "Property": "TaxAmount20" },
+    { "Header": "Kargo Matrahý", "Property": "KargoMatrah" },
+    { "Header": "Kargo KDV", "Property": "KargoKdv" },
+    { "Header": "Depozito", "Property": "DepositAmount" },
+    { "Header": "Cari Toplam", "Property": "TotalPayable" },
+    { "Header": "Ödeme Türü", "Property": "PaymentMethod" }
+  ],
+  "FilterRules": [
+    {
+      "PropertyName": "ItemName",
+      "FilterValue": "kargo",
+      "ComparisonType": "Contains",
+      "ColumnPrefix": "Kargo",
+      "TaxRate": 20,
+      "IncludeInResult": false
+    }
+  ]
+}

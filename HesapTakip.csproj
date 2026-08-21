@@ -14,7 +14,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.0.7.10</Version>
+    <Version>1.0.7.11</Version>
     <PackageVersion>1.0.0</PackageVersion>
     <NeutralLanguage>tr</NeutralLanguage>	  	    
     </PropertyGroup>
@@ -36,6 +36,10 @@
     <EmbeddedResource Remove="ActivationForm.resx" />
     <EmbeddedResource Remove="EFaturaxml2.resx" />
     <EmbeddedResource Remove="KontorForm.resx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="templates\bilanco-satis-kargo.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -84,7 +88,7 @@
 
   <ItemGroup>
     <None Update="expense_categories.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Properties\Settings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>
@@ -93,6 +97,21 @@
     <None Update="spellbook.jpg">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
+    </None>
+    <None Update="templates\table_bilancoalis.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="templates\table_bilancosatis.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="templates\table_faturakalem.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="templates\table_isletmealis.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="templates\table_isletmesatis.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

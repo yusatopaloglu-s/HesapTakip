@@ -44,7 +44,7 @@ namespace HesapTakip
         //DBS Kategorileri
         DataTable GetCategories();
         // Expense matching (optional) - default implementations provided
-        bool AddExpenseMatching(string itemName, string subRecordType) { return false; }
+        bool AddExpenseMatching(string itemName, string subRecordType, string categoryLabel) { return false; }
         bool DeleteExpenseMatching(string itemName) { return false; }
         DataTable GetExpenseMatchings() { return new DataTable(); }
         // Periods (fiscal years) management (optional)
