@@ -1,10 +1,8 @@
-﻿using System;
-using System.Diagnostics;
-using System.Windows.Forms;
-using QuestPDF.Fluent;
+﻿using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 
 namespace HesapTakip

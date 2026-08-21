@@ -1022,8 +1022,8 @@ namespace HesapTakip
 
                         var bilancoAlisEntry = new InvoiceData
                         {
-                                            InvoiceType = invoiceType,
-                                            IssueDate = DateTime.TryParse(
+                            InvoiceType = invoiceType,
+                            IssueDate = DateTime.TryParse(
                           issueDate,
                           out var date)
                               ? date.ToString("dd.MM.yyyy", culture)
@@ -1049,8 +1049,8 @@ namespace HesapTakip
                               out var dep)
                                   ? dep.ToString("N2", formatter2)
                                   : "0,00",
-                                                Oiv = oiv.ToString("N2", formatter2),
-                                                TotalPayable = double.TryParse(
+                            Oiv = oiv.ToString("N2", formatter2),
+                            TotalPayable = double.TryParse(
                               payableAmount,
                               NumberStyles.Any,
                               CultureInfo.InvariantCulture,

@@ -136,11 +136,11 @@ namespace HesapTakip
                     { "CategoryID", "INT PRIMARY KEY AUTO_INCREMENT" },
                     { "Label", "VARCHAR(255) NOT NULL" },
                     { "Info", "VARCHAR(255) NOT NULL" },
-                    { "CONSTRAINT_UQ_Label", "CONSTRAINT CONSTRAINT_UQ_Label UNIQUE (Label)" }
+                    { "CONSTRAINT_UQ_Label_Info", "CONSTRAINT CONSTRAINT_UQ_Label_Info UNIQUE (Label, Info)" }
                 }, conn);
 
                 // ExpenseCategories tablosunu JSON dosyasından doldur
-                 string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
                 if (!File.Exists(jsonFilePath))
                 {
                     throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
@@ -151,27 +151,99 @@ namespace HesapTakip
 
                 if (categories != null && categories.Count > 0)
                 {
-                    // INSERT ... ON DUPLICATE KEY UPDATE yapısı ile yoksa ekler, varsa günceller
-                    string query = @"INSERT INTO ExpenseCategories (Label, Info) 
-                     VALUES (@label, @info) 
-                     ON DUPLICATE KEY UPDATE Info = VALUES(Info);";
 
-                    using (var cmd = new MySqlCommand(query, conn))
+                    using (var dropCmd = new MySqlCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
                     {
-                        cmd.Parameters.Add("@label", MySqlDbType.VarChar);
-                        cmd.Parameters.Add("@info", MySqlDbType.VarChar);
+                        dropCmd.ExecuteNonQuery();
+                    }
+
+                    string createTempQuery = @"
+                                    CREATE TABLE ExpenseCategories_Temp (
+                                        CategoryID INT PRIMARY KEY,
+                                        Label VARCHAR(255) NOT NULL,
+                                        Info VARCHAR(255) NOT NULL
+                                    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_turkish_ci;";
+
+                    using (var createCmd = new MySqlCommand(createTempQuery, conn))
+                    {
+                        createCmd.ExecuteNonQuery();
+                    }
+
+
+                    string insertTempQuery = "INSERT INTO ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                    using (var insertCmd = new MySqlCommand(insertTempQuery, conn))
+                    {
+                        insertCmd.Parameters.Add("@id", MySqlDbType.Int32);
+                        insertCmd.Parameters.Add("@label", MySqlDbType.VarChar);
+                        insertCmd.Parameters.Add("@info", MySqlDbType.VarChar);
 
                         foreach (var category in categories)
                         {
-                            cmd.Parameters["@label"].Value = category.Label ?? string.Empty;
-                            cmd.Parameters["@info"].Value = category.Info ?? string.Empty;
-                            cmd.ExecuteNonQuery();
+                            if (category.ID <= 0) continue;
+
+                            insertCmd.Parameters["@id"].Value = category.ID;
+                            insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                            insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                            insertCmd.ExecuteNonQuery();
+                        }
+                    }
+
+
+                    using (var disableCmd = new MySqlCommand("SET UNIQUE_CHECKS = 0; SET FOREIGN_KEY_CHECKS = 0;", conn))
+                    {
+                        disableCmd.ExecuteNonQuery();
+                    }
+
+                    try
+                    {
+
+                        string bulkNormalizeQuery = @"
+                            UPDATE ExpenseCategories ec
+                            INNER JOIN ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID
+                            SET ec.Label = CONCAT(ec.Label, '_TEMP_SYNC');";
+
+                        using (var normalizeCmd = new MySqlCommand(bulkNormalizeQuery, conn))
+                        {
+                            normalizeCmd.ExecuteNonQuery();
+                        }
+
+                        string bulkUpdateQuery = @"
+                            UPDATE ExpenseCategories ec
+                            INNER JOIN ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID
+                            SET ec.Label = ect.Label, ec.Info = ect.Info;";
+
+                        using (var updateCmd = new MySqlCommand(bulkUpdateQuery, conn))
+                        {
+                            updateCmd.ExecuteNonQuery();
+                        }
+
+
+                        string bulkInsertQuery = @"
+                            INSERT INTO ExpenseCategories (CategoryID, Label, Info)
+                            SELECT ect.CategoryID, ect.Label, ect.Info
+                            FROM ExpenseCategories_Temp ect
+                            LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
+                            LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
+                            WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+
+                        using (var insertCmd = new MySqlCommand(bulkInsertQuery, conn))
+                        {
+                            insertCmd.ExecuteNonQuery();
+                        }
+                    }
+                    finally
+                    {
+
+                        using (var cleanCmd = new MySqlCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+                        {
+                            cleanCmd.ExecuteNonQuery();
                         }
                     }
                 }
 
-                string varsayilanKategori = "NoCat";
+
                 // ExpenseMatching tablosu
+                string varsayilanKategori = "NoCat";
                 EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
                  {
                    { "MatchingID", "INT PRIMARY KEY AUTO_INCREMENT" },
@@ -194,7 +266,7 @@ namespace HesapTakip
                     { "PeriodYear", "INT PRIMARY KEY" },
                     { "DisplayName", "VARCHAR(255) NULL" }
                 }, conn);
-                               
+
             }
         }
 
@@ -705,6 +777,7 @@ namespace HesapTakip
 
         private class ExpenseCategory
         {
+            public int ID { get; set; }
             public string Label { get; set; }
             public string Info { get; set; }
         }
@@ -735,9 +808,9 @@ namespace HesapTakip
                     return true;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                ex.Message.ToString(); 
+                ex.Message.ToString();
                 return false;
             }
         }
@@ -802,6 +875,6 @@ namespace HesapTakip
             {
                 return false;
             }
-        }       
+        }
     }
 }

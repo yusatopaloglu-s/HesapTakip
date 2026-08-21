@@ -167,32 +167,102 @@ namespace HesapTakip
                 }, conn);
 
                 // ExpenseCategories tablosunu JSON dosyasından doldur
-                if (!TableHasData("ExpenseCategories", conn))
+                string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                if (!File.Exists(jsonFilePath))
                 {
-                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                    if (File.Exists(jsonFilePath))
-                    {
-                        string jsonContent = File.ReadAllText(jsonFilePath);
-                        var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+                    throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                }
 
-                        using (var cmd = new SQLiteCommand())
+                string jsonContent = File.ReadAllText(jsonFilePath);
+                var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                if (categories != null && categories.Count > 0)
+                {
+          
+                    using (var dropCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+                    {
+                        dropCmd.ExecuteNonQuery();
+                    }
+
+                    string createTempQuery = @"
+        CREATE TABLE ExpenseCategories_Temp (
+            CategoryID INTEGER PRIMARY KEY,
+            Label TEXT NOT NULL,
+            Info TEXT NOT NULL
+        );";
+
+                    using (var createCmd = new SQLiteCommand(createTempQuery, conn))
+                    {
+                        createCmd.ExecuteNonQuery();
+                    }
+
+           
+                    string insertTempQuery = "INSERT INTO ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                    using (var insertCmd = new SQLiteCommand(insertTempQuery, conn))
+                    {
+                        insertCmd.Parameters.Add("@id", DbType.Int32);
+                        insertCmd.Parameters.Add("@label", DbType.String);
+                        insertCmd.Parameters.Add("@info", DbType.String);
+
+                        foreach (var category in categories)
                         {
-                            cmd.Connection = conn;
-                            foreach (var category in categories)
-                            {
-                                cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                cmd.Parameters.Clear();
-                                cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                cmd.ExecuteNonQuery();
-                            }
+                            if (category.ID <= 0) continue;
+
+                            insertCmd.Parameters["@id"].Value = category.ID;
+                            insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                            insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                            insertCmd.ExecuteNonQuery();
                         }
                     }
-                    else
+
+                    try
                     {
-                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+
+                        string bulkNormalizeQuery = @"
+            UPDATE ExpenseCategories
+            SET Label = Label || '_TEMP_SYNC'
+            WHERE CategoryID IN (SELECT CategoryID FROM ExpenseCategories_Temp);";
+
+                        using (var normalizeCmd = new SQLiteCommand(bulkNormalizeQuery, conn))
+                        {
+                            normalizeCmd.ExecuteNonQuery();
+                        }
+
+                      
+                        string bulkUpdateQuery = @"
+            UPDATE ExpenseCategories
+            SET Label = ect.Label, Info = ect.Info
+            FROM ExpenseCategories_Temp ect
+            WHERE ExpenseCategories.CategoryID = ect.CategoryID;";
+
+                        using (var updateCmd = new SQLiteCommand(bulkUpdateQuery, conn))
+                        {
+                            updateCmd.ExecuteNonQuery();
+                        }
+
+                        string bulkInsertQuery = @"
+            INSERT INTO ExpenseCategories (CategoryID, Label, Info)
+            SELECT ect.CategoryID, ect.Label, ect.Info
+            FROM ExpenseCategories_Temp ect
+            LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
+            LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
+            WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+
+                        using (var insertCmd = new SQLiteCommand(bulkInsertQuery, conn))
+                        {
+                            insertCmd.ExecuteNonQuery();
+                        }
+                    }
+                    finally
+                    {
+                   
+                        using (var cleanCmd = new SQLiteCommand("DROP TABLE IF EXISTS ExpenseCategories_Temp;", conn))
+                        {
+                            cleanCmd.ExecuteNonQuery();
+                        }
                     }
                 }
+
                 // ExpenseMatching tablosu
                 EnsureTableAndColumns("ExpenseMatching", new Dictionary<string, string>
         {
@@ -764,6 +834,7 @@ namespace HesapTakip
 
         private class ExpenseCategory
         {
+            public int ID { get; set; }
             public string Label { get; set; }
             public string Info { get; set; }
         }

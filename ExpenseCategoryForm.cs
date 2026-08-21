@@ -87,7 +87,7 @@ namespace HesapTakip
                 MessageBox.Show($"Eşleştirmeler yüklenirken hata oluştu: {ex.Message}");
             }
         }
-         private void BtnAdd_Click(object sender, EventArgs e)
+        private void BtnAdd_Click(object sender, EventArgs e)
         {
             string itemName = textBox1.Text.Trim();
             if (string.IsNullOrWhiteSpace(itemName))
@@ -96,18 +96,18 @@ namespace HesapTakip
                 return;
             }
 
-            
+
             if (dgv_expensecatlist.SelectedRows.Count == 0)
             {
                 MessageBox.Show("Lütfen bir kategori seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-           
-            string categoryLabel = dgv_expensecatlist.SelectedRows[0].Cells["Label"].Value.ToString();
-            string subRecordType = categoryLabel; 
 
-           
+            string categoryLabel = dgv_expensecatlist.SelectedRows[0].Cells["Label"].Value.ToString();
+            string subRecordType = categoryLabel;
+
+
             string normalizedItemName = itemName.ToLower().Trim();
             if (_matchList.AsEnumerable().Any(row => row.Field<string>("ItemName").ToLower().Trim() == normalizedItemName))
             {
@@ -117,15 +117,15 @@ namespace HesapTakip
 
             try
             {
-                
+
                 bool sonuc = _db.AddExpenseMatching(itemName, subRecordType, categoryLabel);
 
                 if (sonuc)
                 {
 
-                    textBox1.Text = ""; 
+                    textBox1.Text = "";
 
-                    
+
                     LoadMatchings();
 
                     MessageBox.Show("Eşleşme başarıyla eklendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -150,7 +150,7 @@ namespace HesapTakip
                 if (_db.DeleteExpenseMatching(itemName))
                 {
                     dvg_matchlist.Rows.RemoveAt(dvg_matchlist.SelectedRows[0].Index);
-                  
+
                 }
                 else
                 {

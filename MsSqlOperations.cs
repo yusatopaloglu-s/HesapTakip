@@ -1,5 +1,4 @@
-﻿using MySql.Data.MySqlClient;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Text.Json;
@@ -155,31 +154,112 @@ namespace HesapTakip
                         { "Info", "NVARCHAR(255) NOT NULL" }
                     }, conn);
 
-                    // ExpenseCategories tablosunu JSON dosyasından doldur
-                    if (!TableHasData("ExpenseCategories", conn))
+                    string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
+                    if (!File.Exists(jsonFilePath))
                     {
-                        string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "expense_categories.json");
-                        if (File.Exists(jsonFilePath))
-                        {
-                            string jsonContent = File.ReadAllText(jsonFilePath);
-                            var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+                        throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+                    }
 
-                            using (var cmd = new SqlCommand())
+                    // ExpenseCategories tablosunu JSON dosyasından doldur
+                    string jsonContent = File.ReadAllText(jsonFilePath);
+                    var categories = JsonSerializer.Deserialize<List<ExpenseCategory>>(jsonContent);
+
+                    if (categories != null && categories.Count > 0)
+                    {
+
+                        using (var dropCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                        {
+                            dropCmd.ExecuteNonQuery();
+                        }
+
+                        string createTempQuery = @"
+                                CREATE TABLE #ExpenseCategories_Temp (
+                                    CategoryID INT PRIMARY KEY,
+                                    Label NVARCHAR(255) NOT NULL,
+                                    Info NVARCHAR(255) NOT NULL
+                                );";
+
+                        using (var createCmd = new SqlCommand(createTempQuery, conn))
+                        {
+                            createCmd.ExecuteNonQuery();
+                        }
+
+
+                        string insertTempQuery = "INSERT INTO #ExpenseCategories_Temp (CategoryID, Label, Info) VALUES (@id, @label, @info);";
+                        using (var insertCmd = new SqlCommand(insertTempQuery, conn))
+                        {
+                            insertCmd.Parameters.Add("@id", SqlDbType.Int);
+                            insertCmd.Parameters.Add("@label", SqlDbType.NVarChar);
+                            insertCmd.Parameters.Add("@info", SqlDbType.NVarChar);
+
+                            foreach (var category in categories)
                             {
-                                cmd.Connection = conn;
-                                foreach (var category in categories)
-                                {
-                                    cmd.CommandText = "INSERT INTO ExpenseCategories (Label, Info) VALUES (@label, @info)";
-                                    cmd.Parameters.Clear();
-                                    cmd.Parameters.AddWithValue("@label", category.Label ?? "");
-                                    cmd.Parameters.AddWithValue("@info", category.Info ?? "");
-                                    cmd.ExecuteNonQuery();
-                                }
+                                if (category.ID <= 0) continue;
+
+                                insertCmd.Parameters["@id"].Value = category.ID;
+                                insertCmd.Parameters["@label"].Value = category.Label?.Trim() ?? string.Empty;
+                                insertCmd.Parameters["@info"].Value = category.Info?.Trim() ?? string.Empty;
+                                insertCmd.ExecuteNonQuery();
                             }
                         }
-                        else
+
+                        try
                         {
-                            throw new FileNotFoundException("expense_categories.json file not found in the application directory.");
+
+                            string bulkNormalizeQuery = @"
+                                    UPDATE ec
+                                    SET ec.Label = ec.Label + '_TEMP_SYNC'
+                                    FROM ExpenseCategories ec
+                                    INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                            using (var normalizeCmd = new SqlCommand(bulkNormalizeQuery, conn))
+                            {
+                                normalizeCmd.ExecuteNonQuery();
+                            }
+
+                            // Aşama B: Gerçek metinleri güvenle güncelliyoruz.
+                            string bulkUpdateQuery = @"
+                                UPDATE ec
+                                SET ec.Label = ect.Label, ec.Info = ect.Info
+                                FROM ExpenseCategories ec
+                                INNER JOIN #ExpenseCategories_Temp ect ON ec.CategoryID = ect.CategoryID;";
+
+                            using (var updateCmd = new SqlCommand(bulkUpdateQuery, conn))
+                            {
+                                updateCmd.ExecuteNonQuery();
+                            }
+
+
+                            using (var identityOnCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories ON;", conn))
+                            {
+                                identityOnCmd.ExecuteNonQuery();
+                            }
+
+                            string bulkInsertQuery = @"
+                                    INSERT INTO ExpenseCategories (CategoryID, Label, Info)
+                                    SELECT ect.CategoryID, ect.Label, ect.Info
+                                    FROM #ExpenseCategories_Temp ect
+                                    LEFT JOIN ExpenseCategories ec_id ON ect.CategoryID = ec_id.CategoryID
+                                    LEFT JOIN ExpenseCategories ec_txt ON ect.Label = ec_txt.Label AND ect.Info = ec_txt.Info
+                                    WHERE ec_id.CategoryID IS NULL AND ec_txt.CategoryID IS NULL;";
+
+                            using (var insertCmd = new SqlCommand(bulkInsertQuery, conn))
+                            {
+                                insertCmd.ExecuteNonQuery();
+                            }
+
+                            using (var identityOffCmd = new SqlCommand("SET IDENTITY_INSERT ExpenseCategories OFF;", conn))
+                            {
+                                identityOffCmd.ExecuteNonQuery();
+                            }
+                        }
+                        finally
+                        {
+
+                            using (var cleanCmd = new SqlCommand("IF OBJECT_ID('tempdb..#ExpenseCategories_Temp') IS NOT NULL DROP TABLE #ExpenseCategories_Temp;", conn))
+                            {
+                                cleanCmd.ExecuteNonQuery();
+                            }
                         }
                     }
 
@@ -197,7 +277,7 @@ namespace HesapTakip
                         { "PeriodYear", "INT PRIMARY KEY" },
                         { "DisplayName", "NVARCHAR(255) NULL" }
                     }, conn);
-                                     
+
                 }
             }
 
@@ -898,6 +978,7 @@ namespace HesapTakip
 
         private class ExpenseCategory
         {
+            public int ID { get; set; }
             public string Label { get; set; }
             public string Info { get; set; }
         }
