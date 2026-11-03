@@ -2125,11 +2125,10 @@ namespace HesapTakip
             if (!Directory.Exists(templateDir)) return list;
 
             /* var files = Directory.GetFiles(templateDir, "*.json"); */
-
             var files = Directory.GetFiles(
-            templateDir,
-            "*.json",
-            SearchOption.AllDirectories);
+                templateDir,
+                "*.json",
+                SearchOption.AllDirectories);
 
             foreach (var f in files)
             {
@@ -2261,7 +2260,6 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
-            btn_add_custom_table = new Button();
             lblSplitStatus = new Label();
             progressBarSplit = new ProgressBar();
             btnSplitAndSave = new Button();
@@ -2271,6 +2269,7 @@ namespace HesapTakip
             cbx_customerlist = new ComboBox();
             btnExportExcel = new Button();
             btn_clr = new Button();
+            btn_edt_custom_table = new Button();
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
@@ -2316,7 +2315,6 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            groupBox2.Controls.Add(btn_add_custom_table);
             groupBox2.Controls.Add(lblSplitStatus);
             groupBox2.Controls.Add(progressBarSplit);
             groupBox2.Controls.Add(btnSplitAndSave);
@@ -2326,6 +2324,7 @@ namespace HesapTakip
             groupBox2.Controls.Add(cbx_customerlist);
             groupBox2.Controls.Add(btnExportExcel);
             groupBox2.Controls.Add(btn_clr);
+            groupBox2.Controls.Add(btn_edt_custom_table);
             groupBox2.Controls.Add(cmbTableSelector);
             groupBox2.Controls.Add(btnUpload);
             groupBox2.Controls.Add(label1);
@@ -2338,15 +2337,6 @@ namespace HesapTakip
             groupBox2.TabStop = false;
             groupBox2.Enter += groupBox2_Enter;
             // 
-            // btn_add_custom_table
-            // 
-            btn_add_custom_table.Location = new Point(197, 21);
-            btn_add_custom_table.Name = "btn_add_custom_table";
-            btn_add_custom_table.Size = new Size(100, 24);
-            btn_add_custom_table.TabIndex = 14;
-            btn_add_custom_table.Text = "Tablo Ekle";
-            btn_add_custom_table.UseVisualStyleBackColor = true;
-            btn_add_custom_table.Click += btn_add_custom_table_Click;
             // 
             // lblSplitStatus
             // 
@@ -2394,6 +2384,17 @@ namespace HesapTakip
             BtnExportCSV.Text = "CSV";
             BtnExportCSV.UseVisualStyleBackColor = true;
             BtnExportCSV.Click += BtnExportCSV_Click;
+            // \n
+            // btn_edt_custom_table
+            // \n
+            btn_edt_custom_table = new Button();
+            btn_edt_custom_table.Location = new Point(297, 77);
+            btn_edt_custom_table.Name = "btn_edt_custom_table";
+            btn_edt_custom_table.Size = new Size(100, 24);
+            btn_edt_custom_table.TabIndex = 10;
+            btn_edt_custom_table.Text = "Şablonu Düzenle";
+            btn_edt_custom_table.UseVisualStyleBackColor = true;
+            btn_edt_custom_table.Click += Btn_edt_custom_table_Click;
             // 
             // label2
             // 
@@ -2501,22 +2502,7 @@ namespace HesapTakip
         {
 
         }
-        private Button btn_add_custom_table;
 
-        private void btn_add_custom_table_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var baseTemplates = LoadBuiltinTemplatesFromFiles().Select(t => t.Name).ToList();
-                using var dlg = new CustomTemplateForm(_db, baseTemplates);
-                if (dlg.ShowDialog(this) == DialogResult.OK)
-                {
-
-                    InitializeComboBox();
-                    MessageBox.Show("Şablon kaydedildi.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception ex)
             {
                 MessageBox.Show($"Şablon oluşturma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
