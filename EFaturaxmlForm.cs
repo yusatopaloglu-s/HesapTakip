@@ -2124,15 +2124,11 @@ namespace HesapTakip
             var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
             if (!Directory.Exists(templateDir)) return list;
 
-                        /* var files = Directory.GetFiles(templateDir, "*.json"); */
-                        // Custom template klasörünü hariç tut - ./templates/custom içeriği cmbTableSelector'a yüklenmemeli
+            /* var files = Directory.GetFiles(templateDir, "*.json"); */
             var files = Directory.GetFiles(
-            templateDir,
+                templateDir,
                 "*.json",
-                SearchOption.AllDirectories)
-                .Where(f => !f.Contains(Path.DirectorySeparatorChar + "custom" + Path.DirectorySeparatorChar)
-                    && !f.EndsWith(Path.DirectorySeparatorChar + "custom.json"))
-                .ToList();
+                SearchOption.AllDirectories);
 
             foreach (var f in files)
             {
@@ -2264,8 +2260,6 @@ namespace HesapTakip
             cmbTableSelector = new ComboBox();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
-            btn_edt_custom_table = new Button();
-            btn_add_custom_table = new Button();
             lblSplitStatus = new Label();
             progressBarSplit = new ProgressBar();
             btnSplitAndSave = new Button();
@@ -2275,6 +2269,7 @@ namespace HesapTakip
             cbx_customerlist = new ComboBox();
             btnExportExcel = new Button();
             btn_clr = new Button();
+            btn_edt_custom_table = new Button();
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
@@ -2320,8 +2315,6 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            groupBox2.Controls.Add(btn_edt_custom_table);
-            groupBox2.Controls.Add(btn_add_custom_table);
             groupBox2.Controls.Add(lblSplitStatus);
             groupBox2.Controls.Add(progressBarSplit);
             groupBox2.Controls.Add(btnSplitAndSave);
@@ -2331,6 +2324,7 @@ namespace HesapTakip
             groupBox2.Controls.Add(cbx_customerlist);
             groupBox2.Controls.Add(btnExportExcel);
             groupBox2.Controls.Add(btn_clr);
+            groupBox2.Controls.Add(btn_edt_custom_table);
             groupBox2.Controls.Add(cmbTableSelector);
             groupBox2.Controls.Add(btnUpload);
             groupBox2.Controls.Add(label1);
@@ -2338,30 +2332,11 @@ namespace HesapTakip
             groupBox2.Dock = DockStyle.Top;
             groupBox2.Location = new Point(3, 19);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1326, 153);
+            groupBox2.Size = new Size(1326, 152);
             groupBox2.TabIndex = 6;
             groupBox2.TabStop = false;
             groupBox2.Enter += groupBox2_Enter;
             // 
-            // btn_edt_custom_table
-            // 
-            btn_edt_custom_table.Location = new Point(281, 15);
-            btn_edt_custom_table.Name = "btn_edt_custom_table";
-            btn_edt_custom_table.Size = new Size(94, 24);
-            btn_edt_custom_table.TabIndex = 15;
-            btn_edt_custom_table.Text = "Tablo Düzenle";
-            btn_edt_custom_table.UseVisualStyleBackColor = true;
-            btn_edt_custom_table.Click += btn_edt_custom_table_Click;
-            // 
-            // btn_add_custom_table
-            // 
-            btn_add_custom_table.Location = new Point(197, 15);
-            btn_add_custom_table.Name = "btn_add_custom_table";
-            btn_add_custom_table.Size = new Size(78, 24);
-            btn_add_custom_table.TabIndex = 14;
-            btn_add_custom_table.Text = "Tablolar";
-            btn_add_custom_table.UseVisualStyleBackColor = true;
-            btn_add_custom_table.Click += btn_add_custom_table_Click;
             // 
             // lblSplitStatus
             // 
@@ -2382,9 +2357,9 @@ namespace HesapTakip
             // 
             // btnSplitAndSave
             // 
-            btnSplitAndSave.Location = new Point(408, 15);
+            btnSplitAndSave.Location = new Point(562, 22);
             btnSplitAndSave.Name = "btnSplitAndSave";
-            btnSplitAndSave.Size = new Size(100, 37);
+            btnSplitAndSave.Size = new Size(100, 39);
             btnSplitAndSave.TabIndex = 11;
             btnSplitAndSave.Text = "Excel Parçala";
             btnSplitAndSave.UseVisualStyleBackColor = true;
@@ -2392,7 +2367,7 @@ namespace HesapTakip
             // 
             // btn_alttur
             // 
-            btn_alttur.Location = new Point(533, 15);
+            btn_alttur.Location = new Point(341, 81);
             btn_alttur.Name = "btn_alttur";
             btn_alttur.Size = new Size(100, 39);
             btn_alttur.TabIndex = 10;
@@ -2402,29 +2377,40 @@ namespace HesapTakip
             // 
             // BtnExportCSV
             // 
-            BtnExportCSV.Location = new Point(197, 71);
+            BtnExportCSV.Location = new Point(197, 77);
             BtnExportCSV.Name = "BtnExportCSV";
-            BtnExportCSV.Size = new Size(78, 24);
+            BtnExportCSV.Size = new Size(100, 24);
             BtnExportCSV.TabIndex = 9;
-            BtnExportCSV.Text = "CSV Çıktı";
+            BtnExportCSV.Text = "CSV";
             BtnExportCSV.UseVisualStyleBackColor = true;
             BtnExportCSV.Click += BtnExportCSV_Click;
+            // \n
+            // btn_edt_custom_table
+            // \n
+            btn_edt_custom_table = new Button();
+            btn_edt_custom_table.Location = new Point(297, 77);
+            btn_edt_custom_table.Name = "btn_edt_custom_table";
+            btn_edt_custom_table.Size = new Size(100, 24);
+            btn_edt_custom_table.TabIndex = 10;
+            btn_edt_custom_table.Text = "Şablonu Düzenle";
+            btn_edt_custom_table.UseVisualStyleBackColor = true;
+            btn_edt_custom_table.Click += Btn_edt_custom_table_Click;
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 9F);
-            label2.Location = new Point(533, 58);
+            label2.Location = new Point(341, 19);
             label2.Name = "label2";
-            label2.Size = new Size(152, 30);
+            label2.Size = new Size(167, 30);
             label2.TabIndex = 7;
-            label2.Text = "İşletme Excel Faaliyet Kodu \r\nEkleme İçin Firma Seç";
+            label2.Text = "Müşteri Seç\r\nİşletmelerde Faaliyet Kodu için";
             // 
             // cbx_customerlist
             // 
             cbx_customerlist.DropDownStyle = ComboBoxStyle.DropDownList;
             cbx_customerlist.FormattingEnabled = true;
-            cbx_customerlist.Location = new Point(533, 91);
+            cbx_customerlist.Location = new Point(341, 52);
             cbx_customerlist.Name = "cbx_customerlist";
             cbx_customerlist.Size = new Size(171, 23);
             cbx_customerlist.TabIndex = 6;
@@ -2432,17 +2418,17 @@ namespace HesapTakip
             // 
             // btnExportExcel
             // 
-            btnExportExcel.Location = new Point(197, 43);
+            btnExportExcel.Location = new Point(197, 49);
             btnExportExcel.Name = "btnExportExcel";
-            btnExportExcel.Size = new Size(78, 24);
+            btnExportExcel.Size = new Size(100, 24);
             btnExportExcel.TabIndex = 4;
-            btnExportExcel.Text = "Excel Çıktı";
+            btnExportExcel.Text = "Excel";
             btnExportExcel.UseVisualStyleBackColor = true;
             btnExportExcel.Click += BtnExportExcel_Click;
             // 
             // btn_clr
             // 
-            btn_clr.Location = new Point(192, 107);
+            btn_clr.Location = new Point(197, 106);
             btn_clr.Name = "btn_clr";
             btn_clr.Size = new Size(100, 24);
             btn_clr.TabIndex = 5;
@@ -2516,22 +2502,7 @@ namespace HesapTakip
         {
 
         }
-        private Button btn_add_custom_table;
 
-        private void btn_add_custom_table_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var baseTemplates = LoadBuiltinTemplatesFromFiles().Select(t => t.Name).ToList();
-                using var dlg = new CustomTemplateForm(_db, baseTemplates);
-                if (dlg.ShowDialog(this) == DialogResult.OK)
-                {
-
-                    InitializeComboBox();
-                    MessageBox.Show("Şablon kaydedildi.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception ex)
             {
                 MessageBox.Show($"Şablon oluşturma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -2558,12 +2529,6 @@ namespace HesapTakip
                 "Contains" => source.Contains(filter),
                 _ => source == filter
             };
-        }
-        private Button btn_edt_custom_table;
-
-        private void btn_edt_custom_table_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }
