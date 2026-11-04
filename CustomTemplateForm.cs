@@ -18,8 +18,69 @@ public class CustomTemplateForm : Form
         _db = db;
         InitializeComponents();
 
-        cmbBaseTemplate.Items.AddRange(baseTemplates.ToArray());
+        // Custom klasörünü hariç tut - ./templates/custom içeriği cmbBaseTemplate'e yüklenmemeli
+        var builtin = LoadBuiltinTemplatesFromFiles(baseTemplates);
+        cmbBaseTemplate.Items.AddRange(builtin.ToArray());
         if (cmbBaseTemplate.Items.Count > 0) cmbBaseTemplate.SelectedIndex = 0;
+    }
+
+    private List<string> LoadBuiltinTemplatesFromFiles(IEnumerable<string> baseTemplates)
+    {
+        var list = new List<string>();
+        var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
+        if (!Directory.Exists(templateDir)) return list;
+
+        // Custom alt klasörünü Hariç tut
+        var customDir = Path.Combine(templateDir, "custom");
+        var files = Directory.GetFiles(
+            templateDir,
+            "*.json",
+            SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "custom" + Path.DirectorySeparatorChar)
+                && !f.EndsWith(Path.DirectorySeparatorChar + "custom.json"))
+            .ToList();
+
+        foreach (var f in files)
+        {
+            try
+            {
+                var json = File.ReadAllText(f);
+                string name = GetNameFromJsonOrFileName(json, Path.GetFileName(f));
+                list.Add(name);
+            }
+            catch { }
+        }
+
+        // Verilen baseTemplates listesinden sadece built-in'leri ekle
+        foreach (var t in baseTemplates)
+        {
+            if (!list.Contains(t))
+            {
+                list.Add(t);
+            }
+        }
+
+        return list;
+    }
+
+    private string GetNameFromJsonOrFileName(string json, string fileName)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("Name", out var nameProp) && nameProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                return nameProp.GetString() ?? fileName;
+        }
+        catch { }
+
+        // fallback: dosya adına göre okunaklı isim
+        var n = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
+        if (n.Contains("bilancosatis") || n.Contains("bilanco_satis") || n.Contains("bilanco-satis")) return "Bilanço Satış";
+        if (n.Contains("bilancoalis") || n.Contains("bilanco_alis") || n.Contains("bilanco-alis")) return "Bilanço Alış";
+        if (n.Contains("isletmesatis") || n.Contains("isletme_satis")) return "Luca İşletme Satış";
+        if (n.Contains("isletmealis") || n.Contains("isletme_alis")) return "Luca İşletme Alış";
+        if (n.Contains("faturakalem")) return "Fatura Kalemleri Adet";
+        return Path.GetFileNameWithoutExtension(fileName);
     }
 
     private void InitializeComponents()

@@ -2283,7 +2283,7 @@ namespace HesapTakip
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
-           
+
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -2326,7 +2326,7 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-           
+
             groupBox2.Controls.Add(btn_add_custom_table);
             groupBox2.Controls.Add(lblSplitStatus);
             groupBox2.Controls.Add(progressBarSplit);

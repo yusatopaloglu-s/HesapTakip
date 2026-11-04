@@ -24,6 +24,9 @@
     <Compile Remove="ActivationForm.Designer.cs" />
     <Compile Remove="ActivationForm_old.cs" />
     <Compile Remove="AssemblyInfo.cs" />
+    <Compile Remove="CustomTableAddForm.cs" />
+    <Compile Remove="CustomTemplateEditForm.cs" />
+    <Compile Remove="CustomTemplateForm.designer.cs" />
     <Compile Remove="EFaturaxml2.cs" />
     <Compile Remove="ExportManager.cs" />
     <Compile Remove="KontorForm.cs" />
@@ -34,11 +37,13 @@
 
   <ItemGroup>
     <EmbeddedResource Remove="ActivationForm.resx" />
+    <EmbeddedResource Remove="CustomTemplateForm.resx" />
     <EmbeddedResource Remove="EFaturaxml2.resx" />
     <EmbeddedResource Remove="KontorForm.resx" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="CustomTemplateForm.cs.bak" />
     <None Remove="templates\bilanco-satis-kargo.json" />
   </ItemGroup>
 
