@@ -1871,24 +1871,24 @@ namespace HesapTakip
             string sourcePath = ofd.FileName;
             string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
 
-            // Excel dosyası ise kullanıcıya CSV'ye dönüştürme sorusu sor
-            bool convertToCsv = false;
-            if (ext == ".xlsx" || ext == ".xls")
+            // Excel dosyasına dönüştürme seçeneği aktifse kullanıcıdan onay al
+            bool convertToExcel = false;
+            if (ext == ".csv")
             {
                 var result = MessageBox.Show(
-                    "Excel dosyasını CSV formatına dönüştürmek istiyor musunuz?",
+                    "CSV dosyasını Excel formatına dönüştürmek istiyor musunuz?",
                     "Dönüştürme Seçeneği",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question
                 );
 
-                convertToCsv = (result == DialogResult.Yes);
+                convertToExcel = (result == DialogResult.Yes);
             }
 
             using var sfd = new SaveFileDialog
             {
-                Filter = convertToCsv ? "CSV Dosyası|*.csv" : "Excel Dosyası|*.xlsx",
-                FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1" + (convertToCsv ? ".csv" : ".xlsx")
+                Filter = convertToExcel ? "Excel Dosyası|*.xlsx" : "CSV Dosyası|*.csv",
+                FileName = Path.GetFileNameWithoutExtension(sourcePath) + "_Part1" + (convertToExcel ? ".xlsx" : ".csv")
             };
 
             if (sfd.ShowDialog() != DialogResult.OK) return;
@@ -1931,7 +1931,7 @@ namespace HesapTakip
 
             try
             {
-                await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, convertToCsv, progress));
+                await Task.Run(() => SplitAndSaveFileAsync(sourcePath, targetDir, baseName, convertToExcel, progress));
                 MessageBox.Show("Dosya parçalama tamamlandı.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -1952,13 +1952,13 @@ namespace HesapTakip
             }
         }
 
-        private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, bool convertToCsv, IProgress<int> progress)
+        private void SplitAndSaveFileAsync(string sourcePath, string targetDir, string baseName, bool convertToExcel, IProgress<int> progress)
         {
             const int maxRowsWithHeader = 600; // başlık dahil
             string ext = Path.GetExtension(sourcePath).ToLowerInvariant();
 
             // CSV'ye dönüştürme seçeneği aktifse veya orijinal dosya CSV ise CSV formatında kaydet
-            bool useCsvFormat = convertToCsv || ext == ".csv";
+            bool useCsvFormat = convertToExcel || ext == ".csv";
 
             if (useCsvFormat)
             {
@@ -2118,25 +2118,22 @@ namespace HesapTakip
         }
 
         // templates klasöründen yerleşik şablonları yükler
-        private List<TemplateItem> LoadBuiltinTemplatesFromFiles()
+        private List<TemplateItem> LoadBuiltinTemplatesFromFiles(bool includeCustom = true)
         {
             var list = new List<TemplateItem>();
             var templateDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates");
             if (!Directory.Exists(templateDir)) return list;
 
-            /* var files = Directory.GetFiles(templateDir, "*.json"); */
-
-            var files = Directory.GetFiles(
-            templateDir,
-            "*.json",
-            SearchOption.AllDirectories);
+            var files = Directory
+                .EnumerateFiles(templateDir, "*.json", SearchOption.AllDirectories)
+                .Where(f => includeCustom || !IsUnderCustomFolder(f, templateDir))
+                .ToList();
 
             foreach (var f in files)
             {
                 try
                 {
                     var json = File.ReadAllText(f);
-                    // JSON içinden varsa Name al, yoksa dosya adına göre anlamlı bir isim üret
                     string name = GetNameFromJsonOrFileName(json, Path.GetFileName(f));
                     list.Add(new TemplateItem
                     {
@@ -2148,10 +2145,22 @@ namespace HesapTakip
                 }
                 catch
                 {
-
+                    // Geçersiz JSON dosyalarını görmezden gel
                 }
             }
+
             return list;
+        }
+
+        private static bool IsUnderCustomFolder(string filePath, string templateRoot)
+        {
+            var relativePath = Path.GetRelativePath(templateRoot, filePath);
+            var segments = relativePath.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            return segments.Length > 1 &&
+                   string.Equals(segments[0], "custom", StringComparison.OrdinalIgnoreCase);
         }
 
         private class TemplateDefinition
@@ -2274,6 +2283,7 @@ namespace HesapTakip
             label1 = new Label();
             txtbox_act = new TextBox();
             dgvData = new DataGridView();
+           
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvData).BeginInit();
@@ -2316,6 +2326,7 @@ namespace HesapTakip
             // 
             groupBox2.AutoSize = true;
             groupBox2.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+           
             groupBox2.Controls.Add(btn_add_custom_table);
             groupBox2.Controls.Add(lblSplitStatus);
             groupBox2.Controls.Add(progressBarSplit);
@@ -2367,7 +2378,7 @@ namespace HesapTakip
             // 
             // btnSplitAndSave
             // 
-            btnSplitAndSave.Location = new Point(562, 22);
+            btnSplitAndSave.Location = new Point(303, 50);
             btnSplitAndSave.Name = "btnSplitAndSave";
             btnSplitAndSave.Size = new Size(100, 39);
             btnSplitAndSave.TabIndex = 11;
@@ -2377,7 +2388,7 @@ namespace HesapTakip
             // 
             // btn_alttur
             // 
-            btn_alttur.Location = new Point(341, 81);
+            btn_alttur.Location = new Point(303, 91);
             btn_alttur.Name = "btn_alttur";
             btn_alttur.Size = new Size(100, 39);
             btn_alttur.TabIndex = 10;
@@ -2399,7 +2410,7 @@ namespace HesapTakip
             // 
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 9F);
-            label2.Location = new Point(341, 19);
+            label2.Location = new Point(413, 19);
             label2.Name = "label2";
             label2.Size = new Size(167, 30);
             label2.TabIndex = 7;
@@ -2409,7 +2420,7 @@ namespace HesapTakip
             // 
             cbx_customerlist.DropDownStyle = ComboBoxStyle.DropDownList;
             cbx_customerlist.FormattingEnabled = true;
-            cbx_customerlist.Location = new Point(341, 52);
+            cbx_customerlist.Location = new Point(413, 52);
             cbx_customerlist.Name = "cbx_customerlist";
             cbx_customerlist.Size = new Size(171, 23);
             cbx_customerlist.TabIndex = 6;
@@ -2469,6 +2480,8 @@ namespace HesapTakip
             dgvData.Size = new Size(1326, 254);
             dgvData.TabIndex = 2;
             // 
+            // button1
+
             // EFaturaxmlForm
             // 
             ClientSize = new Size(1332, 431);
@@ -2507,11 +2520,13 @@ namespace HesapTakip
         {
             try
             {
-                var baseTemplates = LoadBuiltinTemplatesFromFiles().Select(t => t.Name).ToList();
+                var baseTemplates = LoadBuiltinTemplatesFromFiles(includeCustom: false)
+                    .Select(t => t.Name)
+                    .ToList();
+
                 using var dlg = new CustomTemplateForm(_db, baseTemplates);
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
-
                     InitializeComboBox();
                     MessageBox.Show("Şablon kaydedildi.", "Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -2520,7 +2535,6 @@ namespace HesapTakip
             {
                 MessageBox.Show($"Şablon oluşturma hatası: {ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
         }
 
         private bool IsFilterMatch(string itemName, FilterRule rule)
